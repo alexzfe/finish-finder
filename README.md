@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🥊 Fun Fight Predictor
 
-## Getting Started
+An AI-powered web application that analyzes upcoming UFC fights to predict which matches will be the most entertaining to watch. Using machine learning algorithms and fighter statistics, the platform provides "fun scores" and detailed analysis to help UFC fans prioritize their viewing experience.
 
-First, run the development server:
+## ✨ Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### 🎯 Core Functionality
+- **AI Fight Prediction**: Advanced algorithms analyze fighter stats, styles, and popularity to predict entertainment value
+- **Fun Score Rating**: 0-100 scoring system for fight entertainment potential
+- **Interactive Fight Cards**: Visual representation of upcoming UFC events with highlighted fun fights
+- **Detailed Analysis**: Click any fight for in-depth AI-generated descriptions and factor breakdowns
+- **Customizable Filtering**: Adjust fun score thresholds to find fights that match your preferences
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 📊 Prediction Factors
+- **Finish Rates**: KO/submission percentages and historical fight endings
+- **Stylistic Matchups**: Striker vs striker, grappler vs striker analysis
+- **Fan Popularity**: Social media following and recent buzz metrics
+- **Fight Stakes**: Title fights, main events, and career implications
+- **Skill Parity**: Evenly matched opponents often produce the best fights
+- **Fighting Styles**: Aggressive, technical, or entertaining fighting approaches
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Technology Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Frontend
+- **Next.js 15**: React framework with App Router
+- **TypeScript**: Type-safe development
+- **Tailwind CSS**: Utility-first styling
+- **Framer Motion**: Animations and transitions
 
-## Learn More
+### Backend
+- **Next.js API Routes**: Server-side functionality
+- **Prisma**: Database ORM and migrations
+- **SQLite**: Development database
+- **Custom AI Models**: Multi-factor entertainment scoring
 
-To learn more about Next.js, take a look at the following resources:
+## 🚀 Getting Started
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Prerequisites
+- Node.js 18+ installed
+- npm package manager
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Installation
 
-## Deploy on Vercel
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd fun-fight-predictor
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open your browser**
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+## 📱 Usage
+
+### Viewing Fight Predictions
+1. Select an upcoming UFC event from the event selector
+2. Use the fun score slider to filter fights by entertainment potential
+3. Browse highlighted "Fun Fights" with scores 80+
+4. Click any fight card for detailed analysis
+
+### Understanding Fun Scores
+- **90-100**: 🔥 MUST-WATCH - Guaranteed entertainment
+- **80-89**: ⭐ HIGHLY ENTERTAINING - Strong recommendation
+- **70-79**: 👍 GOOD ENTERTAINMENT - Worth watching
+- **60-69**: 👌 DECENT FIGHT - Moderate interest
+- **Below 60**: 😴 POTENTIALLY SLOW - Lower priority
+
+## 🔧 API Endpoints
+
+### GET /api/predict
+Test the prediction system with mock fighter data
+
+### GET /api/events
+Retrieve upcoming UFC events (when data scraping is enabled)
+
+## 🎯 Current Status
+
+### ✅ Completed Features
+- Core prediction algorithm with multiple factors
+- Interactive React UI with fight cards
+- Database schema for fighters, fights, and events
+- API endpoints for predictions and data
+- Mock data demonstrating full functionality
+- Responsive design with UFC-inspired styling
+
+### 🚧 Next Development Phase
+- Real UFC data integration
+- Enhanced AI descriptions with OpenAI
+- Historical fight outcome training
+- User accounts and preferences
+- Mobile optimization
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+**⚠️ Disclaimer**: This application is for entertainment purposes only. Fight predictions are based on statistical analysis and should not be used as the sole basis for betting decisions.
