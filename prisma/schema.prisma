@@ -1,0 +1,139 @@
+// Fun Fight Predictor Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Fighter {
+  id          String   @id @default(cuid())
+  name        String
+  nickname    String?
+  wins        Int      @default(0)
+  losses      Int      @default(0)
+  draws       Int      @default(0)
+  weightClass String
+  imageUrl    String?
+
+  // Stats
+  finishRate                  Float   @default(0)
+  koPercentage               Float   @default(0)
+  submissionPercentage       Float   @default(0)
+  averageFightTime           Int     @default(0) // in seconds
+  significantStrikesPerMinute Float   @default(0)
+  takedownAccuracy           Float   @default(0)
+
+  // Popularity metrics
+  socialFollowers   Int     @default(0)
+  recentBuzzScore   Float   @default(0) // 0-100
+  fanFavorite       Boolean @default(false)
+
+  // Fun scoring
+  funScore          Float   @default(0)
+
+  // Fighting style tags
+  fightingStyles    String[] // JSON array of styles
+
+  lastFightDate     DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  fighter1Fights    Fight[] @relation("Fighter1")
+  fighter2Fights    Fight[] @relation("Fighter2")
+
+  @@map("fighters")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  name        String
+  date        DateTime
+  location    String
+  venue       String
+  completed   Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  fights      Fight[]
+
+  @@map("events")
+}
+
+model Fight {
+  id                String   @id @default(cuid())
+
+  // Fighter relations
+  fighter1Id        String
+  fighter2Id        String
+  fighter1          Fighter  @relation("Fighter1", fields: [fighter1Id], references: [id])
+  fighter2          Fighter  @relation("Fighter2", fields: [fighter2Id], references: [id])
+
+  // Event relation
+  eventId           String
+  event             Event    @relation(fields: [eventId], references: [id])
+
+  // Fight details
+  weightClass       String
+  titleFight        Boolean  @default(false)
+  mainEvent         Boolean  @default(false)
+  cardPosition      Int      @default(0) // 1 = main event, 2 = co-main, etc.
+
+  // Predictions
+  predictedFunScore Float    @default(0) // 0-100
+  funFactors        String   // JSON array of fun factors
+  aiDescription     String?
+
+  // Results (post-fight)
+  completed         Boolean  @default(false)
+  actualFunScore    Float?   // Post-fight rating
+  winnerId          String?
+  method            String?  // KO, SUB, DEC, etc.
+  round             Int?
+  time              String?  // Fight time (e.g., "4:23")
+
+  bookingDate       DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("fights")
+}
+
+model FunScoreHistory {
+  id              String   @id @default(cuid())
+  fightId         String
+  predictedScore  Float
+  actualScore     Float?
+  accuracy        Float?   // How close prediction was to actual
+  modelVersion    String
+
+  createdAt       DateTime @default(now())
+
+  @@map("fun_score_history")
+}
+
+model PredictionModel {
+  id               String   @id @default(cuid())
+  version          String   @unique
+
+  // Factor weights
+  finishRateWeight    Float @default(0.3)
+  stylisticWeight     Float @default(0.25)
+  popularityWeight    Float @default(0.15)
+  stakesWeight        Float @default(0.2)
+  historicalWeight    Float @default(0.1)
+
+  confidence          Float @default(0) // Overall model confidence
+  trainingAccuracy    Float @default(0)
+
+  active              Boolean @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("prediction_models")
+}
