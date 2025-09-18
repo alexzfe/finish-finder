@@ -34,8 +34,8 @@ model Fighter {
   // Fun scoring
   funScore          Float   @default(0)
 
-  // Fighting style tags
-  fightingStyles    String[] // JSON array of styles
+  // Fighting style tags (JSON string for SQLite)
+  fightingStyles    String   @default("[]") // JSON array of styles
 
   lastFightDate     DateTime?
   createdAt         DateTime @default(now())

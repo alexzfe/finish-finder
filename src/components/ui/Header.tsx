@@ -16,7 +16,7 @@ export function Header() {
           </div>
 
           <nav className="hidden md:flex space-x-6">
-            <a href="#events" className="text-white hover:text-red-400 transition-colors">
+            <a href="/" className="text-white hover:text-red-400 transition-colors">
               Events
             </a>
             <a href="#predictions" className="text-white hover:text-red-400 transition-colors">
@@ -24,6 +24,9 @@ export function Header() {
             </a>
             <a href="#stats" className="text-white hover:text-red-400 transition-colors">
               Fighter Stats
+            </a>
+            <a href="/admin" className="text-white hover:text-red-400 transition-colors">
+              🛠️ Admin
             </a>
           </nav>
         </div>
