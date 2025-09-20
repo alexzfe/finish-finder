@@ -3,11 +3,5 @@
     "src/app/api/**/*.ts": {
       "maxDuration": 60
     }
-  },
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "OPENAI_API_KEY": "@openai_api_key",
-    "SENTRY_DSN": "@sentry_dsn",
-    "NEXT_PUBLIC_SENTRY_DSN": "@next_public_sentry_dsn"
   }
 }
