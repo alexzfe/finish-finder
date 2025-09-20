@@ -33,54 +33,40 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
   const sortedFights = [...(currentEvent.fightCard || [])].reverse()
 
   return (
-    <div className="relative border-b border-gray-200 pb-6" style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}>
-      {/* Navigation Arrows */}
+    <div className="relative rounded-xl border border-white/5 bg-black/55 px-10 pb-6 pt-6 text-white md:px-12">
       <button
         onClick={goToPrevEvent}
         disabled={currentEventIndex === 0}
-        className={`absolute left-0 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all duration-200 ${
+        className={`absolute left-5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border transition-all duration-150 ${
           currentEventIndex === 0
-            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            : 'text-white hover:opacity-90'
+            ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/20'
+            : 'border-white/20 bg-white/10 text-white hover:border-[var(--ufc-red)]/60 hover:bg-[var(--ufc-red)]/20'
         }`}
-        style={{
-          backgroundColor: currentEventIndex === 0 ? undefined : '#d20a0a'
-        }}
         aria-label="Previous event"
       >
-        <ChevronLeftIcon className="w-5 h-5" />
+        <ChevronLeftIcon className="h-4 w-4" />
       </button>
 
       <button
         onClick={goToNextEvent}
         disabled={currentEventIndex === events.length - 1}
-        className={`absolute right-0 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all duration-200 ${
+        className={`absolute right-5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border transition-all duration-150 ${
           currentEventIndex === events.length - 1
-            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            : 'text-white hover:opacity-90'
+            ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/20'
+            : 'border-white/20 bg-white/10 text-white hover:border-[var(--ufc-red)]/60 hover:bg-[var(--ufc-red)]/20'
         }`}
-        style={{
-          backgroundColor: currentEventIndex === events.length - 1 ? undefined : '#d20a0a'
-        }}
         aria-label="Next event"
       >
-        <ChevronRightIcon className="w-5 h-5" />
+        <ChevronRightIcon className="h-4 w-4" />
       </button>
 
-      {/* Event Information */}
-      <div className="text-center px-12">
-        {/* Event Title */}
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 leading-tight uppercase tracking-wide">
+      <div className="text-center">
+        <h1 className="ufc-condensed text-2xl text-white md:text-3xl">
           {currentEvent.name}
         </h1>
 
-        {/* Event Date */}
-        <p
-          className="text-lg md:text-xl font-bold mb-2 uppercase tracking-widest"
-          style={{ color: '#d20a0a' }}
-        >
+        <p className="ufc-condensed mt-2 text-xs text-[var(--ufc-red)] md:text-sm">
           {(() => {
-            // Parse date correctly to avoid timezone issues
             const dateStr = typeof currentEvent.date === 'string'
               ? currentEvent.date.split('T')[0]
               : currentEvent.date.toISOString().split('T')[0];
@@ -95,25 +81,20 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
           })()}
         </p>
 
-        {/* Location */}
-        <p className="text-sm md:text-base text-gray-600 mb-4 uppercase tracking-wide">
+        <p className="mt-2 text-[0.65rem] uppercase tracking-[0.35em] text-white/45">
           📍 {currentEvent.location}
         </p>
 
-        {/* Event Navigation Indicator */}
-        <div className="flex justify-center items-center space-x-2 mb-2">
+        <div className="mt-4 flex items-center justify-center gap-2">
           {events.map((_, index) => (
             <button
               key={index}
               onClick={() => onEventChange(index)}
-              className={`w-3 h-3 rounded-full transition-all duration-200 ${
+              className={`h-1.5 rounded-full transition-all duration-200 ${
                 index === currentEventIndex
-                  ? 'scale-125'
-                  : 'bg-gray-300 hover:bg-gray-400'
+                  ? 'w-8 bg-[var(--ufc-red)]'
+                  : 'w-2.5 bg-white/20 hover:bg-white/40'
               }`}
-              style={{
-                backgroundColor: index === currentEventIndex ? '#d20a0a' : undefined
-              }}
               aria-label={`Go to event ${index + 1}`}
             />
           ))}

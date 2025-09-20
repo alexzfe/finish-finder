@@ -12,3 +12,65 @@
 [2025-09-20T14:50:50.910Z] INFO: Starting automated event update check...
 [2025-09-20T14:51:02.371Z] INFO: Adding new event: UFC Fight Night - Garcia vs. Onama
 [2025-09-20T14:51:03.551Z] INFO: 🤖 Generating AI predictions for event: UFC Fight Night - Garcia vs. Onama
+[2025-09-20T15:02:23.254Z] INFO: AutomatedScraper initialized
+[2025-09-20T15:02:23.256Z] INFO: Starting automated event update check...
+[2025-09-20T15:02:32.556Z] INFO: Adding new event: UFC Fight Night - Nov. 8
+[2025-09-20T15:02:33.779Z] INFO: 🤖 Generating AI predictions for event: UFC Fight Night - Nov. 8
+[2025-09-20T15:03:20.345Z] INFO: AutomatedScraper initialized
+[2025-09-20T15:03:20.347Z] INFO: Starting automated event update check...
+[2025-09-20T15:03:22.003Z] INFO: Adding new event: UFC 322 - Della Maddalena vs. Makhachev
+[2025-09-20T15:03:23.209Z] INFO: Adding new event: UFC Fight Night - Tsarukyan vs. Hooker
+[2025-09-20T15:03:24.344Z] INFO: Adding new event: UFC 323 - Dec. 6
+[2025-09-20T15:03:25.450Z] INFO: Scraping completed: 10 events, 99 fights, 3 changes
+[2025-09-20T15:03:25.450Z] INFO: AutomatedScraper cleanup completed
+[2025-09-20T15:05:20.715Z] INFO: AutomatedScraper initialized
+[2025-09-20T15:05:20.716Z] INFO: Starting automated event update check...
+[2025-09-20T15:05:31.805Z] INFO: 📋 Scraped 11 events:
+[2025-09-20T15:05:31.808Z] INFO:    • UFC Fight Night 260 - Ulberg vs. Reyes (2025-09-27)
+[2025-09-20T15:05:31.808Z] INFO:    • UFC 320 - Ankalaev vs. Pereira 2 (2025-10-04)
+[2025-09-20T15:05:31.809Z] INFO:    • UFC Fight Night 261 - Oliveira vs. Fiziev (2025-10-11)
+[2025-09-20T15:05:31.809Z] INFO:    • UFC Fight Night 262 - De Ridder vs. Allen (2025-10-18)
+[2025-09-20T15:05:31.809Z] INFO:    • UFC 321 - Aspinall vs. Gane (2025-10-25)
+[2025-09-20T15:05:31.809Z] INFO:    • UFC Fight Night - Garcia vs. Onama (2025-11-01)
+[2025-09-20T15:05:31.810Z] INFO:    • UFC Fight Night - Nov. 8 (2025-11-08)
+[2025-09-20T15:05:31.810Z] INFO:    • UFC 322 - Della Maddalena vs. Makhachev (2025-11-15)
+[2025-09-20T15:05:31.810Z] INFO:    • UFC Fight Night - Tsarukyan vs. Hooker (2025-11-22)
+[2025-09-20T15:05:31.810Z] INFO:    • UFC 323 - Dec. 6 (2025-12-06)
+[2025-09-20T15:05:31.810Z] INFO:    • UFC Fight Night - Royval vs. Kape (2025-12-13)
+[2025-09-20T15:05:31.810Z] INFO: Adding new event: UFC Fight Night - Royval vs. Kape
+[2025-09-20T15:05:33.011Z] INFO: Scraping completed: 11 events, 104 fights, 1 changes
+[2025-09-20T15:05:33.012Z] INFO: AutomatedScraper cleanup completed
+[2025-09-20T16:55:04.530Z] INFO: AutomatedScraper initialized
+[2025-09-20T16:55:04.536Z] INFO: AutomatedScraper cleanup completed
+[2025-09-20T16:56:52.400Z] INFO: AutomatedScraper initialized
+[2025-09-20T16:56:52.402Z] INFO: Starting automated event update check...
+[2025-09-20T16:57:03.833Z] INFO: 📋 Scraped 11 events:
+[2025-09-20T16:57:03.835Z] INFO:    • UFC Fight Night 260 - Ulberg vs. Reyes (2025-09-27)
+[2025-09-20T16:57:03.835Z] INFO:    • UFC 320 - Ankalaev vs. Pereira 2 (2025-10-04)
+[2025-09-20T16:57:03.836Z] INFO:    • UFC Fight Night 261 - Oliveira vs. Fiziev (2025-10-11)
+[2025-09-20T16:57:03.836Z] INFO:    • UFC Fight Night 262 - De Ridder vs. Allen (2025-10-18)
+[2025-09-20T16:57:03.836Z] INFO:    • UFC 321 - Aspinall vs. Gane (2025-10-25)
+[2025-09-20T16:57:03.836Z] INFO:    • UFC Fight Night - Garcia vs. Onama (2025-11-01)
+[2025-09-20T16:57:03.836Z] INFO:    • UFC Fight Night - Nov. 8 (2025-11-08)
+[2025-09-20T16:57:03.836Z] INFO:    • UFC 322 - Della Maddalena vs. Makhachev (2025-11-15)
+[2025-09-20T16:57:03.836Z] INFO:    • UFC Fight Night - Tsarukyan vs. Hooker (2025-11-22)
+[2025-09-20T16:57:03.836Z] INFO:    • UFC 323 - Dec. 6 (2025-12-06)
+[2025-09-20T16:57:03.836Z] INFO:    • UFC Fight Night - Royval vs. Kape (2025-12-13)
+[2025-09-20T16:57:03.837Z] INFO: Scraping completed: 11 events, 104 fights, 0 changes
+[2025-09-20T16:57:03.837Z] INFO: AutomatedScraper cleanup completed
+[2025-09-20T17:06:11.282Z] INFO: AutomatedScraper initialized
+[2025-09-20T17:06:11.283Z] INFO: Starting automated event update check...
+[2025-09-20T17:06:23.069Z] INFO: 📋 Scraped 11 events:
+[2025-09-20T17:06:23.072Z] INFO:    • UFC Fight Night 260 - Ulberg vs. Reyes (2025-09-27)
+[2025-09-20T17:06:23.072Z] INFO:    • UFC 320 - Ankalaev vs. Pereira 2 (2025-10-04)
+[2025-09-20T17:06:23.072Z] INFO:    • UFC Fight Night 261 - Oliveira vs. Fiziev (2025-10-11)
+[2025-09-20T17:06:23.072Z] INFO:    • UFC Fight Night 262 - De Ridder vs. Allen (2025-10-18)
+[2025-09-20T17:06:23.072Z] INFO:    • UFC 321 - Aspinall vs. Gane (2025-10-25)
+[2025-09-20T17:06:23.072Z] INFO:    • UFC Fight Night - Garcia vs. Onama (2025-11-01)
+[2025-09-20T17:06:23.072Z] INFO:    • UFC Fight Night - Nov. 8 (2025-11-08)
+[2025-09-20T17:06:23.073Z] INFO:    • UFC 322 - Della Maddalena vs. Makhachev (2025-11-15)
+[2025-09-20T17:06:23.073Z] INFO:    • UFC Fight Night - Tsarukyan vs. Hooker (2025-11-22)
+[2025-09-20T17:06:23.073Z] INFO:    • UFC 323 - Dec. 6 (2025-12-06)
+[2025-09-20T17:06:23.073Z] INFO:    • UFC Fight Night - Royval vs. Kape (2025-12-13)
+[2025-09-20T17:06:23.073Z] INFO: Scraping completed: 11 events, 104 fights, 0 changes
+[2025-09-20T17:06:23.074Z] INFO: AutomatedScraper cleanup completed

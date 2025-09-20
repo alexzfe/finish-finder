@@ -1,26 +1,87 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ufc-black: #191919;
+  --ufc-black-alt: #111111;
+  --ufc-white: #ffffff;
+  --ufc-red: #d20a0a;
+  --ufc-gray-900: #2b2b2b;
+  --ufc-gray-800: #363636;
+  --ufc-gray-700: #444444;
+  --ufc-gray-200: #ebebeb;
+  --ufc-gray-100: #f4f4f4;
+  --ufc-font-condensed: "Roboto Condensed Variable", "Roboto Condensed", "Arial Narrow", "DIN Alternate", "Helvetica Neue", sans-serif;
+  --ufc-font-sans: "Karla Variable", "Karla", "Arial", "Helvetica Neue", sans-serif;
+  --ufc-letter-spacing-wide: 0.08em;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-background: var(--ufc-black);
+  --color-foreground: var(--ufc-white);
+  --font-sans: var(--ufc-font-sans);
+  --font-condensed: var(--ufc-font-condensed);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--ufc-black-alt);
+  color: var(--ufc-white);
+  font-family: var(--ufc-font-sans);
+  letter-spacing: 0.01em;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--ufc-red);
+}
+
+.ufc-condensed {
+  font-family: var(--ufc-font-condensed);
+  text-transform: uppercase;
+  letter-spacing: var(--ufc-letter-spacing-wide);
+}
+
+.ufc-section {
+  background-color: var(--ufc-gray-900);
+  border-top: 4px solid var(--ufc-red);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+}
+
+.ufc-card {
+  background-color: var(--ufc-gray-800);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.ufc-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.9rem 1.75rem;
+  font-family: var(--ufc-font-condensed);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  background: var(--ufc-red);
+  color: var(--ufc-white);
+  border: none;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.ufc-button:hover {
+  background: #f22323;
+  transform: translateY(-1px);
+}
+
+.ufc-button--ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.ufc-button--ghost:hover {
+  border-color: var(--ufc-red);
+  color: var(--ufc-red);
 }

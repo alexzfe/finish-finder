@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import axios from 'axios'
 import * as cheerio from 'cheerio'
+import * as Sentry from '@sentry/nextjs'
 
 export const dynamic = 'force-dynamic'
 
 interface FighterImageResult {
   url: string | null
-  source: 'tapology' | 'fallback' | 'placeholder'
+  source: 'tapology' | 'ufc' | 'sherdog' | 'fallback' | 'placeholder'
   confidence: number
   cached: boolean
 }
@@ -25,9 +26,25 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const imageResult = await searchTapologyFighter(fighterName)
-    return NextResponse.json(imageResult)
+    const primaryResult = await searchTapologyFighter(fighterName)
+    if (primaryResult.source !== 'placeholder') {
+      return NextResponse.json(primaryResult)
+    }
+
+    const ufcResult = await searchUfcFighter(fighterName)
+    if (ufcResult.source !== 'placeholder') {
+      return NextResponse.json(ufcResult)
+    }
+
+    const sherdogResult = await searchSherdogFighter(fighterName)
+    return NextResponse.json(sherdogResult)
   } catch (error) {
+    Sentry.captureException(error, {
+      data: {
+        fighterName,
+        route: '/api/fighter-image'
+      }
+    })
     console.error('Fighter image API error:', error)
     return NextResponse.json({
       url: '/images/fighter-placeholder.svg',
@@ -92,23 +109,109 @@ async function searchTapologyFighter(fighterName: string): Promise<FighterImageR
       }
     }
 
-    // Fallback to placeholder
-    return {
-      url: '/images/fighter-placeholder.svg',
-      source: 'placeholder',
-      confidence: 0,
-      cached: false
-    }
+    return getPlaceholderResult()
 
   } catch (error) {
     console.error('Tapology search failed:', error)
-    return {
-      url: '/images/fighter-placeholder.svg',
-      source: 'placeholder',
-      confidence: 0,
-      cached: false
-    }
+    return getPlaceholderResult()
   }
+}
+
+async function searchUfcFighter(fighterName: string): Promise<FighterImageResult> {
+  const slug = slugifyName(fighterName)
+  if (!slug) {
+    return getPlaceholderResult()
+  }
+
+  const profileUrl = `https://www.ufc.com/athlete/${slug}`
+
+  try {
+    const response = await axios.get(profileUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; FinishFinderBot/1.0; +https://finish-finder.com)'
+      },
+      timeout: 10000
+    })
+
+    const $ = cheerio.load(response.data)
+    const imageSelectors = [
+      'picture img',
+      '.c-hero__image img',
+      '.hero-profile__image img',
+      'img[alt*="fighter" i]'
+    ]
+
+    for (const selector of imageSelectors) {
+      const img = $(selector).first()
+      const src = img.attr('src') || img.attr('data-src')
+      if (src && isValidFighterImage(src)) {
+        return {
+          url: src.startsWith('http') ? src : `https://www.ufc.com${src}`,
+          source: 'ufc',
+          confidence: 60,
+          cached: false
+        }
+      }
+    }
+
+    return getPlaceholderResult()
+  } catch (error) {
+    console.error('UFC image fetch failed:', error)
+    return getPlaceholderResult()
+  }
+}
+
+async function searchSherdogFighter(fighterName: string): Promise<FighterImageResult> {
+  const slug = slugifyName(fighterName)
+  if (!slug) {
+    return getPlaceholderResult()
+  }
+
+  const profileUrl = `https://www.sherdog.com/fighter/${slug}`
+
+  try {
+    const response = await axios.get(profileUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; FinishFinderBot/1.0; +https://finish-finder.com)'
+      },
+      timeout: 10000
+    })
+
+    const $ = cheerio.load(response.data)
+    const image = $('img[itemprop="image"], .profile_picture img').first()
+    const src = image.attr('src')
+
+    if (src && isValidFighterImage(src)) {
+      return {
+        url: src.startsWith('http') ? src : `https://www.sherdog.com${src}`,
+        source: 'sherdog',
+        confidence: 50,
+        cached: false
+      }
+    }
+
+    return getPlaceholderResult()
+  } catch (error) {
+    console.error('Sherdog image fetch failed:', error)
+    return getPlaceholderResult()
+  }
+}
+
+function getPlaceholderResult(): FighterImageResult {
+  return {
+    url: '/images/fighter-placeholder.svg',
+    source: 'placeholder',
+    confidence: 0,
+    cached: false
+  }
+}
+
+function slugifyName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '-');
 }
 
 async function extractFighterImage(profileUrl: string): Promise<string | null> {

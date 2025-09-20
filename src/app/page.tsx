@@ -42,7 +42,15 @@ export default function Home() {
 
             const now = new Date()
             const nearestEventIndex = sortedEvents.findIndex((event: UFCEvent) => event.date >= now)
-            setCurrentEventIndex(nearestEventIndex >= 0 ? nearestEventIndex : 0)
+            const resolvedIndex = nearestEventIndex >= 0 ? nearestEventIndex : 0
+            setCurrentEventIndex(resolvedIndex)
+            const defaultEvent = sortedEvents[resolvedIndex]
+            if (defaultEvent?.fightCard?.length) {
+              setSelectedFight((prev) => {
+                const stillValid = prev && defaultEvent.fightCard.some(fight => fight.id === prev.id)
+                return stillValid ? prev : defaultEvent.fightCard[0]
+              })
+            }
             setError(null)
             setLoading(false)
             return
@@ -64,7 +72,15 @@ export default function Home() {
 
           const now = new Date()
           const nearestEventIndex = sortedEvents.findIndex((event: UFCEvent) => event.date >= now)
-          setCurrentEventIndex(nearestEventIndex >= 0 ? nearestEventIndex : 0)
+          const resolvedIndex = nearestEventIndex >= 0 ? nearestEventIndex : 0
+          setCurrentEventIndex(resolvedIndex)
+          const defaultEvent = sortedEvents[resolvedIndex]
+          if (defaultEvent?.fightCard?.length) {
+            setSelectedFight((prev) => {
+              const stillValid = prev && defaultEvent.fightCard.some(fight => fight.id === prev.id)
+              return stillValid ? prev : defaultEvent.fightCard[0]
+            })
+          }
           setError(null)
           return
         }
@@ -88,98 +104,109 @@ export default function Home() {
     setSelectedFight(fight)
   }
 
+  const currentEvent = events[currentEventIndex]
+
+  useEffect(() => {
+    if (!currentEvent) {
+      return
+    }
+    setSelectedFight(prev => {
+      const fights = currentEvent.fightCard ?? []
+      const stillValid = prev && fights.some(fight => fight.id === prev.id)
+      if (stillValid) {
+        return prev
+      }
+      return fights[0] ?? null
+    })
+  }, [currentEvent])
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#191919' }}>
+    <div className="min-h-screen bg-[var(--ufc-black-alt)]">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="mx-auto max-w-7xl px-6 pb-16">
         {loading ? (
-          <div className="text-center text-white py-20">
-            <div className="text-6xl mb-6">⏳</div>
-            <h2 className="text-3xl font-bold mb-4 uppercase tracking-widest" style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}>
-              Loading Events
-            </h2>
-            <p className="text-gray-300 text-lg">Fetching the latest UFC events and fight data</p>
+          <div className="flex flex-col items-center justify-center py-24 text-center text-white">
+            <div className="mb-6 text-6xl">⏳</div>
+            <h2 className="ufc-condensed text-4xl text-white">Loading Events</h2>
+            <p className="mt-4 max-w-xl text-sm uppercase tracking-[0.4em] text-white/60">
+              Fetching the latest fight cards direct from Sherdog and prepping entertainment analytics
+            </p>
           </div>
         ) : error ? (
-          <div className="text-center text-white py-20">
-            <div className="text-6xl mb-6">⚠️</div>
-            <h2 className="text-3xl font-bold mb-4 uppercase tracking-widest" style={{ color: '#d20a0a', fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}>
-              Error Loading Data
-            </h2>
-            <p className="text-gray-300 text-lg mb-8">{error}</p>
+          <div className="flex flex-col items-center justify-center py-24 text-center text-white">
+            <div className="mb-6 text-6xl">⚠️</div>
+            <h2 className="ufc-condensed text-4xl text-[var(--ufc-red)]">Error Loading Data</h2>
+            <p className="mt-4 max-w-xl text-sm uppercase tracking-[0.4em] text-white/60">{error}</p>
           </div>
         ) : events.length > 0 ? (
-          <div className="space-y-8">
-            {/* Event Navigation */}
-            <div className="bg-white rounded-lg p-6 shadow-lg">
-              <EventNavigation
-                events={events}
-                currentEventIndex={currentEventIndex}
-                onEventChange={handleEventChange}
-              />
-            </div>
+          <div className="space-y-6">
+            <section id="events" className="ufc-section mt-6 rounded-2xl px-0 pb-6 pt-4">
+              <div className="px-6 md:px-8">
+                <h3 className="ufc-condensed text-xl text-white md:text-2xl">Upcoming Events</h3>
+              </div>
+              <div className="mt-4 rounded-2xl border-t border-white/5 bg-black/35 px-4 py-5 md:px-8">
+                <EventNavigation
+                  events={events}
+                  currentEventIndex={currentEventIndex}
+                  onEventChange={handleEventChange}
+                />
+              </div>
+            </section>
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Fight List - Takes up 2 columns */}
-              <div className="lg:col-span-2">
+            <section id="cards" className="flex flex-col gap-6 md:flex-row md:items-start">
+              <div className="ufc-section rounded-2xl px-4 py-5 md:flex-[2] md:px-5">
                 <FightList
-                  event={events[currentEventIndex]}
+                  event={currentEvent}
                   onFightClick={handleFightClick}
                 />
               </div>
 
-              {/* Sidebar - Takes up 1 column */}
-              <div className="space-y-6">
-                <div className="sticky top-6">
+              <aside className="self-start rounded-2xl border border-white/5 bg-black/70 p-5 text-white shadow-2xl md:sticky md:top-20 md:flex-[1] md:max-h-[calc(100vh-160px)] md:overflow-y-auto lg:top-24">
                 {selectedFight ? (
-                  <div className="bg-white rounded-lg shadow-lg p-6" style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}>
-                    <div className="mb-4">
-                      <p className="text-xs uppercase tracking-wide text-gray-500">BOUT</p>
-                      <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wide">
-                        {selectedFight.fighter1?.name || 'TBD'} VS {selectedFight.fighter2?.name || 'TBD'}
+                  <div className="space-y-5">
+                    <div className="border-l-4 border-[var(--ufc-red)] pl-4">
+                      <p className="ufc-condensed text-xs text-white/60">Featured Bout</p>
+                      <h3 className="ufc-condensed mt-1 text-2xl text-white">
+                        {selectedFight.fighter1?.name || 'TBD'} vs {selectedFight.fighter2?.name || 'TBD'}
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1 uppercase tracking-wide">
-                        {selectedFight.weightClass} • {selectedFight.scheduledRounds || 3} ROUNDS {selectedFight.titleFight ? '• TITLE FIGHT' : ''}{selectedFight.mainEvent && !selectedFight.titleFight ? ' • MAIN EVENT' : ''}
+                      <p className="text-xs uppercase tracking-[0.4em] text-white/50">
+                        {selectedFight.weightClass} • {selectedFight.scheduledRounds || 3} Rounds
+                        {selectedFight.titleFight ? ' • Title Fight' : ''}
+                        {selectedFight.mainEvent && !selectedFight.titleFight ? ' • Main Event' : ''}
                       </p>
                     </div>
 
-                    <div className="grid gap-3 text-sm mb-4">
-                      <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                        <span className="block text-xs uppercase tracking-wide text-gray-500">FUN SCORE</span>
-                        <span className="text-lg font-bold" style={{
-                          color: selectedFight.predictedFunScore >= 85 ? '#d20a0a' :
-                                 selectedFight.predictedFunScore >= 75 ? '#ea580c' :
-                                 selectedFight.predictedFunScore >= 65 ? '#d97706' : '#374151'
-                        }}>
-                          {selectedFight.predictedFunScore || 0}
-                        </span>
+                    <div className="grid gap-2.5 text-sm uppercase tracking-[0.24em] text-white/80">
+                      <div className="rounded-xl bg-white/5 px-4 py-3.5">
+                        <span className="block text-[0.7rem] text-white/70">Fun Score</span>
+                        <span className="ufc-condensed text-2xl text-[var(--ufc-red)] md:text-3xl">{selectedFight.predictedFunScore || 0}</span>
                       </div>
-                      <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                        <span className="block text-xs uppercase tracking-wide text-gray-500">FINISH CHANCE</span>
-                        <span className="text-base font-bold text-gray-900">{selectedFight.finishProbability || 0}%</span>
+                      <div className="rounded-xl bg-white/5 px-4 py-3.5">
+                        <span className="block text-[0.7rem] text-white/70">Finish Probability</span>
+                        <span className="ufc-condensed text-xl text-white md:text-2xl">{selectedFight.finishProbability || 0}%</span>
                       </div>
-                      <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                        <span className="block text-xs uppercase tracking-wide text-gray-500">RISK LEVEL</span>
-                        <span className="text-base font-bold text-gray-900 uppercase">{selectedFight.riskLevel || 'BALANCED'}</span>
+                      <div className="rounded-xl bg-white/5 px-4 py-3.5">
+                        <span className="block text-[0.7rem] text-white/70">Risk Profile</span>
+                        <span className="ufc-condensed text-base text-white md:text-lg">{selectedFight.riskLevel || 'Balanced'}</span>
                       </div>
                     </div>
 
                     {selectedFight.aiDescription && (
-                      <div className="mb-4">
-                        <p className="text-sm text-gray-700 leading-relaxed">
-                          {selectedFight.aiDescription}
-                        </p>
-                      </div>
+                      <p className="text-sm leading-relaxed text-white/80">
+                        {selectedFight.aiDescription}
+                      </p>
                     )}
 
                     {Array.isArray(selectedFight.funFactors) && selectedFight.funFactors.length > 0 && (
-                      <div className="mb-4">
-                        <span className="text-xs uppercase tracking-wide text-gray-500">KEY FACTORS</span>
-                        <ul className="mt-2 flex flex-wrap gap-2 text-xs">
+                      <div>
+                        <p className="ufc-condensed text-xs text-white/70">Key Factors</p>
+                        <ul className="mt-3 flex flex-wrap gap-2">
                           {selectedFight.funFactors.map((factor, idx) => (
-                            <li key={idx} className="rounded-lg border border-gray-200 bg-gray-100 px-3 py-1 text-gray-700 uppercase tracking-wide">
+                            <li
+                              key={idx}
+                              className="rounded-full border border-white/15 bg-white/15 px-3 py-1 text-[0.7rem] uppercase tracking-[0.28em] text-white"
+                            >
                               {typeof factor === 'string' ? factor : factor.type}
                             </li>
                           ))}
@@ -189,33 +216,28 @@ export default function Home() {
 
                     {selectedFight.fightPrediction && (
                       <div>
-                        <span className="text-xs uppercase tracking-wide text-gray-500">ANALYST PICK</span>
-                        <p className="mt-1 text-sm text-gray-700">{selectedFight.fightPrediction}</p>
+                        <p className="ufc-condensed text-xs text-white/70">Analyst Pick</p>
+                        <p className="mt-2 text-sm text-white/80">{selectedFight.fightPrediction}</p>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="bg-white rounded-lg p-6 shadow-lg text-center" style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}>
-                    <div className="text-4xl mb-4">🥊</div>
-                    <h3 className="text-lg font-bold uppercase tracking-wide mb-2 text-gray-900">
-                      Fight Details
-                    </h3>
-                    <p className="text-sm text-gray-600 uppercase tracking-wide">
-                      Select a matchup to see the in-depth breakdown
+                  <div className="flex flex-col items-center justify-center text-center text-white/70">
+                    <div className="mb-4 text-5xl">🥊</div>
+                    <h3 className="ufc-condensed text-xl text-white">Select a Fight</h3>
+                    <p className="mt-2 text-sm uppercase tracking-[0.35em] text-white/50">
+                      Choose a matchup to break down the finish potential
                     </p>
                   </div>
                 )}
-                </div>
-              </div>
-            </div>
+              </aside>
+            </section>
           </div>
         ) : (
-          <div className="text-center text-white py-20">
-            <div className="text-6xl mb-6">🥊</div>
-            <h2 className="text-3xl font-bold mb-4 uppercase tracking-widest" style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}>
-              No Events Available
-            </h2>
-            <p className="text-gray-300 text-lg mb-8">
+          <div className="flex flex-col items-center justify-center py-24 text-center text-white">
+            <div className="mb-6 text-6xl">🥊</div>
+            <h2 className="ufc-condensed text-4xl text-white">No Events Available</h2>
+            <p className="mt-4 max-w-xl text-sm uppercase tracking-[0.4em] text-white/60">
               Check back soon for upcoming UFC events and fight predictions!
             </p>
           </div>

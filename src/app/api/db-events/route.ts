@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import * as Sentry from '@sentry/nextjs'
 
 export const dynamic = 'force-dynamic'
 
@@ -101,6 +102,11 @@ export async function GET() {
     })
 
   } catch (error) {
+    Sentry.captureException(error, {
+      data: {
+        route: '/api/db-events'
+      }
+    })
     console.error('Database events API error:', error)
     return NextResponse.json({
       success: false,

@@ -50,19 +50,19 @@ const FighterAvatarComponent = ({
   }
 
   const getConfidenceColor = (conf: number): string => {
-    if (conf >= 80) return 'text-green-600'
-    if (conf >= 60) return 'text-yellow-600'
-    if (conf >= 40) return 'text-orange-600'
-    return 'text-red-600'
+    if (conf >= 80) return 'text-emerald-400'
+    if (conf >= 60) return 'text-amber-400'
+    if (conf >= 40) return 'text-orange-400'
+    return 'text-red-400'
   }
 
   const shouldShowImage = url && !imageError && !error && source !== 'placeholder'
 
   return (
     <div className={`flex flex-col items-center ${className}`}>
-      <div className={`${sizeClasses[size]} relative rounded-full overflow-hidden bg-gray-200 flex items-center justify-center`}>
+      <div className={`${sizeClasses[size]} relative flex items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/10`}>
         {loading ? (
-          <div className="animate-pulse bg-gray-300 w-full h-full rounded-full" />
+          <div className="h-full w-full animate-pulse rounded-full bg-white/10" />
         ) : shouldShowImage ? (
           <img
             src={url}
@@ -71,8 +71,8 @@ const FighterAvatarComponent = ({
             onError={handleImageError}
           />
         ) : (
-          <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-            <span className={`font-bold text-gray-600 ${textSizeClasses[size]}`}>
+          <div className="flex h-full w-full items-center justify-center bg-black/60">
+            <span className={`ufc-condensed text-white/70 ${textSizeClasses[size]}`}>
               {getInitials(fighterName)}
             </span>
           </div>
@@ -90,7 +90,7 @@ const FighterAvatarComponent = ({
       </div>
 
       {showName && fighterName && (
-        <span className={`mt-1 text-center font-medium text-gray-900 ${textSizeClasses[size]}`}>
+        <span className={`mt-1 text-center font-medium text-white ${textSizeClasses[size]}`}>
           {fighterName}
         </span>
       )}

@@ -4,6 +4,7 @@ const { HybridUFCService } = require('../src/lib/ai/hybridUFCService.ts')
 const { PrismaClient } = require('@prisma/client')
 const fs = require('fs/promises')
 const path = require('path')
+let Sentry = null
 
 // TypeScript interfaces converted to JSDoc for JavaScript compatibility
 
@@ -12,6 +13,17 @@ class AutomatedScraper {
     this.prisma = new PrismaClient()
     this.ufcService = new HybridUFCService()
     this.logFile = path.join(__dirname, '../logs/scraper.log')
+    this.missingEventsFile = path.join(__dirname, '../logs/missing-events.json')
+    this.missingFightsFile = path.join(__dirname, '../logs/missing-fights.json')
+    this.cancellationThreshold = Number(process.env.SCRAPER_CANCEL_THRESHOLD || 3)
+    if (!Number.isFinite(this.cancellationThreshold) || this.cancellationThreshold < 1) {
+      this.cancellationThreshold = 3
+    }
+    this.fightCancellationThreshold = Number(process.env.SCRAPER_FIGHT_CANCEL_THRESHOLD || 2)
+    if (!Number.isFinite(this.fightCancellationThreshold) || this.fightCancellationThreshold < 1) {
+      this.fightCancellationThreshold = 2
+    }
+    this.monitoringSetup = false
   }
 
   async initialize() {
@@ -32,6 +44,8 @@ class AutomatedScraper {
 
     try {
       await this.log('Starting automated event update check...')
+      const missingEventsState = await this.loadMissingEvents()
+      const missingFightsState = await this.loadMissingFights()
 
       // Get current events from database
       const currentEvents = await this.prisma.event.findMany({
@@ -72,6 +86,8 @@ class AutomatedScraper {
         if (!existingEvent) {
           // New event detected - create without AI predictions
           await this.handleNewEvent(scrapedEvent, scrapedData.fighters)
+          delete missingFightsState[scrapedEvent.id]
+          delete missingEventsState[scrapedEvent.id]
 
           result.changesDetected.push({
             type: 'added',
@@ -84,7 +100,7 @@ class AutomatedScraper {
           // Check for modifications
           const changes = await this.detectEventChanges(existingEvent, scrapedEvent)
           if (Object.keys(changes).length > 0) {
-            await this.handleEventChanges(existingEvent, scrapedEvent, changes)
+            await this.handleEventChanges(existingEvent, scrapedEvent, changes, missingFightsState)
 
             result.changesDetected.push({
               type: 'modified',
@@ -97,6 +113,10 @@ class AutomatedScraper {
         }
 
         result.fightsProcessed += scrapedEvent.fightCard.length
+        if (existingEvent && missingEventsState[existingEvent.id]) {
+          delete missingEventsState[existingEvent.id]
+          await this.log(`✅ Event restored after temporary absence: ${existingEvent.name}`)
+        }
       }
 
       // Check for cancelled/removed events
@@ -106,18 +126,37 @@ class AutomatedScraper {
         )
 
         if (!stillExists && !currentEvent.completed) {
-          await this.handleCancelledEvent(currentEvent)
-          result.changesDetected.push({
-            type: 'cancelled',
-            eventId: currentEvent.id,
-            eventName: currentEvent.name,
-            changes: { status: { old: 'active', new: 'cancelled' } },
-            timestamp: new Date()
-          })
+          const currentState = missingEventsState[currentEvent.id] || { count: 0, lastSeen: currentEvent.updatedAt }
+          currentState.count += 1
+          currentState.lastSeen = currentState.lastSeen || currentEvent.updatedAt
+          missingEventsState[currentEvent.id] = currentState
+
+          if (currentState.count >= this.cancellationThreshold) {
+            await this.handleCancelledEvent(currentEvent)
+            result.changesDetected.push({
+              type: 'cancelled',
+              eventId: currentEvent.id,
+              eventName: currentEvent.name,
+              changes: { status: { old: 'active', new: 'cancelled' }, missingCount: currentState.count },
+              timestamp: new Date()
+            })
+            delete missingEventsState[currentEvent.id]
+          } else {
+            await this.log(`⚠️ Event missing from scrape (${currentState.count}/${this.cancellationThreshold}): ${currentEvent.name}`, 'warn')
+            await this.recordMonitoringWarning('Event missing from scrape', {
+              type: 'event_missing_warning',
+              eventId: currentEvent.id,
+              eventName: currentEvent.name,
+              missingCount: currentState.count,
+              threshold: this.cancellationThreshold
+            })
+          }
         }
       }
 
       await this.log(`Scraping completed: ${result.eventsProcessed} events, ${result.fightsProcessed} fights, ${result.changesDetected.length} changes`)
+      await this.saveMissingEvents(missingEventsState)
+      await this.saveMissingFights(missingFightsState)
 
     } catch (error) {
       const errorMsg = `Scraping failed: ${error.message}`
@@ -305,7 +344,7 @@ class AutomatedScraper {
     }
   }
 
-  async handleEventChanges(existing, scraped, changes) {
+  async handleEventChanges(existing, scraped, changes, missingFightsState) {
     await this.log(`Updating event: ${existing.name} - ${Object.keys(changes).join(', ')} changed`)
 
     try {
@@ -320,6 +359,58 @@ class AutomatedScraper {
           updatedAt: new Date()
         }
       })
+
+      // Maintain fights missing across runs
+      const eventFightState = missingFightsState[existing.id] || {}
+      const scrapedFightKeys = new Set()
+      for (const fight of scraped.fightCard || []) {
+        scrapedFightKeys.add(this.getFightKeyFromScraped(fight))
+      }
+
+      for (const existingFight of existing.fights) {
+        const fightKey = this.getFightKeyFromExisting(existingFight)
+        if (scrapedFightKeys.has(fightKey)) {
+          if (eventFightState[fightKey]) {
+            delete eventFightState[fightKey]
+          }
+          continue
+        }
+
+        const currentState = eventFightState[fightKey] || { count: 0, lastSeen: existingFight.updatedAt }
+        currentState.count += 1
+        currentState.lastSeen = new Date().toISOString()
+        eventFightState[fightKey] = currentState
+
+        const fightLabel = `${existingFight.fighter1.name} vs ${existingFight.fighter2.name}`
+
+        if (currentState.count < this.fightCancellationThreshold) {
+          await this.log(`⚠️ Fight missing from scrape (${currentState.count}/${this.fightCancellationThreshold}) in ${existing.name}: ${fightLabel}`, 'warn')
+          await this.recordMonitoringWarning('Fight missing from scrape', {
+            type: 'fight_missing_warning',
+            eventId: existing.id,
+            fightId: existingFight.id,
+            fight: fightLabel,
+            missingCount: currentState.count,
+            threshold: this.fightCancellationThreshold
+          })
+          scraped.fightCard.push(this.mapExistingFightToScraped(existingFight))
+        } else {
+          await this.log(`Fight auto-removed after repeated misses in ${existing.name}: ${fightLabel}`, 'error')
+          await this.forwardToMonitoring('error', 'Fight auto-removed after repeated misses', {
+            eventId: existing.id,
+            fightId: existingFight.id,
+            fight: fightLabel,
+            threshold: this.fightCancellationThreshold
+          })
+          delete eventFightState[fightKey]
+        }
+      }
+
+      if (Object.keys(eventFightState).length > 0) {
+        missingFightsState[existing.id] = eventFightState
+      } else {
+        delete missingFightsState[existing.id]
+      }
 
       // Handle fight card changes if needed
       if (changes.fightCard) {
@@ -363,7 +454,12 @@ class AutomatedScraper {
   }
 
   async handleCancelledEvent(event) {
-    await this.log(`Event cancelled: ${event.name}`)
+    await this.log(`Event cancelled after ${this.cancellationThreshold} consecutive misses: ${event.name}`)
+    await this.forwardToMonitoring('error', 'Event auto-cancelled after repeated misses', {
+      eventId: event.id,
+      eventName: event.name,
+      threshold: this.cancellationThreshold
+    })
 
     // Mark event as completed (cancelled)
     await this.prisma.event.update({
@@ -413,6 +509,126 @@ class AutomatedScraper {
       await fs.appendFile(this.logFile, logEntry)
     } catch (error) {
       console.error('Failed to write to log file:', error)
+    }
+  }
+
+  async recordMonitoringWarning(message, payload) {
+    try {
+      const warning = {
+        type: payload.type || 'scraper_warning',
+        timestamp: new Date().toISOString(),
+        payload
+      }
+      await fs.appendFile(this.logFile, `${JSON.stringify(warning)}\n`)
+      await this.forwardToMonitoring('warning', message, warning)
+    } catch (error) {
+      console.error('Failed to record monitoring warning:', error)
+    }
+  }
+
+  async forwardToMonitoring(level, message, context) {
+    if (!process.env.SENTRY_DSN) {
+      return
+    }
+
+    try {
+      if (!this.monitoringSetup) {
+        if (!Sentry) {
+          Sentry = require('@sentry/node')
+        }
+        Sentry.init({
+          dsn: process.env.SENTRY_DSN,
+          environment: process.env.NODE_ENV || 'development',
+          release: process.env.SENTRY_RELEASE
+        })
+        this.monitoringSetup = true
+      }
+
+      if (!this.monitoringSetup) {
+        return
+      }
+
+      Sentry.withScope(scope => {
+        scope.setLevel(level)
+        scope.setContext('scraper', context)
+        Sentry.captureMessage(message)
+      })
+    } catch (error) {
+      console.error('Failed to forward monitoring event:', error)
+    }
+  }
+
+  getFightKeyFromScraped(fight) {
+    return this.normalizeFightKey(fight.fighter1Name, fight.fighter2Name)
+  }
+
+  getFightKeyFromExisting(fight) {
+    return this.normalizeFightKey(fight.fighter1.name, fight.fighter2.name)
+  }
+
+  normalizeFightKey(nameA, nameB) {
+    const normalize = (value) => value.toLowerCase().replace(/[^a-z0-9]/g, '')
+    return `${normalize(nameA || '')}-${normalize(nameB || '')}`
+  }
+
+  mapExistingFightToScraped(fight) {
+    return {
+      id: fight.id,
+      fighter1Id: fight.fighter1Id,
+      fighter2Id: fight.fighter2Id,
+      fighter1Name: fight.fighter1.name,
+      fighter2Name: fight.fighter2.name,
+      weightClass: fight.weightClass,
+      cardPosition: fight.cardPosition,
+      scheduledRounds: fight.scheduledRounds,
+      status: fight.completed ? 'completed' : 'scheduled',
+      titleFight: fight.titleFight,
+      mainEvent: fight.mainEvent,
+      fightNumber: fight.fightNumber,
+      funFactor: fight.funFactor,
+      finishProbability: fight.finishProbability,
+      entertainmentReason: fight.entertainmentReason,
+      keyFactors: fight.keyFactors ? JSON.parse(fight.keyFactors) : [],
+      fightPrediction: fight.fightPrediction,
+      riskLevel: fight.riskLevel,
+      funFactors: fight.funFactors ? JSON.parse(fight.funFactors) : [],
+      aiDescription: fight.aiDescription
+    }
+  }
+
+  async loadMissingEvents() {
+    try {
+      const data = await fs.readFile(this.missingEventsFile, 'utf8')
+      return JSON.parse(data)
+    } catch (error) {
+      return {}
+    }
+  }
+
+  async saveMissingEvents(state) {
+    try {
+      await fs.mkdir(path.dirname(this.missingEventsFile), { recursive: true })
+      await fs.writeFile(this.missingEventsFile, JSON.stringify(state, null, 2))
+    } catch (error) {
+      await this.log(`Failed to persist missing event state: ${error.message}`, 'warn')
+    }
+  }
+
+  async loadMissingFights() {
+    try {
+      const data = await fs.readFile(this.missingFightsFile, 'utf8')
+      return JSON.parse(data)
+    } catch (error) {
+      return {}
+    }
+  }
+
+  async saveMissingFights(state) {
+    try {
+      await fs.mkdir(path.dirname(this.missingFightsFile), { recursive: true })
+      await fs.writeFile(this.missingFightsFile, JSON.stringify(state, null, 2))
+    } catch (error) {
+      await this.log(`Failed to persist missing fight state: ${error.message}`, 'warn')
     }
   }
 

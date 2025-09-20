@@ -69,6 +69,14 @@ An AI-powered UFC fight entertainment analyzer that helps fans discover the most
    cp .env.example .env
    # Add your OpenAI API key to .env
    OPENAI_API_KEY=your_api_key_here
+   # Optional but recommended for monitoring:
+   # Server-side Sentry DSN for scraper/API alerts
+   SENTRY_DSN=your_sentry_dsn
+   # Client-side DSN to capture browser errors
+   NEXT_PUBLIC_SENTRY_DSN=your_public_sentry_dsn
+   # Adjust sample rates for tracing or session replay if desired
+   SENTRY_TRACES_SAMPLE_RATE=0.1
+   NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0.1
    ```
 
 4. **Start the development server**
@@ -115,6 +123,7 @@ An AI-powered UFC fight entertainment analyzer that helps fans discover the most
 - **Static Site Generation**: Build process exports data to JSON for GitHub Pages
 - **UFC Design System**: Consistent colors (#d20a0a, #191919) and Arial typography
 - **Component Architecture**: Modular React components with TypeScript
+- **Monitoring**: Sentry instrumentation via `sentry.*.config.ts` and route-level capture; scraper keeps `logs/missing-events.json` / `logs/missing-fights.json` counters before cancelling cards
 
 ### 🚧 Future Enhancements
 - Admin dashboard for data management
