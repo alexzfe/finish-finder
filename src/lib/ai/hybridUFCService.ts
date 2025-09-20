@@ -677,102 +677,136 @@ export class HybridUFCService {
       console.log(`🎯 Generating entertainment predictions for ${eventName}`)
 
       const predictionModel = process.env.OPENAI_PREDICTION_MODEL || 'gpt-4o-mini'
-      const fightList = fights
-        .map(f => `${f.id}: ${f.fighter1Name} vs ${f.fighter2Name} (${f.weightClass}) - ${f.cardPosition}`)
-        .join('\n')
+      const chunkSizeRaw = Number(process.env.OPENAI_PREDICTION_CHUNK_SIZE ?? 6)
+      const chunkSize = Number.isFinite(chunkSizeRaw) && chunkSizeRaw > 0 ? Math.max(1, Math.floor(chunkSizeRaw)) : 6
+      const fightChunks = this.chunkArray(fights, chunkSize)
+      const aggregatedPredictions = new Map<string, PredictionResult>()
 
-      const prompt = `You are a senior MMA analyst whose specialty is identifying bouts that will thrill fans. Prioritize finish probability above all else when assigning the funFactor: a high likelihood of a KO/TKO or submission should heavily influence the score, while other excitement boosters (pace, chaos, rivalries, stakes) can nudge it up or down but never override finish potential. Analyze the following upcoming UFC fights and respond with strict JSON only.\n\nGuidelines:\n- Keep analysis fight-specific; you may mention event context (e.g., title or main event) only as supporting detail.\n- Return the fights in the exact order they are provided.\n- riskLevel reflects how unpredictable the outcome is, not your confidence in the prediction.\n- If critical fighter data is missing, output "insufficient data" in entertainmentReason and set funFactor and finishProbability to 0; otherwise provide your best informed assessment and never leave fields blank.\n\nEVENT: ${eventName}\n\nFor each fight, provide:\n- fightId\n- funFactor (1-10 entertainment scale driven primarily by finish probability)\n- finishProbability (0-100)\n- entertainmentReason (3-4 sentences detailing why this fight will or will not deliver action, citing specific stylistic dynamics, recent performances, and volatility)\n- keyFactors (3-5 short phrases such as "knockout power" or "scramble heavy")\n- prediction (succinct outcome pick)\n- riskLevel (high|medium|low)\n\nFIGHTS TO ANALYZE:\n${fightList}`
+      for (const [index, chunk] of fightChunks.entries()) {
+        const chunkFightList = chunk
+          .map(f => `${f.id}: ${f.fighter1Name} vs ${f.fighter2Name} (${f.weightClass}) - ${f.cardPosition}`)
+          .join('\n')
 
-      const completion = await this.openai.chat.completions.create({
-        model: predictionModel,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a professional MMA analyst who provides insightful predictions about fight excitement and finish probability based on real fighter data.'
-          },
-          {
-            role: 'user',
-            content: prompt
+        const prompt = `You are a senior MMA analyst whose specialty is identifying bouts that will thrill fans. Prioritize finish probability above all else when assigning the funFactor: a high likelihood of a KO/TKO or submission should heavily influence the score, while other excitement boosters (pace, chaos, rivalries, stakes) can nudge it up or down but never override finish potential. Analyze the following upcoming UFC fights and respond with strict JSON only.\n\nGuidelines:\n- Keep analysis fight-specific; you may mention event context (e.g., title or main event) only as supporting detail.\n- Return the fights in the exact order they are provided.\n- riskLevel reflects how unpredictable the outcome is, not your confidence in the prediction.\n- If critical fighter data is missing, output "insufficient data" in entertainmentReason and set funFactor and finishProbability to 0; otherwise provide your best informed assessment and never leave fields blank.\n\nEVENT: ${eventName}\n\nFor each fight, provide:\n- fightId\n- funFactor (1-10 entertainment scale driven primarily by finish probability)\n- finishProbability (0-100)\n- entertainmentReason (3-4 sentences detailing why this fight will or will not deliver action, citing specific stylistic dynamics, recent performances, and volatility)\n- keyFactors (3-5 short phrases such as "knockout power" or "scramble heavy")\n- prediction (succinct outcome pick)\n- riskLevel (high|medium|low)\n\nFIGHTS TO ANALYZE:\n${chunkFightList}`
+
+        console.log(`🤖 Requesting predictions batch ${index + 1}/${fightChunks.length} (${chunk.length} fights) for ${eventName}`)
+
+        const completion = await this.openai.chat.completions.create({
+          model: predictionModel,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a professional MMA analyst who provides insightful predictions about fight excitement and finish probability based on real fighter data.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.4,
+          max_tokens: 2000
+        })
+
+        const response = completion.choices[0]?.message?.content
+        if (!response) {
+          throw new Error('No prediction response from OpenAI')
+        }
+
+        const predictions = this.parsePredictionResponse(response, `batch ${index + 1}/${fightChunks.length}`)
+        if (!predictions.length) {
+          console.warn(`⚠️ No predictions returned for batch ${index + 1}/${fightChunks.length}`)
+        }
+
+        for (const prediction of predictions) {
+          if (prediction?.fightId) {
+            aggregatedPredictions.set(prediction.fightId, prediction)
           }
-        ],
-        temperature: 0.4,
-        max_tokens: 2000
-      })
-
-      const response = completion.choices[0]?.message?.content
-      if (!response) {
-        throw new Error('No prediction response from OpenAI')
-      }
-
-      // Clean and parse the JSON response
-      let cleanPredResponse = response.replace(/```json\n?/g, '').replace(/\n?```/g, '').trim()
-
-      // Additional cleaning for malformed JSON
-      cleanPredResponse = cleanPredResponse.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']')
-
-      let predictions: PredictionResult[]
-      try {
-        const parsed = JSON.parse(cleanPredResponse)
-        predictions = Array.isArray(parsed) ? parsed : []
-      } catch (parseError) {
-        console.error('❌ Predictions JSON parsing failed:', parseError)
-        console.error('Raw predictions response:', response.substring(0, 500))
-        console.error('Cleaned predictions response:', cleanPredResponse.substring(0, 500))
-
-        // Try to recover partial JSON by finding valid objects
-        try {
-          // First try to match complete objects with potential nesting
-          let bracketMatches = cleanPredResponse.match(/\{(?:[^{}]|\{[^{}]*\})*\}/g)
-
-          if (!bracketMatches) {
-            // Fallback to simpler pattern
-            bracketMatches = cleanPredResponse.match(/\{[^{}]*\}/g)
-          }
-
-          if (bracketMatches) {
-            predictions = bracketMatches.map(match => {
-              try {
-                // Clean up potential incomplete strings in the match
-                let cleanMatch = match.replace(/"[^"]*$/, '""') // Fix unterminated strings
-                cleanMatch = cleanMatch.replace(/,\s*}/, '}') // Remove trailing commas
-                return JSON.parse(cleanMatch)
-              } catch {
-                return null
-              }
-            }).filter(Boolean)
-            console.log(`🔧 Recovered ${predictions.length} predictions from partial JSON`)
-          } else {
-            console.log('❌ Could not recover any predictions, using default values')
-            predictions = []
-          }
-        } catch {
-          console.log('❌ JSON recovery failed, using default values')
-          predictions = []
         }
       }
 
-      // Merge predictions back into fights with new structured data
       return fights.map(fight => {
-        const prediction = predictions.find(p => p.fightId === fight.id)
+        const prediction = aggregatedPredictions.get(fight.id)
         if (prediction) {
           return {
             ...fight,
             finishProbability: prediction.finishProbability,
+            funFactor: prediction.funFactor,
             entertainmentReason: prediction.entertainmentReason,
-            keyFactors: prediction.keyFactors,
+            keyFactors: prediction.keyFactors || [],
             fightPrediction: prediction.prediction,
-            riskLevel: prediction.riskLevel,
-            funFactor: prediction.funFactor
+            riskLevel: prediction.riskLevel ?? null
           }
         }
 
-        return fight
+        console.warn(`⚠️ Missing prediction for fight: ${fight.fighter1Name} vs ${fight.fighter2Name}`)
+        return {
+          ...fight,
+          funFactor: fight.funFactor ?? 0,
+          finishProbability: fight.finishProbability ?? 0,
+          entertainmentReason: fight.entertainmentReason || 'AI prediction unavailable. Data generated from scraper only.',
+          keyFactors: fight.keyFactors || [],
+          riskLevel: fight.riskLevel ?? null
+        }
       })
 
     } catch (error) {
       console.error('❌ Error generating fight predictions:', error)
       return fights
     }
+  }
+
+  private parsePredictionResponse(response: string, context: string): PredictionResult[] {
+    let cleanPredResponse = response.replace(/```json\n?/g, '').replace(/\n?```/g, '').trim()
+    cleanPredResponse = cleanPredResponse.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']')
+
+    let predictions: PredictionResult[] = []
+    try {
+      const parsed = JSON.parse(cleanPredResponse)
+      predictions = Array.isArray(parsed) ? parsed : []
+    } catch (parseError) {
+      console.error(`❌ Predictions JSON parsing failed (${context}):`, parseError)
+      console.error('Raw predictions response:', response.substring(0, 500))
+      console.error('Cleaned predictions response:', cleanPredResponse.substring(0, 500))
+
+      try {
+        let bracketMatches = cleanPredResponse.match(/\{(?:[^{}]|\{[^{}]*\})*\}/g)
+
+        if (!bracketMatches) {
+          bracketMatches = cleanPredResponse.match(/\{[^{}]*\}/g)
+        }
+
+        if (bracketMatches) {
+          predictions = bracketMatches.map(match => {
+            try {
+              let cleanMatch = match.replace(/"[^"]*$/, '""')
+              cleanMatch = cleanMatch.replace(/,\s*}/, '}')
+              return JSON.parse(cleanMatch)
+            } catch {
+              return null
+            }
+          }).filter(Boolean) as PredictionResult[]
+          console.log(`🔧 Recovered ${predictions.length} predictions from partial JSON (${context})`)
+        } else {
+          console.log(`❌ Could not recover any predictions (${context}), using default values`)
+        }
+      } catch {
+        console.log(`❌ JSON recovery failed (${context}), using default values`)
+      }
+    }
+
+    return predictions
+  }
+
+  private chunkArray<T>(items: T[], size: number): T[][] {
+    if (size <= 0) {
+      return [items]
+    }
+
+    const chunks: T[][] = []
+    for (let i = 0; i < items.length; i += size) {
+      chunks.push(items.slice(i, i + size))
+    }
+    return chunks
   }
 
   private parseEventDate(dateString: string): Date | null {
