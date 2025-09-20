@@ -16,6 +16,7 @@ An AI-powered UFC fight entertainment analyzer that helps fans discover the most
 - **Sticky Fight Details**: Interactive sidebar that follows your scroll with fight breakdowns
 - **Finish Probability**: AI-calculated odds of knockouts and submissions
 - **Key Factors Analysis**: Breakdown of what makes each fight exciting
+- **Redundant Fighter Imagery**: Tapology → UFC.com → Sherdog fallbacks keep avatars live even when a source rate-limits
 
 ### 📊 AI Analysis Factors
 - **Striking Power & Aggression**: Knockout artists, heavy hitters, volume strikers
@@ -121,15 +122,22 @@ An AI-powered UFC fight entertainment analyzer that helps fans discover the most
 ### 🔧 Technical Implementation
 - **Sherdog Scraper**: `HybridUFCService` class handles data collection and AI analysis
 - **Static Site Generation**: Build process exports data to JSON for GitHub Pages
-- **UFC Design System**: Consistent colors (#d20a0a, #191919) and Arial typography
-- **Component Architecture**: Modular React components with TypeScript
-- **Monitoring**: Sentry instrumentation via `sentry.*.config.ts` and route-level capture; scraper keeps `logs/missing-events.json` / `logs/missing-fights.json` counters before cancelling cards
+- **UFC Design System**: Condensed headline fonts, Tailwind-inspired utility classes, and responsive layouts tuned to UFC.com styling
+- **Component Architecture**: Modular React components with TypeScript and memoized fight lists for performance
+- **Resilient Data Pipeline**: Scraper only cancels events/fights after repeated misses, tracked in `logs/missing-events.json` and `logs/missing-fights.json`
+- **Monitoring**: Sentry instrumentation across client, server, edge and scraper via `sentry.*.config.ts` and API route hooks
 
 ### 🚧 Future Enhancements
 - Admin dashboard for data management
 - Historical fight outcome analysis
 - Enhanced fighter statistics integration
 - User preferences and fight alerts
+- Alert surface for upcoming fight cancellations/reschedules
+
+## ⏱ Monitoring & Reliability
+- **Sentry**: Frontend (`NEXT_PUBLIC_SENTRY_DSN`) and backend (`SENTRY_DSN`) events stream into dedicated Sentry projects for fast triage.
+- **Structured Logs**: Scraper writes JSON warning lines whenever a fight or event disappears; cancellation only happens after configurable thresholds.
+- **Strike Ledgers**: `logs/missing-events.json` and `logs/missing-fights.json` preserve state between runs so temporary site glitches do not blank the card.
 
 ## 🌐 Deployment
 
