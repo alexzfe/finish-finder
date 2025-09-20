@@ -4,6 +4,7 @@ WORKDIR /app
 
 # Install production and dev dependencies (ts-node is needed at runtime)
 COPY package.json package-lock.json* ./
+COPY prisma ./prisma
 RUN npm install --include=dev
 
 # Copy remaining project files
