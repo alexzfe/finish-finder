@@ -54,8 +54,14 @@ class AutomatedScraper {
       })
 
       // Scrape latest data from sources (now separated from AI predictions)
-      const scrapedData = await this.ufcService.getUpcomingUFCEvents(10)
+      const scrapedData = await this.ufcService.getUpcomingUFCEvents(15)
       result.eventsProcessed = scrapedData.events.length
+
+      // Debug: Log all scraped events
+      await this.log(`📋 Scraped ${scrapedData.events.length} events:`)
+      for (const event of scrapedData.events) {
+        await this.log(`   • ${event.name} (${event.date})`)
+      }
 
       // Compare and detect changes
       for (const scrapedEvent of scrapedData.events) {
@@ -66,9 +72,6 @@ class AutomatedScraper {
         if (!existingEvent) {
           // New event detected - create without AI predictions
           await this.handleNewEvent(scrapedEvent, scrapedData.fighters)
-
-          // THEN generate AI predictions for new event
-          await this.generateEventPredictions(scrapedEvent.id, scrapedEvent.name)
 
           result.changesDetected.push({
             type: 'added',
@@ -82,11 +85,6 @@ class AutomatedScraper {
           const changes = await this.detectEventChanges(existingEvent, scrapedEvent)
           if (Object.keys(changes).length > 0) {
             await this.handleEventChanges(existingEvent, scrapedEvent, changes)
-
-            // ONLY regenerate AI predictions if fight card changed
-            if (changes.fightCard) {
-              await this.generateEventPredictions(existingEvent.id, existingEvent.name)
-            }
 
             result.changesDetected.push({
               type: 'modified',
