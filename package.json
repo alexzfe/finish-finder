@@ -8,7 +8,17 @@
     "start": "npx serve out",
     "lint": "eslint",
     "predict:event": "node scripts/generate-event-predictions.js",
-    "pages:build": "node scripts/prepare-github-pages.js"
+    "predict:list": "node scripts/generate-predictions-only.js list",
+    "predict:all": "node scripts/generate-predictions-only.js all",
+    "predict:single": "node scripts/generate-predictions-only.js event",
+    "pages:build": "node scripts/prepare-github-pages.js",
+    "scraper:check": "node scripts/automated-scraper.js check",
+    "scraper:status": "node scripts/automated-scraper.js status",
+    "scraper:schedule": "node scripts/automated-scraper.js schedule",
+    "db:migrate": "npx prisma migrate dev",
+    "db:push": "npx prisma db push",
+    "db:reset": "npx prisma migrate reset",
+    "db:test": "node scripts/test-scraper-simple.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.8",

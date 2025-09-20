@@ -3,8 +3,11 @@ import type { NextConfig } from "next";
 const repoBase = process.env.NEXT_PUBLIC_BASE_PATH?.replace(/^\/+|\/+$/g, "") ?? "";
 
 const nextConfig: NextConfig = {
-  output: "export",
-  distDir: "out",
+  // Only enable static export for production builds, not development
+  ...(process.env.NODE_ENV === 'production' ? {
+    output: "export",
+    distDir: "out",
+  } : {}),
   images: {
     unoptimized: true,
   },
@@ -12,7 +15,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  ...(repoBase
+  ...(repoBase && process.env.NODE_ENV === 'production'
     ? {
         basePath: `/${repoBase}`,
         assetPrefix: `/${repoBase}/`,

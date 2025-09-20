@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo, useCallback } from 'react'
 import { UFCEvent, Fight } from '@/types'
+import { FighterAvatar } from '@/components/fighter/FighterAvatar'
 
 interface FightListProps {
   event: UFCEvent
@@ -22,7 +23,7 @@ type Section = {
   fights: Fight[]
 }
 
-export function FightList({ event, onFightClick }: FightListProps) {
+const FightListComponent = ({ event, onFightClick }: FightListProps) => {
   const [loading, setLoading] = useState(true)
   const [sections, setSections] = useState<NormalizedSections>({
     mainCard: [],
@@ -123,12 +124,12 @@ export function FightList({ event, onFightClick }: FightListProps) {
     return `${record.wins}-${record.losses}-${record.draws}`
   }
 
-  const handleFightSelection = (fight: Fight) => {
+  const handleFightSelection = useCallback((fight: Fight) => {
     setSelectedFight(fight)
     onFightClick?.(fight)
-  }
+  }, [onFightClick])
 
-  const renderFightRow = (fight: Fight) => {
+  const renderFightRow = useCallback((fight: Fight) => {
     const isActive = selectedFight?.id === fight.id
     const funScore = fight.predictedFunScore || 0
 
@@ -180,9 +181,10 @@ export function FightList({ event, onFightClick }: FightListProps) {
           <div className="flex items-center justify-between">
             {/* Fighter 1 */}
             <div className="flex items-center space-x-3 flex-1">
-              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                <span className="text-lg">🥊</span>
-              </div>
+              <FighterAvatar
+                fighterName={fight.fighter1?.name}
+                size="md"
+              />
               <div className="min-w-0 flex-1">
                 <div
                   className="font-bold uppercase tracking-wide text-gray-900 truncate"
@@ -219,9 +221,10 @@ export function FightList({ event, onFightClick }: FightListProps) {
                   {formatRecord(fight.fighter2?.record)}
                 </div>
               </div>
-              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                <span className="text-lg">🥊</span>
-              </div>
+              <FighterAvatar
+                fighterName={fight.fighter2?.name}
+                size="md"
+              />
             </div>
           </div>
 
@@ -238,7 +241,7 @@ export function FightList({ event, onFightClick }: FightListProps) {
         </div>
       </div>
     )
-  }
+  }, [selectedFight?.id, handleFightSelection])
 
   if (loading) {
     return (
@@ -288,3 +291,5 @@ export function FightList({ event, onFightClick }: FightListProps) {
     </div>
   )
 }
+
+export const FightList = memo(FightListComponent)

@@ -1,0 +1,14 @@
+[2025-09-20T14:38:35.101Z] INFO: AutomatedScraper initialized
+[2025-09-20T14:38:35.104Z] INFO: Starting automated event update check...
+[2025-09-20T14:41:43.527Z] INFO: AutomatedScraper initialized
+[2025-09-20T14:41:43.528Z] INFO: Starting automated event update check...
+[2025-09-20T14:42:29.571Z] INFO: Event cancelled: UFC 320 - Ankalaev vs. Pereira 2
+[2025-09-20T14:42:29.608Z] INFO: Event cancelled: UFC Fight Night 261 - Oliveira vs. Fiziev
+[2025-09-20T14:42:29.614Z] INFO: Event cancelled: UFC Fight Night 262 - De Ridder vs. Allen
+[2025-09-20T14:42:29.621Z] INFO: Event cancelled: UFC 321 - Aspinall vs. Gane
+[2025-09-20T14:42:29.626Z] INFO: Scraping completed: 1 events, 14 fights, 4 changes
+[2025-09-20T14:42:29.627Z] INFO: AutomatedScraper cleanup completed
+[2025-09-20T14:50:50.909Z] INFO: AutomatedScraper initialized
+[2025-09-20T14:50:50.910Z] INFO: Starting automated event update check...
+[2025-09-20T14:51:02.371Z] INFO: Adding new event: UFC Fight Night - Garcia vs. Onama
+[2025-09-20T14:51:03.551Z] INFO: 🤖 Generating AI predictions for event: UFC Fight Night - Garcia vs. Onama

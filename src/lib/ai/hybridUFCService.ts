@@ -115,10 +115,10 @@ export class HybridUFCService {
   }
 
 
-  // Main method to get upcoming UFC events with real data
+  // Main method to get upcoming UFC events with real data (NO AI PREDICTIONS)
   async getUpcomingUFCEvents(limit: number = 5): Promise<{ events: UFCEvent[], fighters: Fighter[] }> {
     try {
-      console.log('🌐 Starting hybrid UFC data collection (real events + AI analysis)...')
+      console.log('🌐 Starting UFC data collection (events only, no AI predictions)...')
 
       // Step 1: Search for real current events
       const realEvents = await this.searchRealUFCEvents(limit)
@@ -144,13 +144,10 @@ export class HybridUFCService {
           continue
         }
 
-        if (eventWithFights.event.fightCard.length > 0) {
-          const enrichedFights = await this.generateFightPredictions(eventWithFights.event.fightCard, eventWithFights.event.name)
-          eventWithFights.event.fightCard = enrichedFights
-          eventWithFights.event.mainCard = enrichedFights.filter(f => f.cardPosition === 'main')
-          eventWithFights.event.prelimCard = enrichedFights.filter(f => f.cardPosition === 'preliminary')
-          eventWithFights.event.earlyPrelimCard = enrichedFights.filter(f => f.cardPosition === 'early-preliminary')
-        }
+        // NO AI PREDICTIONS HERE - just basic fight structure
+        eventWithFights.event.mainCard = eventWithFights.event.fightCard.filter(f => f.cardPosition === 'main')
+        eventWithFights.event.prelimCard = eventWithFights.event.fightCard.filter(f => f.cardPosition === 'preliminary')
+        eventWithFights.event.earlyPrelimCard = eventWithFights.event.fightCard.filter(f => f.cardPosition === 'early-preliminary')
 
         events.push(eventWithFights.event)
 
@@ -167,8 +164,19 @@ export class HybridUFCService {
       }
 
     } catch (error) {
-      console.error('❌ Error in hybrid UFC collection:', error)
+      console.error('❌ Error in UFC data collection:', error)
       return { events: [], fighters: [] }
+    }
+  }
+
+  // NEW: Separate method for AI prediction generation
+  async generateEventPredictions(eventId: string, eventName: string, fights: Fight[]): Promise<Fight[]> {
+    try {
+      console.log(`🎯 Generating AI predictions for: ${eventName}`)
+      return await this.generateFightPredictions(fights, eventName)
+    } catch (error) {
+      console.error(`❌ Failed to generate predictions for ${eventName}:`, error)
+      return fights // Return original fights without predictions
     }
   }
 
