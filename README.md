@@ -77,9 +77,6 @@ An AI-powered web application that analyzes upcoming UFC fights to predict which
 
 ## 🔧 API Endpoints
 
-### GET /api/predict
-Test the prediction system with mock fighter data
-
 ### GET /api/events
 Retrieve upcoming UFC events (when data scraping is enabled)
 
@@ -99,6 +96,13 @@ Retrieve upcoming UFC events (when data scraping is enabled)
 - Historical fight outcome training
 - User accounts and preferences
 - Mobile optimization
+
+## 🌐 GitHub Pages Deployment
+
+1. Set the `NEXT_PUBLIC_BASE_PATH` environment variable to your repository name (for example `finish-finder`) before running `npm run build` so asset links resolve correctly on `https://<user>.github.io/<repo>/`.
+2. Run `npm run build` to export the static site into the `out/` directory.
+3. Deploy the contents of `out/` to GitHub Pages (either by pushing the folder to the configured branch or using the provided GitHub Actions workflow).
+4. Update `public/data/events.json` with any static event data you want visible on the hosted site—the app automatically falls back to this file when API routes are unavailable.
 
 ## 📄 License
 

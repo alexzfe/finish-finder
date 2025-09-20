@@ -12,38 +12,64 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch collected events from the database only
+  // Fetch collected events from the database when available, otherwise fallback to static JSON
   useEffect(() => {
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH
+      ? `/${process.env.NEXT_PUBLIC_BASE_PATH.replace(/^\/+/, '')}`
+      : ''
+    const staticEventsUrl = `${basePath}/data/events.json`
+
     const fetchEvents = async () => {
+      setLoading(true)
+
+      const normalizeEvents = (rawEvents: any[]): UFCEvent[] =>
+        rawEvents
+          .map((event: any) => ({
+            ...event,
+            date: new Date(event.date)
+          }))
+          .sort((a: UFCEvent, b: UFCEvent) => a.date.getTime() - b.date.getTime())
+
       try {
-        setLoading(true)
+        // Try API first so local development keeps dynamic data
+        const apiResponse = await fetch('/api/db-events')
+        if (apiResponse.ok) {
+          const apiData = await apiResponse.json()
+          if (apiData?.success && Array.isArray(apiData.data?.events) && apiData.data.events.length > 0) {
+            const sortedEvents = normalizeEvents(apiData.data.events)
+            setEvents(sortedEvents)
 
-        // Only use database events - no fallbacks to placeholder data
-        const response = await fetch('/api/db-events')
-        const data = await response.json()
+            const now = new Date()
+            const nearestEventIndex = sortedEvents.findIndex((event: UFCEvent) => event.date >= now)
+            setCurrentEventIndex(nearestEventIndex >= 0 ? nearestEventIndex : 0)
+            setError(null)
+            setLoading(false)
+            return
+          }
+        }
+      } catch (error) {
+        console.warn('API event fetch failed, falling back to static data.', error)
+      }
 
-        if (data.success && data.data.events.length > 0) {
-          // Sort events by date (nearest first)
-          const sortedEvents = data.data.events
-            .map((event: any) => ({
-              ...event,
-              date: new Date(event.date)
-            }))
-            .sort((a: UFCEvent, b: UFCEvent) => a.date.getTime() - b.date.getTime())
-
+      try {
+        const staticResponse = await fetch(staticEventsUrl)
+        if (!staticResponse.ok) {
+          throw new Error(`Static events fetch failed with status ${staticResponse.status}`)
+        }
+        const staticData = await staticResponse.json()
+        if (Array.isArray(staticData?.events) && staticData.events.length > 0) {
+          const sortedEvents = normalizeEvents(staticData.events)
           setEvents(sortedEvents)
 
-          // Find the nearest upcoming event
           const now = new Date()
           const nearestEventIndex = sortedEvents.findIndex((event: UFCEvent) => event.date >= now)
           setCurrentEventIndex(nearestEventIndex >= 0 ? nearestEventIndex : 0)
-
           setError(null)
-        } else {
-          setError('No events available. Please collect real UFC events from the admin panel.')
+          return
         }
-      } catch (err) {
-        console.error('Error fetching events:', err)
+        setError('No events available in static data. Please update data/events.json.')
+      } catch (fallbackError) {
+        console.error('Error fetching static events:', fallbackError)
         setError('Failed to load events. Please try again.')
       } finally {
         setLoading(false)
