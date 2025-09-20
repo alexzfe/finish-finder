@@ -193,3 +193,4 @@ This project is licensed under the MIT License.
 ---
 
 **⚠️ Disclaimer**: This application is for entertainment purposes only. Fight predictions are based on AI analysis and should not be used as the sole basis for betting decisions. UFC and fight data is sourced from publicly available information.
+
