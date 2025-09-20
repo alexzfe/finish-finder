@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import OpenAI from 'openai'
+import { buildPredictionPrompt } from '@/lib/ai/predictionPrompt'
 
 const prisma = new PrismaClient()
 
@@ -82,20 +83,6 @@ const extractPredictions = (raw: string): PredictionRecord[] => {
   throw new Error('OpenAI response did not contain a predictions array')
 }
 
-const buildPrompt = (eventName: string, fights: Array<{
-  id: string
-  fighter1Name: string
-  fighter2Name: string
-  weightClass: string
-  cardPosition: string
-}>): string => {
-  const fightList = fights
-    .map(f => `${f.id}: ${f.fighter1Name} vs ${f.fighter2Name} (${f.weightClass}) - ${f.cardPosition}`)
-    .join('\n')
-
-  return `You are a senior MMA analyst whose specialty is identifying bouts that will thrill fans. Focus on finish probability first, then chaos factors like violent scrambles, slugfests, and volatile momentum swings. Analyze the following upcoming UFC fights and respond with strict JSON.\n\nEVENT: ${eventName}\n\nFor each fight, provide:\n- fightId\n- funFactor (1-10 scale for entertainment)\n- finishProbability (0-100)\n- entertainmentReason (3-4 sentences summarizing why the fight will or won't deliver action)\n- keyFactors (3-5 short phrases like "knockout power" or "scramble heavy")\n- prediction (succinct outcome pick)\n- riskLevel (high|medium|low)\n\nFIGHTS TO ANALYZE:\n${fightList}`
-}
-
 const runPredictionsForEvent = async (
   openai: OpenAI,
   event: Awaited<ReturnType<typeof prisma.event.findUnique>>,
@@ -125,7 +112,7 @@ const runPredictionsForEvent = async (
   let totalCompletionTokens = 0
 
   for (const batch of batches) {
-    const prompt = buildPrompt(event.name, batch)
+    const prompt = buildPredictionPrompt(event.name, batch)
     totalPromptTokens += Math.round(prompt.length / 4)
 
     const completion = await openai.chat.completions.create({

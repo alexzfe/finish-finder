@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /* eslint-disable @typescript-eslint/no-require-imports */
+require('ts-node/register')
 
 /**
  * Generate fresh OpenAI entertainment predictions for a UFC event and
@@ -11,11 +12,13 @@
 
 const { PrismaClient } = require('@prisma/client')
 const { OpenAI } = require('openai')
+const { buildPredictionPrompt } = require('../src/lib/ai/predictionPrompt.ts')
 
 const prisma = new PrismaClient()
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
-const DEFAULT_CHUNK_SIZE = 8
+const parsedChunkEnv = Number.parseInt(process.env.OPENAI_PREDICTION_CHUNK_SIZE || '6', 10)
+const DEFAULT_CHUNK_SIZE = Number.isFinite(parsedChunkEnv) && parsedChunkEnv > 0 ? parsedChunkEnv : 6
 
 function parseArgs(argv) {
   const options = {
@@ -73,11 +76,7 @@ function chunk(array, size) {
 }
 
 function buildPrompt(eventName, fights) {
-  const fightList = fights
-    .map(f => `${f.id}: ${f.fighter1Name} vs ${f.fighter2Name} (${f.weightClass}) - ${f.cardPosition}`)
-    .join('\n')
-
-  return `You are a senior MMA analyst whose specialty is identifying bouts that will thrill fans. Focus on finish probability first, then chaos factors like violent scrambles, slugfests, and volatile momentum swings. Analyze the following upcoming UFC fights and respond with strict JSON.\n\nEVENT: ${eventName}\n\nFor each fight, provide:\n- fightId\n- funFactor (1-10 scale for entertainment)\n- finishProbability (0-100)\n- entertainmentReason (3-4 sentences summarizing why the fight will or won't deliver action)\n- keyFactors (3-5 short phrases such as 'knockout power' or 'scramble heavy')\n- prediction (succinct outcome pick)\n- riskLevel (high|medium|low)\n\nFIGHTS TO ANALYZE:\n${fightList}`
+  return buildPredictionPrompt(eventName, fights)
 }
 
 function sanitizeJson(raw) {
