@@ -77,8 +77,11 @@ interface PredictionResult {
   riskLevel?: 'high' | 'medium' | 'low'
 }
 
+type SherdogBlockCode = 'SHERDOG_BLOCKED'
+
 export class HybridUFCService {
   private openai: OpenAI | null = null
+  private sherdogBlocked: boolean = false
 
   constructor(enableAI: boolean = true) {
     if (enableAI && process.env.OPENAI_API_KEY) {
@@ -104,6 +107,8 @@ export class HybridUFCService {
 
   // Search for real current UFC events using Sherdog listings
   async searchRealUFCEvents(limit: number): Promise<RealUFCEvent[]> {
+    this.sherdogBlocked = false
+
     try {
       console.log('🔍 Fetching upcoming UFC events from Sherdog...')
 
@@ -113,9 +118,22 @@ export class HybridUFCService {
       return events
 
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        this.sherdogBlocked = true
+        const blockedError = new Error('Sherdog responded with HTTP 403 (blocked)') as Error & { code?: SherdogBlockCode }
+        blockedError.name = 'SherdogBlockedError'
+        blockedError.code = 'SHERDOG_BLOCKED'
+        console.warn('⚠️ Sherdog blocked the request with HTTP 403. Treating as transient protection.');
+        throw blockedError
+      }
+
       console.error('❌ Error searching for real events:', error)
       return []
     }
+  }
+
+  isSherdogBlocked(): boolean {
+    return this.sherdogBlocked
   }
 
 
@@ -168,6 +186,10 @@ export class HybridUFCService {
       }
 
     } catch (error) {
+      if ((error as Error & { code?: SherdogBlockCode }).code === 'SHERDOG_BLOCKED') {
+        throw error
+      }
+
       console.error('❌ Error in UFC data collection:', error)
       return { events: [], fighters: [] }
     }

@@ -179,9 +179,15 @@ class AutomatedScraper {
       }
 
     } catch (error) {
-      const errorMsg = `Scraping failed: ${error.message}`
-      result.errors.push(errorMsg)
-      await this.log(errorMsg, 'error')
+      if (error && error.code === 'SHERDOG_BLOCKED') {
+        const warningMsg = 'Sherdog returned HTTP 403 (blocked). Skipping scrape and leaving strike counters unchanged.'
+        result.errors.push(warningMsg)
+        await this.log(warningMsg, 'warn')
+      } else {
+        const errorMsg = `Scraping failed: ${error.message}`
+        result.errors.push(errorMsg)
+        await this.log(errorMsg, 'error')
+      }
     }
 
     result.executionTime = Date.now() - startTime
