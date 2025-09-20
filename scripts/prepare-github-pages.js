@@ -49,6 +49,9 @@ async function main() {
   console.log('📦 Copying static export into docs/...')
   await fs.cp(outDir, docsDir, { recursive: true })
 
+  console.log('🔧 Adding .nojekyll file for GitHub Pages...')
+  await fs.writeFile(path.join(docsDir, '.nojekyll'), '')
+
   console.log('✅ GitHub Pages build ready!')
   console.log('   • public/data/events.json refreshed with latest database data')
   console.log('   • docs/ now contains the static site (commit & push to publish)')
