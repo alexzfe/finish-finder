@@ -99,10 +99,13 @@ Retrieve upcoming UFC events (when data scraping is enabled)
 
 ## 🌐 GitHub Pages Deployment
 
-1. Set the `NEXT_PUBLIC_BASE_PATH` environment variable to your repository name (for example `finish-finder`) before running `npm run build` so asset links resolve correctly on `https://<user>.github.io/<repo>/`.
-2. Run `npm run build` to export the static site into the `out/` directory.
-3. Deploy the contents of `out/` to GitHub Pages (either by pushing the folder to the configured branch or using the provided GitHub Actions workflow).
-4. Update `public/data/events.json` with any static event data you want visible on the hosted site—the app automatically falls back to this file when API routes are unavailable.
+1. (Optional) Set `NEXT_PUBLIC_BASE_PATH` if your repository name differs from `finish-finder`.
+2. Run `npm run pages:build` to:
+   - Export the latest database data into `public/data/events.json`.
+   - Build the static site with the proper GitHub Pages base path.
+   - Copy the generated files into `docs/` ready for publishing.
+3. Commit and push the updated `docs/` folder (and `public/data/events.json`).
+4. Enable GitHub Pages in the repo settings (branch: `main`, folder: `/docs`).
 
 ## 📄 License
 

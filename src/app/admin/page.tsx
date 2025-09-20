@@ -6,6 +6,7 @@ import { Header } from '@/components/ui/Header'
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD
 const STORAGE_KEY = 'ffp-admin-auth'
+const ADMIN_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ADMIN === 'true'
 
 export default function AdminPage() {
   const [authorized, setAuthorized] = useState(!ADMIN_PASSWORD)
@@ -60,10 +61,11 @@ export default function AdminPage() {
           </p>
         </div>
 
-        {authorized ? (
-          <div className="space-y-4">
-            {ADMIN_PASSWORD ? (
-              <div className="flex justify-end">
+        {ADMIN_ENABLED ? (
+          authorized ? (
+            <div className="space-y-4">
+              {ADMIN_PASSWORD ? (
+                <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -73,30 +75,39 @@ export default function AdminPage() {
                 </button>
               </div>
             ) : null}
-            <DataCollectionDashboard />
-          </div>
+              <DataCollectionDashboard />
+            </div>
+          ) : (
+            <div className="max-w-md mx-auto bg-white/10 backdrop-blur-sm rounded-lg p-6">
+              <h2 className="text-2xl font-semibold text-white mb-4 text-center">🔐 Enter Admin Password</h2>
+              <p className="text-white/60 text-sm mb-4 text-center">
+                This section is restricted. Please enter the admin password to continue.
+              </p>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Admin password"
+                  className="w-full rounded bg-black/40 border border-white/20 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+                {error ? <p className="text-sm text-red-400">{error}</p> : null}
+                <button
+                  type="submit"
+                  className="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                >
+                  Unlock
+                </button>
+              </form>
+            </div>
+          )
         ) : (
           <div className="max-w-md mx-auto bg-white/10 backdrop-blur-sm rounded-lg p-6">
-            <h2 className="text-2xl font-semibold text-white mb-4 text-center">🔐 Enter Admin Password</h2>
-            <p className="text-white/60 text-sm mb-4 text-center">
-              This section is restricted. Please enter the admin password to continue.
+            <h2 className="text-2xl font-semibold text-white mb-4 text-center">ℹ️ Admin Tools Unavailable</h2>
+            <p className="text-white/60 text-sm text-center">
+              The data collection dashboard is disabled in the static GitHub Pages build. Run the project locally with
+              server capabilities enabled to access admin features.
             </p>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Admin password"
-                className="w-full rounded bg-black/40 border border-white/20 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
-              {error ? <p className="text-sm text-red-400">{error}</p> : null}
-              <button
-                type="submit"
-                className="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors font-semibold"
-              >
-                Unlock
-              </button>
-            </form>
           </div>
         )}
       </main>

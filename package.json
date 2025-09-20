@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "npx serve out",
     "lint": "eslint",
-    "predict:event": "node scripts/generate-event-predictions.js"
+    "predict:event": "node scripts/generate-event-predictions.js",
+    "pages:build": "node scripts/prepare-github-pages.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.8",
