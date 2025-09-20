@@ -88,6 +88,12 @@ Detailed step-by-step instructions live in `launch_plan.md` if you need a projec
 - **Sentry**: instrumentation covers client (`NEXT_PUBLIC_SENTRY_DSN`), server (`SENTRY_DSN`), edge, and scraper warnings (via `SENTRY_TOKEN`).
 - **Static export**: `npm run pages:build` writes to `/docs` for GitHub Pages hosting; optional once Vercel is live.
 
+### Automated Scraper Scheduler
+- **Container image**: build with `docker build -t finish-finder-scraper .` (uses the root `Dockerfile`, installs Prisma + ts-node, and runs the scraper in `check` mode by default).
+- **Runner env vars**: provide `OPENAI_API_KEY`, `DATABASE_URL`, `SCRAPER_CANCEL_THRESHOLD`, `SCRAPER_FIGHT_CANCEL_THRESHOLD`, and optional Sentry DSNs when starting the container.
+- **GitHub Actions cron**: `.github/workflows/scraper.yml` triggers the container every 4 hours (plus manual `workflow_dispatch`). Secrets/variables are pulled from repository settings so the job stays zero-cost.
+- **Local dry run**: run `docker run --rm --env-file .env.local finish-finder-scraper` to verify behavior exactly as Actions will execute it.
+
 ---
 
 ## 6. Current Limitations & Backlog

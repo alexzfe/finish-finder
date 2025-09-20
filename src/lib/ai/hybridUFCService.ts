@@ -80,7 +80,7 @@ interface PredictionResult {
 export class HybridUFCService {
   private openai: OpenAI | null = null
 
-  constructor(enableAI: boolean = false) {
+  constructor(enableAI: boolean = true) {
     if (enableAI && process.env.OPENAI_API_KEY) {
       this.openai = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY
