@@ -33,43 +33,52 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
   const sortedFights = [...(currentEvent.fightCard || [])].reverse()
 
   return (
-    <div className="relative bg-white/10 backdrop-blur-sm rounded-lg p-6 mb-6">
+    <div className="relative border-b border-gray-200 pb-6" style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}>
       {/* Navigation Arrows */}
       <button
         onClick={goToPrevEvent}
         disabled={currentEventIndex === 0}
-        className={`absolute left-4 top-1/2 transform -translate-y-1/2 p-3 rounded-full transition-all duration-200 ${
+        className={`absolute left-0 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all duration-200 ${
           currentEventIndex === 0
-            ? 'bg-gray-600/30 text-gray-400 cursor-not-allowed'
-            : 'bg-red-600/80 text-white hover:bg-red-600 hover:scale-110 shadow-lg'
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'text-white hover:opacity-90'
         }`}
+        style={{
+          backgroundColor: currentEventIndex === 0 ? undefined : '#d20a0a'
+        }}
         aria-label="Previous event"
       >
-        <ChevronLeftIcon className="w-6 h-6" />
+        <ChevronLeftIcon className="w-5 h-5" />
       </button>
 
       <button
         onClick={goToNextEvent}
         disabled={currentEventIndex === events.length - 1}
-        className={`absolute right-4 top-1/2 transform -translate-y-1/2 p-3 rounded-full transition-all duration-200 ${
+        className={`absolute right-0 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all duration-200 ${
           currentEventIndex === events.length - 1
-            ? 'bg-gray-600/30 text-gray-400 cursor-not-allowed'
-            : 'bg-red-600/80 text-white hover:bg-red-600 hover:scale-110 shadow-lg'
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : 'text-white hover:opacity-90'
         }`}
+        style={{
+          backgroundColor: currentEventIndex === events.length - 1 ? undefined : '#d20a0a'
+        }}
         aria-label="Next event"
       >
-        <ChevronRightIcon className="w-6 h-6" />
+        <ChevronRightIcon className="w-5 h-5" />
       </button>
 
       {/* Event Information */}
-      <div className="text-center px-10">
+      <div className="text-center px-12">
         {/* Event Title */}
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-3 leading-tight">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 leading-tight uppercase tracking-wide">
           {currentEvent.name}
         </h1>
 
         {/* Event Date */}
-        <p className="text-lg md:text-xl text-red-400 font-semibold mb-1">
+        <p
+          className="text-lg md:text-xl font-bold mb-2 uppercase tracking-widest"
+          style={{ color: '#d20a0a' }}
+        >
           {(() => {
             // Parse date correctly to avoid timezone issues
             const dateStr = typeof currentEvent.date === 'string'
@@ -87,7 +96,7 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
         </p>
 
         {/* Location */}
-        <p className="text-sm md:text-base text-white/70 mb-4">
+        <p className="text-sm md:text-base text-gray-600 mb-4 uppercase tracking-wide">
           📍 {currentEvent.location}
         </p>
 
@@ -99,9 +108,12 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
               onClick={() => onEventChange(index)}
               className={`w-3 h-3 rounded-full transition-all duration-200 ${
                 index === currentEventIndex
-                  ? 'bg-red-500 scale-125'
-                  : 'bg-white/30 hover:bg-white/50'
+                  ? 'scale-125'
+                  : 'bg-gray-300 hover:bg-gray-400'
               }`}
+              style={{
+                backgroundColor: index === currentEventIndex ? '#d20a0a' : undefined
+              }}
               aria-label={`Go to event ${index + 1}`}
             />
           ))}

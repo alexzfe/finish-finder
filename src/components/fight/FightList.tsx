@@ -96,10 +96,17 @@ export function FightList({ event, onFightClick }: FightListProps) {
   }, [event])
 
   const getFunScoreTextClass = (score: number) => {
-    if (score >= 85) return 'text-red-400'
-    if (score >= 75) return 'text-orange-300'
-    if (score >= 65) return 'text-yellow-300'
+    if (score >= 85) return 'text-red-500'
+    if (score >= 75) return 'text-orange-400'
+    if (score >= 65) return 'text-yellow-400'
     return 'text-white'
+  }
+
+  const getFunScoreStyle = (score: number) => {
+    if (score >= 85) return { color: '#d20a0a' } // UFC red
+    if (score >= 75) return { color: '#ea580c' } // Darker orange for white background
+    if (score >= 65) return { color: '#d97706' } // Darker yellow/amber for white background
+    return { color: '#374151' } // Dark gray for white background
   }
 
   const sectionsToRender: Section[] = useMemo(() => [
@@ -126,132 +133,158 @@ export function FightList({ event, onFightClick }: FightListProps) {
     const funScore = fight.predictedFunScore || 0
 
     return (
-      <button
+      <div
         key={fight.id}
-        type="button"
-        onClick={() => handleFightSelection(fight)}
-        className={`w-full text-left rounded-lg border border-white/10 bg-white/5 px-3 py-2 transition-colors duration-150 hover:bg-white/10 ${
-          isActive ? 'ring-2 ring-red-500/60 bg-white/15' : ''
+        className={`border rounded-lg overflow-hidden transition-all duration-200 hover:shadow-lg cursor-pointer ${
+          isActive ? 'ring-2 ring-red-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
         }`}
+        onClick={() => handleFightSelection(fight)}
+        style={{
+          borderColor: isActive ? '#d20a0a' : undefined,
+          fontFamily: 'Arial, "Helvetica Neue", sans-serif'
+        }}
       >
-        <div className="flex items-center justify-between gap-3">
-          <div className={`text-sm md:text-base font-semibold ${getFunScoreTextClass(funScore)}`}>
-            {fight.fighter1?.name || 'TBD'}
-            <span className="text-white/40 text-xs md:text-sm"> ({formatRecord(fight.fighter1?.record)})</span>
-            <span className="mx-2 text-white/50">vs</span>
-            {fight.fighter2?.name || 'TBD'}
-            <span className="text-white/40 text-xs md:text-sm"> ({formatRecord(fight.fighter2?.record)})</span>
-          </div>
-          <div className="text-right text-xs md:text-sm text-white/60 flex flex-col items-end gap-1">
-            <span className={`${getFunScoreTextClass(funScore)} font-semibold`}>{funScore} FUN</span>
-            {fight.finishProbability ? <span>Finish {fight.finishProbability}%</span> : null}
+        {/* Fight Header */}
+        <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="text-xs uppercase tracking-widest font-bold text-gray-600">
+                {fight.position || 'FIGHT'}
+              </span>
+              {fight.titleFight && (
+                <span
+                  className="text-xs uppercase tracking-widest font-bold px-2 py-1 rounded"
+                  style={{ backgroundColor: '#d20a0a', color: 'white' }}
+                >
+                  TITLE
+                </span>
+              )}
+            </div>
+            <div className="text-right">
+              <div
+                className="text-lg font-bold uppercase tracking-wide"
+                style={getFunScoreStyle(funScore)}
+              >
+                {funScore}
+              </div>
+              <div className="text-xs uppercase tracking-widest font-semibold text-gray-500">
+                FUN SCORE
+              </div>
+            </div>
           </div>
         </div>
-        <div className="mt-1 text-xs text-white/50">
-          {fight.position ? `${fight.position} • ` : ''}{fight.weightClass} • {fight.scheduledRounds || 3} Rounds{fight.titleFight ? ' • Title Fight' : ''}
+
+        {/* Main Fight Content */}
+        <div className="p-3">
+          {/* Fighters Side by Side */}
+          <div className="flex items-center justify-between">
+            {/* Fighter 1 */}
+            <div className="flex items-center space-x-3 flex-1">
+              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                <span className="text-lg">🥊</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div
+                  className="font-bold uppercase tracking-wide text-gray-900 truncate"
+                  style={getFunScoreStyle(funScore)}
+                >
+                  {fight.fighter1?.name || 'TBD'}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {formatRecord(fight.fighter1?.record)}
+                </div>
+              </div>
+            </div>
+
+            {/* VS Divider */}
+            <div className="px-4">
+              <span
+                className="text-xs font-bold uppercase tracking-widest px-2 py-1 rounded"
+                style={{ backgroundColor: '#f3f4f6', color: '#6b7280' }}
+              >
+                VS
+              </span>
+            </div>
+
+            {/* Fighter 2 */}
+            <div className="flex items-center space-x-3 flex-1 justify-end">
+              <div className="min-w-0 flex-1 text-right">
+                <div
+                  className="font-bold uppercase tracking-wide text-gray-900 truncate"
+                  style={getFunScoreStyle(funScore)}
+                >
+                  {fight.fighter2?.name || 'TBD'}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {formatRecord(fight.fighter2?.record)}
+                </div>
+              </div>
+              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                <span className="text-lg">🥊</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Fight Details */}
+          <div className="mt-3 pt-2 border-t border-gray-200">
+            <div className="flex items-center justify-between text-xs uppercase tracking-widest text-gray-500">
+              <span>{fight.weightClass}</span>
+              <span>{fight.scheduledRounds || 3} ROUNDS</span>
+              {fight.finishProbability ? (
+                <span className="font-semibold">FINISH {fight.finishProbability}%</span>
+              ) : null}
+            </div>
+          </div>
         </div>
-      </button>
+      </div>
     )
   }
 
   if (loading) {
     return (
-      <div className="text-center text-white py-8">
+      <div className="text-center text-gray-800 py-8">
         <div className="text-4xl mb-4">🎯</div>
-        <p className="text-lg">Loading fight card...</p>
+        <p className="text-lg uppercase tracking-wide">Loading fight card...</p>
       </div>
     )
   }
 
   if (!sections.allFights.length) {
     return (
-      <div className="text-center text-white/70 py-12">
+      <div className="text-center text-gray-800 py-12">
         <div className="text-6xl mb-4">🥊</div>
-        <h3 className="text-xl font-semibold mb-2">No fights available</h3>
-        <p>Fight card details will be updated soon.</p>
+        <h3 className="text-xl font-semibold mb-2 uppercase tracking-wide">No fights available</h3>
+        <p className="text-gray-600">Fight card details will be updated soon.</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,336px)]">
-        <div className="space-y-4">
-          {sectionsToRender.map(section => (
-            <div key={section.title} className="space-y-3">
-              <div className="sticky top-0 z-10">
-                <div className="inline-flex items-center rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white/70 backdrop-blur">
-                  {section.title}
-                </div>
-              </div>
-              <div className="space-y-2">
-                {section.fights.map(renderFightRow)}
-              </div>
+    <div className="space-y-6">
+      {sectionsToRender.map(section => (
+        <div key={section.title} className="bg-white rounded-lg shadow-lg overflow-hidden">
+          {/* Section Header */}
+          <div
+            className="px-6 py-4 border-b border-gray-200"
+            style={{ backgroundColor: '#f8f9fa' }}
+          >
+            <h2
+              className="text-xl font-bold uppercase tracking-widest text-gray-900"
+              style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}
+            >
+              {section.title}
+            </h2>
+          </div>
+
+          {/* Fight Cards Grid */}
+          <div className="p-6">
+            <div className="grid gap-3">
+              {section.fights.map(renderFightRow)}
             </div>
-          ))}
+          </div>
         </div>
+      ))}
 
-        <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-5">
-          {selectedFight ? (
-            <>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-white/40">Bout</p>
-                <h3 className="text-lg font-semibold text-white">
-                  {selectedFight.fighter1?.name || 'TBD'} vs {selectedFight.fighter2?.name || 'TBD'}
-                </h3>
-                <p className="text-sm text-white/60 mt-1">
-                  {selectedFight.weightClass} • {selectedFight.scheduledRounds || 3} Rounds {selectedFight.titleFight ? '• Title Fight' : ''}{selectedFight.mainEvent && !selectedFight.titleFight ? ' • Main Event' : ''}
-                </p>
-              </div>
-
-              <div className="grid gap-3 text-sm text-white/70 md:grid-cols-3">
-                <div className="rounded-lg bg-black/20 px-4 py-3">
-                  <span className="block text-xs uppercase tracking-wide text-white/40">Fun Score</span>
-                  <span className={`${getFunScoreTextClass(selectedFight.predictedFunScore || 0)} text-lg font-semibold`}>
-                    {selectedFight.predictedFunScore || 0}
-                  </span>
-                </div>
-                <div className="rounded-lg bg-black/20 px-4 py-3">
-                  <span className="block text-xs uppercase tracking-wide text-white/40">Finish Chance</span>
-                  <span className="text-base font-semibold text-white/80">{selectedFight.finishProbability || 0}%</span>
-                </div>
-                <div className="rounded-lg bg-black/20 px-4 py-3">
-                  <span className="block text-xs uppercase tracking-wide text-white/40">Risk Level</span>
-                  <span className="text-base font-semibold text-white/80 capitalize">{selectedFight.riskLevel || 'Balanced'}</span>
-                </div>
-              </div>
-
-              {selectedFight.aiDescription ? (
-                <p className="text-sm text-white/80 leading-relaxed">
-                  {selectedFight.aiDescription}
-                </p>
-              ) : null}
-
-              {Array.isArray(selectedFight.funFactors) && selectedFight.funFactors.length > 0 ? (
-                <div>
-                  <span className="text-xs uppercase tracking-wide text-white/40">Key Factors</span>
-                  <ul className="mt-2 flex flex-wrap gap-2 text-xs">
-                    {selectedFight.funFactors.map((factor, idx) => (
-                      <li key={idx} className="rounded-full bg-white/10 px-3 py-1 text-white/80">
-                        {typeof factor === 'string' ? factor : factor.type}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              {selectedFight.fightPrediction ? (
-                <div>
-                  <span className="text-xs uppercase tracking-wide text-white/40">Analyst Pick</span>
-                  <p className="mt-1 text-sm text-white/70">{selectedFight.fightPrediction}</p>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <p className="text-sm text-white/60">Select a matchup to see the in-depth breakdown.</p>
-          )}
-        </div>
-      </div>
     </div>
   )
 }
