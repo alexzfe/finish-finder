@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+// Register ts-node to handle TypeScript imports
+require('ts-node/register')
+
+// Import from TypeScript source
 const { HybridUFCService } = require('../src/lib/ai/hybridUFCService.ts')
 const { PrismaClient } = require('@prisma/client')
 const fs = require('fs/promises')
