@@ -681,47 +681,7 @@ export class HybridUFCService {
         .map(f => `${f.id}: ${f.fighter1Name} vs ${f.fighter2Name} (${f.weightClass}) - ${f.cardPosition}`)
         .join('\n')
 
-      const prompt = `You are a professional MMA analyst specializing in entertainment value prediction. Analyze these REAL upcoming UFC fights for fan engagement and excitement potential.
-
-FIGHTS TO ANALYZE:
-${fightList}
-
-ENTERTAINMENT EVALUATION CRITERIA:
-1. **Striking Power & Aggression**: Knockout artists, heavy hitters, volume strikers
-2. **Submission Threat**: Grappling specialists, submission artists
-3. **Fighting Styles Clash**: Striker vs grappler, counter-puncher vs pressure fighter
-4. **Recent Form**: Win streaks, spectacular finishes, momentum
-5. **Historical Performance**: Fight of the Night bonuses, finish rates
-6. **Stylistic Matchup**: Fighting styles that create fireworks
-7. **Title Implications**: Championship fights, rankings impact
-8. **Personal Narratives**: Rivalries, comebacks, career-defining moments
-
-FUN FACTOR SCALE (1-10):
-- 1-3: Technical decision likely, low action
-- 4-5: Solid fight, some excitement moments
-- 6-7: Entertaining bout, good action throughout
-- 8-9: Potential Fight of the Night, high entertainment
-- 10: Can't-miss spectacle, guaranteed fireworks
-
-FINISH PROBABILITY (0-100%):
-- Consider knockout power, submission skills, chinny fighters
-- Factor in fighting styles and typical fight patterns
-- Account for recent finishes and finish rates
-
-FORMAT AS EXACT JSON:
-[
-  {
-    "fightId": "fight-id",
-    "funFactor": 8,
-    "finishProbability": 75,
-    "entertainmentReason": "Detailed 2-3 sentence explanation of why this fight will be entertaining, focusing on specific fighting styles, recent performances, and what makes it must-watch.",
-    "keyFactors": ["Knockout Power", "Style Clash", "Title Implications"],
-    "prediction": "Brief prediction of how the fight will play out",
-    "riskLevel": "high|medium|low"
-  }
-]
-
-Provide specific, detailed analysis for each fight explaining the entertainment value.`
+      const prompt = `You are a senior MMA analyst whose specialty is identifying bouts that will thrill fans. Prioritize finish probability above all else when assigning the funFactor: a high likelihood of a KO/TKO or submission should heavily influence the score, while other excitement boosters (pace, chaos, rivalries, stakes) can nudge it up or down but never override finish potential. Analyze the following upcoming UFC fights and respond with strict JSON only.\n\nGuidelines:\n- Keep analysis fight-specific; you may mention event context (e.g., title or main event) only as supporting detail.\n- Return the fights in the exact order they are provided.\n- riskLevel reflects how unpredictable the outcome is, not your confidence in the prediction.\n- If critical fighter data is missing, output "insufficient data" in entertainmentReason and set funFactor and finishProbability to 0; otherwise provide your best informed assessment and never leave fields blank.\n\nEVENT: ${eventName}\n\nFor each fight, provide:\n- fightId\n- funFactor (1-10 entertainment scale driven primarily by finish probability)\n- finishProbability (0-100)\n- entertainmentReason (3-4 sentences detailing why this fight will or will not deliver action, citing specific stylistic dynamics, recent performances, and volatility)\n- keyFactors (3-5 short phrases such as "knockout power" or "scramble heavy")\n- prediction (succinct outcome pick)\n- riskLevel (high|medium|low)\n\nFIGHTS TO ANALYZE:\n${fightList}`
 
       const completion = await this.openai.chat.completions.create({
         model: predictionModel,
