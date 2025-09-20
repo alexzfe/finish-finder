@@ -164,6 +164,14 @@ npm run dev
 # Access at http://localhost:3000
 ```
 
+## 🧭 Developer Resources
+
+- [`docs/NEW_DEVELOPER_OVERVIEW.md`](docs/NEW_DEVELOPER_OVERVIEW.md) – architecture, data flow, automation, and known gaps.
+- [`launch_plan.md`](launch_plan.md) – roadmap to the hosted (Vercel + Supabase) release.
+- [`docs/production_setup.md`](docs/production_setup.md) – provisioning steps for Vercel, Supabase, and scheduled scraper jobs.
+- [`docs/env_vars.md`](docs/env_vars.md) – environment variables for local and production deployments.
+- [`docs/prisma_supabase.md`](docs/prisma_supabase.md) – Prisma/PostgreSQL migration checklist.
+
 ## 📄 License
 
 This project is licensed under the MIT License.
