@@ -78,12 +78,16 @@ interface PredictionResult {
 }
 
 export class HybridUFCService {
-  private openai: OpenAI
+  private openai: OpenAI | null = null
 
-  constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    })
+  constructor(enableAI: boolean = false) {
+    if (enableAI && process.env.OPENAI_API_KEY) {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      })
+    } else if (enableAI && !process.env.OPENAI_API_KEY) {
+      console.warn('⚠️ OpenAI API key not found. AI predictions will be disabled.')
+    }
   }
 
   // Get current date for accurate searches
@@ -171,6 +175,11 @@ export class HybridUFCService {
 
   // NEW: Separate method for AI prediction generation
   async generateEventPredictions(eventId: string, eventName: string, fights: Fight[]): Promise<Fight[]> {
+    if (!this.openai) {
+      console.log(`ℹ️ AI predictions disabled for: ${eventName}`)
+      return fights // Return original fights without predictions
+    }
+
     try {
       console.log(`🎯 Generating AI predictions for: ${eventName}`)
       return await this.generateFightPredictions(fights, eventName)
@@ -424,7 +433,7 @@ export class HybridUFCService {
     }
   }
 
-  private extractSherdogFighter(fighterCell: cheerio.Cheerio<cheerio.Element>, weightClass: string): {
+  private extractSherdogFighter(fighterCell: any, weightClass: string): {
     id: string
     name: string
     nickname?: string
@@ -475,7 +484,7 @@ export class HybridUFCService {
     }
   }
 
-  private extractSherdogFeaturedFighter(fighterCard: cheerio.Cheerio<cheerio.Element>, weightClass: string): {
+  private extractSherdogFeaturedFighter(fighterCard: any, weightClass: string): {
     id: string
     name: string
     nickname?: string
@@ -638,7 +647,7 @@ export class HybridUFCService {
   }
 
   private async generateFightPredictions(fights: Fight[], eventName: string): Promise<Fight[]> {
-    if (!fights.length) {
+    if (!fights.length || !this.openai) {
       return fights
     }
 
@@ -727,7 +736,37 @@ Provide specific, detailed analysis for each fight explaining the entertainment 
         console.error('❌ Predictions JSON parsing failed:', parseError)
         console.error('Raw predictions response:', response.substring(0, 500))
         console.error('Cleaned predictions response:', cleanPredResponse.substring(0, 500))
-        return fights
+
+        // Try to recover partial JSON by finding valid objects
+        try {
+          // First try to match complete objects with potential nesting
+          let bracketMatches = cleanPredResponse.match(/\{(?:[^{}]|\{[^{}]*\})*\}/g)
+
+          if (!bracketMatches) {
+            // Fallback to simpler pattern
+            bracketMatches = cleanPredResponse.match(/\{[^{}]*\}/g)
+          }
+
+          if (bracketMatches) {
+            predictions = bracketMatches.map(match => {
+              try {
+                // Clean up potential incomplete strings in the match
+                let cleanMatch = match.replace(/"[^"]*$/, '""') // Fix unterminated strings
+                cleanMatch = cleanMatch.replace(/,\s*}/, '}') // Remove trailing commas
+                return JSON.parse(cleanMatch)
+              } catch {
+                return null
+              }
+            }).filter(Boolean)
+            console.log(`🔧 Recovered ${predictions.length} predictions from partial JSON`)
+          } else {
+            console.log('❌ Could not recover any predictions, using default values')
+            predictions = []
+          }
+        } catch {
+          console.log('❌ JSON recovery failed, using default values')
+          predictions = []
+        }
       }
 
       // Merge predictions back into fights with new structured data

@@ -32,11 +32,37 @@ After deployment, run migrations:
 npx prisma migrate deploy
 ```
 
-### 4. Scraper Automation
+### 4. Data Population
+
+#### Initial Data Scraping
+After deployment, populate the database with UFC events and fighters:
+```bash
+# Scrape UFC data (works without OpenAI key)
+DATABASE_URL="your_production_db_url" node scripts/test-scraper-data-only.js
+```
+
+#### AI Predictions Generation
+Generate entertainment predictions for all fights:
+```bash
+# Generate AI predictions (requires OpenAI key)
+DATABASE_URL="your_production_db_url" OPENAI_API_KEY="your_openai_key" node scripts/generate-ai-predictions.js
+```
+
+#### Automated Updates
 Set up GitHub Actions or another cron service to run the scraper every 4 hours:
 ```bash
 node scripts/automated-scraper.js check
 ```
+
+## ✅ Deployment Status
+
+**Production deployment successfully completed!**
+
+- **Live Site**: https://finish-finder.vercel.app/
+- **API Endpoint**: https://finish-finder.vercel.app/api/db-events
+- **Database**: 5 UFC events with 66 fights and AI predictions
+- **Architecture**: Vercel + Supabase PostgreSQL with connection pooling
+- **Data Pipeline**: Sherdog scraping → PostgreSQL → API → Next.js frontend
 
 ## GitHub Pages Deployment (Static)
 

@@ -4,7 +4,9 @@ An AI-powered UFC fight entertainment analyzer that helps fans discover the most
 
 ## 🌐 Live Demo
 
-**[View Live Site on GitHub Pages →](https://alexzfe.github.io/finish-finder/)**
+**[🚀 Production Site (Vercel + Supabase) →](https://finish-finder.vercel.app/)**
+
+**[📄 Static Site (GitHub Pages) →](https://alexzfe.github.io/finish-finder/)**
 
 ## ✨ Features
 
