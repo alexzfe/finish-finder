@@ -2,15 +2,27 @@ import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import * as Sentry from '@sentry/nextjs'
 
-export const dynamic = 'force-static'
-export const revalidate = false
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
-const prisma = new PrismaClient()
+// Initialize Prisma client only when DATABASE_URL is available
+let prisma: PrismaClient | null = null
+
+function getPrismaClient() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL not configured')
+  }
+  if (!prisma) {
+    prisma = new PrismaClient()
+  }
+  return prisma
+}
 
 export async function GET() {
   try {
+    const prismaClient = getPrismaClient()
     // Get upcoming events with their fights and fighters
-    const events = await prisma.event.findMany({
+    const events = await prismaClient.event.findMany({
       where: {
         date: {
           gte: new Date() // Only upcoming events
@@ -114,6 +126,8 @@ export async function GET() {
       error: 'Failed to fetch events from database'
     }, { status: 500 })
   } finally {
-    await prisma.$disconnect()
+    if (prisma) {
+      await prisma.$disconnect()
+    }
   }
 }

@@ -3,8 +3,8 @@ import axios from 'axios'
 import * as cheerio from 'cheerio'
 import * as Sentry from '@sentry/nextjs'
 
-export const dynamic = 'force-static'
-export const revalidate = false
+export const dynamic = 'force-dynamic'
+export const revalidate = 3600 // Cache for 1 hour
 
 interface FighterImageResult {
   url: string | null

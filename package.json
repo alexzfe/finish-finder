@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "npx serve out",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "postinstall": "prisma generate",
     "lint": "eslint",
     "predict:event": "node scripts/generate-event-predictions.js",
     "predict:list": "node scripts/generate-predictions-only.js list",
