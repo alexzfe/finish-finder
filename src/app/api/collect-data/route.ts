@@ -1,6 +1,6 @@
-// Data Collection API Route
+// Hybrid Web Search + AI UFC Data Collection API Route
 import { NextRequest, NextResponse } from 'next/server'
-import { UFCStatsCollector } from '@/lib/scraping/ufcStatsCollector'
+import { HybridUFCService } from '@/lib/ai/hybridUFCService'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -8,183 +8,200 @@ const prisma = new PrismaClient()
 // POST endpoint to trigger data collection
 export async function POST(request: NextRequest) {
   try {
-    const { action } = await request.json()
+    // Get parameters from URL or body
+    const { searchParams } = new URL(request.url)
+    const forceRealParam = searchParams.get('forceReal') === 'true'
 
-    const collector = new UFCStatsCollector()
+    let action = 'targeted'  // Default action
+    let forceReal = forceRealParam
+
+    try {
+      const body = await request.json()
+      action = body.action || action
+      forceReal = body.forceReal || forceReal
+    } catch (e) {
+      // No JSON body, use URL params and defaults
+      console.log('No JSON body provided, using defaults and URL params')
+    }
+
+    const hybridService = new HybridUFCService()
 
     switch (action) {
-      case 'fighters':
-        console.log('🥊 Starting fighter data collection...')
-        const fighters = await collector.scrapeFighters()
+      case 'targeted':
+        console.log('🌐 Starting hybrid UFC data collection (real events + AI analysis)...')
+        const targetedData = await hybridService.getUpcomingUFCEvents(5)
 
-        // Store in database
-        for (const fighter of fighters) {
-          await prisma.fighter.upsert({
-            where: { id: fighter.id },
-            update: {
-              name: fighter.name,
-              nickname: fighter.nickname,
-              wins: fighter.record.wins,
-              losses: fighter.record.losses,
-              draws: fighter.record.draws,
-              weightClass: fighter.weightClass,
-              finishRate: fighter.stats.finishRate,
-              koPercentage: fighter.stats.koPercentage,
-              submissionPercentage: fighter.stats.submissionPercentage,
-              averageFightTime: fighter.stats.averageFightTime,
-              significantStrikesPerMinute: fighter.stats.significantStrikesPerMinute,
-              takedownAccuracy: fighter.stats.takedownAccuracy,
-              socialFollowers: fighter.popularity.socialFollowers,
-              recentBuzzScore: fighter.popularity.recentBuzzScore,
-              fanFavorite: fighter.popularity.fanFavorite,
-              funScore: fighter.funScore,
-              fightingStyles: JSON.stringify(fighter.fighting_style),
-              updatedAt: new Date()
-            },
-            create: {
-              id: fighter.id,
-              name: fighter.name,
-              nickname: fighter.nickname,
-              wins: fighter.record.wins,
-              losses: fighter.record.losses,
-              draws: fighter.record.draws,
-              weightClass: fighter.weightClass,
-              finishRate: fighter.stats.finishRate,
-              koPercentage: fighter.stats.koPercentage,
-              submissionPercentage: fighter.stats.submissionPercentage,
-              averageFightTime: fighter.stats.averageFightTime,
-              significantStrikesPerMinute: fighter.stats.significantStrikesPerMinute,
-              takedownAccuracy: fighter.stats.takedownAccuracy,
-              socialFollowers: fighter.popularity.socialFollowers,
-              recentBuzzScore: fighter.popularity.recentBuzzScore,
-              fanFavorite: fighter.popularity.fanFavorite,
-              funScore: fighter.funScore,
-              fightingStyles: fighter.fighting_style
+        // Entertainment predictions are already generated in the hybrid service
+
+        // Step 1: Store events first (preserving existing events in chronological order)
+        console.log(`📅 Processing ${targetedData.events.length} new events for chronological storage...`)
+
+        for (const event of targetedData.events) {
+          const eventDate = new Date(event.date + 'T00:00:00.000Z')
+
+          // Check for existing events with same date and venue
+          const existingEvent = await prisma.event.findFirst({
+            where: {
+              date: eventDate,
+              venue: event.venue
             }
           })
-        }
 
-        return NextResponse.json({
-          success: true,
-          message: `Successfully collected ${fighters.length} fighters`,
-          data: { count: fighters.length }
-        })
+          if (existingEvent) {
+            console.log(`🔄 Event already exists: ${event.name} on ${event.date} at ${event.venue}`)
 
-      case 'events':
-        console.log('📅 Starting event data collection...')
-        const events = await collector.scrapeUpcomingEvents()
+            // If the new event has more detail (longer name), update the existing one
+            if (event.name.length > existingEvent.name.length) {
+              console.log(`   📝 Updating with more detailed name: ${event.name}`)
+              await prisma.event.update({
+                where: { id: existingEvent.id },
+                data: {
+                  name: event.name,
+                  updatedAt: new Date()
+                }
+              })
+            } else {
+              console.log(`   ✅ Keeping existing event (already detailed enough)`)
+            }
+            continue
+          }
 
-        // Store in database
-        for (const event of events) {
-          await prisma.event.upsert({
-            where: { id: event.id },
-            update: {
-              name: event.name,
-              date: event.date,
-              location: event.location,
-              venue: event.venue,
-              updatedAt: new Date()
-            },
-            create: {
+          // Create new event if no duplicate found
+          console.log(`➕ Adding new event: ${event.name} on ${event.date}`)
+          await prisma.event.create({
+            data: {
               id: event.id,
               name: event.name,
-              date: event.date,
+              date: eventDate,
               location: event.location,
               venue: event.venue
             }
           })
         }
 
-        return NextResponse.json({
-          success: true,
-          message: `Successfully collected ${events.length} events`,
-          data: { count: events.length }
+        // After adding events, get all events sorted chronologically
+        const allEvents = await prisma.event.findMany({
+          orderBy: { date: 'asc' }
         })
 
-      case 'all':
-        console.log('🚀 Starting comprehensive data collection...')
-        const allData = await collector.collectAllData()
+        console.log(`📊 Total events in database: ${allEvents.length} (sorted chronologically)`)
+        allEvents.forEach((event, index) => {
+          console.log(`   ${index + 1}. ${event.name} - ${event.date.toISOString().split('T')[0]}`)
+        })
 
-        // Store fighters
-        for (const fighter of allData.fighters) {
+        // Step 2: Store fighters second (before fights that reference them)
+        for (const fighter of targetedData.fighters) {
           await prisma.fighter.upsert({
             where: { id: fighter.id },
             update: {
               name: fighter.name,
-              nickname: fighter.nickname,
-              wins: fighter.record.wins,
-              losses: fighter.record.losses,
-              draws: fighter.record.draws,
+              nickname: fighter.nickname || null,
+              wins: fighter.wins,
+              losses: fighter.losses,
+              draws: fighter.draws,
               weightClass: fighter.weightClass,
-              finishRate: fighter.stats.finishRate,
-              koPercentage: fighter.stats.koPercentage,
-              submissionPercentage: fighter.stats.submissionPercentage,
-              averageFightTime: fighter.stats.averageFightTime,
-              significantStrikesPerMinute: fighter.stats.significantStrikesPerMinute,
-              takedownAccuracy: fighter.stats.takedownAccuracy,
-              socialFollowers: fighter.popularity.socialFollowers,
-              recentBuzzScore: fighter.popularity.recentBuzzScore,
-              fanFavorite: fighter.popularity.fanFavorite,
-              funScore: fighter.funScore,
-              fightingStyles: JSON.stringify(fighter.fighting_style),
+              height: fighter.height || null,
+              reach: fighter.reach || null,
+              age: fighter.age || null,
+              nationality: fighter.nationality || null,
+              fightingStyles: fighter.fightingStyle || null,
+              record: fighter.record,
+              winsByKO: fighter.winsByKO || 0,
+              winsBySubmission: fighter.winsBySubmission || 0,
+              winsByDecision: fighter.winsByDecision || 0,
+              currentStreak: fighter.currentStreak || null,
+              ranking: fighter.ranking || null,
               updatedAt: new Date()
             },
             create: {
               id: fighter.id,
               name: fighter.name,
-              nickname: fighter.nickname,
-              wins: fighter.record.wins,
-              losses: fighter.record.losses,
-              draws: fighter.record.draws,
+              nickname: fighter.nickname || null,
+              wins: fighter.wins,
+              losses: fighter.losses,
+              draws: fighter.draws,
               weightClass: fighter.weightClass,
-              finishRate: fighter.stats.finishRate,
-              koPercentage: fighter.stats.koPercentage,
-              submissionPercentage: fighter.stats.submissionPercentage,
-              averageFightTime: fighter.stats.averageFightTime,
-              significantStrikesPerMinute: fighter.stats.significantStrikesPerMinute,
-              takedownAccuracy: fighter.stats.takedownAccuracy,
-              socialFollowers: fighter.popularity.socialFollowers,
-              recentBuzzScore: fighter.popularity.recentBuzzScore,
-              fanFavorite: fighter.popularity.fanFavorite,
-              funScore: fighter.funScore,
-              fightingStyles: fighter.fighting_style
+              height: fighter.height || null,
+              reach: fighter.reach || null,
+              age: fighter.age || null,
+              nationality: fighter.nationality || null,
+              fightingStyles: fighter.fightingStyle || null,
+              record: fighter.record,
+              winsByKO: fighter.winsByKO || 0,
+              winsBySubmission: fighter.winsBySubmission || 0,
+              winsByDecision: fighter.winsByDecision || 0,
+              currentStreak: fighter.currentStreak || null,
+              ranking: fighter.ranking || null
             }
           })
         }
 
-        // Store events
-        for (const event of allData.events) {
-          await prisma.event.upsert({
-            where: { id: event.id },
-            update: {
-              name: event.name,
-              date: event.date,
-              location: event.location,
-              venue: event.venue,
-              updatedAt: new Date()
-            },
-            create: {
-              id: event.id,
-              name: event.name,
-              date: event.date,
-              location: event.location,
-              venue: event.venue
+        // Step 3: Store fights last (after events and fighters exist)
+        for (const event of targetedData.events) {
+          for (const fight of event.fightCard) {
+            // Verify fighter IDs exist
+            const fighter1Exists = await prisma.fighter.findUnique({ where: { id: fight.fighter1Id } })
+            const fighter2Exists = await prisma.fighter.findUnique({ where: { id: fight.fighter2Id } })
+
+            if (!fighter1Exists || !fighter2Exists) {
+              console.warn(`⚠️ Skipping fight ${fight.id} - missing fighters: ${fight.fighter1Id} or ${fight.fighter2Id}`)
+              continue
             }
-          })
+
+            await prisma.fight.upsert({
+              where: { id: fight.id },
+              update: {
+                fighter1Id: fight.fighter1Id,
+                fighter2Id: fight.fighter2Id,
+                eventId: event.id,
+                weightClass: fight.weightClass,
+                titleFight: fight.titleFight || false,
+                mainEvent: fight.mainEvent || false,
+                cardPosition: fight.cardPosition,
+                scheduledRounds: fight.scheduledRounds,
+                fightNumber: fight.fightNumber || 0,
+                funFactor: fight.funFactor || 0,
+                finishProbability: fight.finishProbability || 0,
+                entertainmentReason: fight.entertainmentReason || null,
+                keyFactors: JSON.stringify(fight.keyFactors || []),
+                fightPrediction: fight.fightPrediction || null,
+                riskLevel: fight.riskLevel || null,
+                updatedAt: new Date()
+              },
+              create: {
+                id: fight.id,
+                fighter1Id: fight.fighter1Id,
+                fighter2Id: fight.fighter2Id,
+                eventId: event.id,
+                weightClass: fight.weightClass,
+                titleFight: fight.titleFight || false,
+                mainEvent: fight.mainEvent || false,
+                cardPosition: fight.cardPosition,
+                scheduledRounds: fight.scheduledRounds,
+                fightNumber: fight.fightNumber || 0,
+                funFactor: fight.funFactor || 0,
+                finishProbability: fight.finishProbability || 0,
+                entertainmentReason: fight.entertainmentReason || null,
+                keyFactors: JSON.stringify(fight.keyFactors || []),
+                fightPrediction: fight.fightPrediction || null,
+                riskLevel: fight.riskLevel || null
+              }
+            })
+          }
         }
 
         return NextResponse.json({
           success: true,
-          message: `Successfully collected all data`,
+          message: `Successfully collected targeted data: ${targetedData.events.length} events, ${targetedData.fighters.length} fighters`,
           data: {
-            fighters: allData.fighters.length,
-            events: allData.events.length
+            events: targetedData.events.length,
+            fighters: targetedData.fighters.length
           }
         })
 
       default:
         return NextResponse.json(
-          { success: false, error: 'Invalid action. Use: fighters, events, or all' },
+          { success: false, error: 'Currently only "targeted" action is supported with AI data collection' },
           { status: 400 }
         )
     }

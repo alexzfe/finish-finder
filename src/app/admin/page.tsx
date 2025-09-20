@@ -1,9 +1,51 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { DataCollectionDashboard } from '@/components/admin/DataCollectionDashboard'
 import { Header } from '@/components/ui/Header'
 
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD
+const STORAGE_KEY = 'ffp-admin-auth'
+
 export default function AdminPage() {
+  const [authorized, setAuthorized] = useState(!ADMIN_PASSWORD)
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!ADMIN_PASSWORD) {
+      return
+    }
+
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
+    if (stored && stored === ADMIN_PASSWORD) {
+      setAuthorized(true)
+    }
+  }, [])
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!ADMIN_PASSWORD) {
+      setAuthorized(true)
+      return
+    }
+
+    if (password === ADMIN_PASSWORD) {
+      setAuthorized(true)
+      localStorage.setItem(STORAGE_KEY, ADMIN_PASSWORD)
+      setError(null)
+      setPassword('')
+    } else {
+      setError('Incorrect password. Please try again.')
+    }
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem(STORAGE_KEY)
+    setAuthorized(false)
+    setPassword('')
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-red-900 to-black">
       <Header />
@@ -18,52 +60,45 @@ export default function AdminPage() {
           </p>
         </div>
 
-        <DataCollectionDashboard />
-
-        {/* Future admin sections can go here */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-            <h3 className="text-xl font-bold text-white mb-4">🎯 Prediction Model</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-white/70">Model Version:</span>
-                <span className="text-white">v1.0.0</span>
+        {authorized ? (
+          <div className="space-y-4">
+            {ADMIN_PASSWORD ? (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="text-sm text-white/60 hover:text-white underline"
+                >
+                  Sign out
+                </button>
               </div>
-              <div className="flex justify-between">
-                <span className="text-white/70">Accuracy:</span>
-                <span className="text-green-400">85.3%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-white/70">Predictions Made:</span>
-                <span className="text-white">1,247</span>
-              </div>
-            </div>
-            <button className="w-full mt-4 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700">
-              Retrain Model
-            </button>
+            ) : null}
+            <DataCollectionDashboard />
           </div>
-
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-            <h3 className="text-xl font-bold text-white mb-4">📊 Analytics</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-white/70">Page Views:</span>
-                <span className="text-white">15,632</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-white/70">API Calls:</span>
-                <span className="text-white">8,439</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-white/70">Active Users:</span>
-                <span className="text-blue-400">342</span>
-              </div>
-            </div>
-            <button className="w-full mt-4 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-              View Details
-            </button>
+        ) : (
+          <div className="max-w-md mx-auto bg-white/10 backdrop-blur-sm rounded-lg p-6">
+            <h2 className="text-2xl font-semibold text-white mb-4 text-center">🔐 Enter Admin Password</h2>
+            <p className="text-white/60 text-sm mb-4 text-center">
+              This section is restricted. Please enter the admin password to continue.
+            </p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Admin password"
+                className="w-full rounded bg-black/40 border border-white/20 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+              {error ? <p className="text-sm text-red-400">{error}</p> : null}
+              <button
+                type="submit"
+                className="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors font-semibold"
+              >
+                Unlock
+              </button>
+            </form>
           </div>
-        </div>
+        )}
       </main>
     </div>
   )

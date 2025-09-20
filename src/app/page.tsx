@@ -1,92 +1,122 @@
 'use client'
 
-import { useState } from 'react'
-import { FightCard } from '@/components/fight/FightCard'
-import { EventSelector } from '@/components/ui/EventSelector'
+import { useState, useEffect } from 'react'
+import { EventNavigation } from '@/components/ui/EventNavigation'
+import { FightList } from '@/components/fight/FightList'
 import { Header } from '@/components/ui/Header'
-import { UFCEvent } from '@/types'
-
-// Mock data for development
-const mockEvents: UFCEvent[] = [
-  {
-    id: 'ufc-300',
-    name: 'UFC 300: Historic Night',
-    date: new Date('2024-04-13'),
-    location: 'Las Vegas, Nevada',
-    venue: 'T-Mobile Arena',
-    fightCard: [],
-    mainCard: [],
-    prelimCard: [],
-    earlyPrelimCard: []
-  },
-  {
-    id: 'ufc-301',
-    name: 'UFC 301: Championship Showdown',
-    date: new Date('2024-05-04'),
-    location: 'Rio de Janeiro, Brazil',
-    venue: 'Farmasi Arena',
-    fightCard: [],
-    mainCard: [],
-    prelimCard: [],
-    earlyPrelimCard: []
-  }
-]
+import { UFCEvent, Fight } from '@/types'
 
 export default function Home() {
-  const [selectedEvent, setSelectedEvent] = useState<UFCEvent | null>(mockEvents[0])
-  const [funThreshold, setFunThreshold] = useState(70) // Show fights with 70+ fun score
+  const [events, setEvents] = useState<UFCEvent[]>([])
+  const [currentEventIndex, setCurrentEventIndex] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch collected events from the database only
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true)
+
+        // Only use database events - no fallbacks to placeholder data
+        const response = await fetch('/api/db-events')
+        const data = await response.json()
+
+        if (data.success && data.data.events.length > 0) {
+          // Sort events by date (nearest first)
+          const sortedEvents = data.data.events
+            .map((event: any) => ({
+              ...event,
+              date: new Date(event.date)
+            }))
+            .sort((a: UFCEvent, b: UFCEvent) => a.date.getTime() - b.date.getTime())
+
+          setEvents(sortedEvents)
+
+          // Find the nearest upcoming event
+          const now = new Date()
+          const nearestEventIndex = sortedEvents.findIndex((event: UFCEvent) => event.date >= now)
+          setCurrentEventIndex(nearestEventIndex >= 0 ? nearestEventIndex : 0)
+
+          setError(null)
+        } else {
+          setError('No events available. Please collect real UFC events from the admin panel.')
+        }
+      } catch (err) {
+        console.error('Error fetching events:', err)
+        setError('Failed to load events. Please try again.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchEvents()
+  }, [])
+
+  const handleEventChange = (index: number) => {
+    setCurrentEventIndex(index)
+  }
+
+  const handleFightClick = (fight: Fight) => {
+    console.log('Fight clicked:', fight)
+    // TODO: Implement fight detail modal or navigation
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-red-900 to-black">
       <Header />
 
       <main className="container mx-auto px-4 py-8">
-        {/* Event Selection */}
-        <div className="mb-8">
-          <EventSelector
-            events={mockEvents}
-            selectedEvent={selectedEvent}
-            onEventSelect={setSelectedEvent}
-          />
-        </div>
-
-        {/* Fun Filter */}
-        <div className="mb-8 bg-white/10 backdrop-blur-sm rounded-lg p-6">
-          <h3 className="text-white text-lg font-semibold mb-4">
-            🔥 Fun Fight Filter
-          </h3>
-          <div className="flex items-center space-x-4">
-            <label className="text-white">
-              Minimum Fun Score:
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={funThreshold}
-              onChange={(e) => setFunThreshold(parseInt(e.target.value))}
-              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-            />
-            <span className="text-white font-bold text-xl">
-              {funThreshold}
-            </span>
+        {loading ? (
+          <div className="text-center text-white py-16">
+            <div className="text-6xl mb-4">⏳</div>
+            <h2 className="text-2xl font-bold mb-4">Loading Events...</h2>
+            <p className="text-white/70">Fetching the latest UFC events and fight data</p>
           </div>
-        </div>
+        ) : error ? (
+          <div className="text-center text-white py-16">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h2 className="text-2xl font-bold mb-4 text-red-400">Error Loading Data</h2>
+            <p className="text-white/70 mb-6">{error}</p>
+            <a
+              href="/admin"
+              className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors inline-block"
+            >
+              Go to Admin Panel
+            </a>
+          </div>
+        ) : events.length > 0 ? (
+          <>
+            {/* Event Navigation with Arrow Controls */}
+            <EventNavigation
+              events={events}
+              currentEventIndex={currentEventIndex}
+              onEventChange={handleEventChange}
+            />
 
-        {/* Fight Card */}
-        {selectedEvent ? (
-          <FightCard
-            event={selectedEvent}
-            funThreshold={funThreshold}
-          />
+            {/* Fight List */}
+            <div className="max-w-4xl mx-auto">
+              <FightList
+                event={events[currentEventIndex]}
+                onFightClick={handleFightClick}
+              />
+            </div>
+          </>
         ) : (
           <div className="text-center text-white/70 py-16">
+            <div className="text-6xl mb-4">🥊</div>
             <h2 className="text-2xl font-bold mb-4">
               No Events Available
             </h2>
-            <p>
+            <p className="mb-6">
               Check back soon for upcoming UFC events and fight predictions!
             </p>
+            <a
+              href="/admin"
+              className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors inline-block"
+            >
+              Go to Admin Panel
+            </a>
           </div>
         )}
       </main>

@@ -31,6 +31,12 @@ export class FunFightPredictor {
   private async analyzeFunFactors(fighter1: Fighter, fighter2: Fighter, fight: Fight): Promise<FunFactor[]> {
     const factors: FunFactor[] = []
 
+    // Validate fighter data
+    if (!fighter1?.stats || !fighter2?.stats) {
+      console.error('Fighter missing stats data in analyzeFunFactors')
+      return factors
+    }
+
     // 1. Finish Rate Analysis
     const avgFinishRate = (fighter1.stats.finishRate + fighter2.stats.finishRate) / 2
     if (avgFinishRate > 70) {

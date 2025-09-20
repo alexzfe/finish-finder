@@ -18,6 +18,18 @@ model Fighter {
   weightClass String
   imageUrl    String?
 
+  // Enhanced AI-collected data
+  record              String?  // "W-L-D" format
+  height              String?  // "5'10\""
+  reach               String?  // "70\""
+  age                 Int?
+  nationality         String?
+  winsByKO            Int      @default(0)
+  winsBySubmission    Int      @default(0)
+  winsByDecision      Int      @default(0)
+  currentStreak       String?  // "3 win streak"
+  ranking             Int?     // Current division ranking
+
   // Stats
   finishRate                  Float   @default(0)
   koPercentage               Float   @default(0)
@@ -61,6 +73,7 @@ model Event {
 
   // Relations
   fights      Fight[]
+  predictionUsage PredictionUsage[]
 
   @@map("events")
 }
@@ -82,11 +95,21 @@ model Fight {
   weightClass       String
   titleFight        Boolean  @default(false)
   mainEvent         Boolean  @default(false)
-  cardPosition      Int      @default(0) // 1 = main event, 2 = co-main, etc.
+  cardPosition      String   @default("preliminary") // "main", "preliminary", "early-preliminary"
+  scheduledRounds   Int      @default(3)
+  fightNumber       Int?     // Order on card
 
-  // Predictions
+  // Enhanced AI Predictions
+  funFactor             Int      @default(0)    // 1-10 scale
+  finishProbability     Int      @default(0)    // 0-100 percentage
+  entertainmentReason   String?                 // Why this fight will be entertaining
+  keyFactors           String   @default("[]")  // JSON array ["Knockout Power", "Style Clash"]
+  fightPrediction      String?                  // How the fight will play out
+  riskLevel            String?                  // "high", "medium", "low"
+
+  // Legacy predictions (for backward compatibility)
   predictedFunScore Float    @default(0) // 0-100
-  funFactors        String   // JSON array of fun factors
+  funFactors        String   @default("[]") // JSON array of fun factors
   aiDescription     String?
 
   // Results (post-fight)
@@ -136,4 +159,20 @@ model PredictionModel {
   updatedAt           DateTime @updatedAt
 
   @@map("prediction_models")
+}
+
+model PredictionUsage {
+  id                        String   @id @default(cuid())
+  eventId                   String
+  event                     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventName                 String
+  fightsProcessed           Int
+  chunks                    Int
+  promptTokensEstimated     Int
+  completionTokensEstimated Int
+  totalTokensEstimated      Int
+  source                    String
+  createdAt                 DateTime @default(now())
+
+  @@map("prediction_usage")
 }

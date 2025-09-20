@@ -26,12 +26,20 @@ export function EventSelector({ events, selectedEvent, onEventSelect }: EventSel
           >
             <h3 className="font-semibold text-lg mb-2">{event.name}</h3>
             <p className="text-sm opacity-80">
-              {event.date.toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
+              {(() => {
+                // Parse date correctly to avoid timezone issues
+                const dateStr = typeof event.date === 'string'
+                  ? event.date.split('T')[0]
+                  : event.date.toISOString().split('T')[0];
+                const [year, month, day] = dateStr.split('-').map(Number);
+                const safeDate = new Date(year, month - 1, day);
+                return safeDate.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                });
+              })()}
             </p>
             <p className="text-sm opacity-70">
               📍 {event.location}

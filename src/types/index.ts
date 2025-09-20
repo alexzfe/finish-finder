@@ -36,10 +36,19 @@ export interface Fight {
   weightClass: WeightClass;
   titleFight: boolean;
   mainEvent: boolean;
+  cardPosition?: 'main' | 'preliminary' | 'early-preliminary';
+  fightNumber?: number;
   event: UFCEvent;
   predictedFunScore: number; // 0-100
-  funFactors: FunFactor[];
+  funFactors: Array<FunFactor | string>;
   aiDescription: string;
+  funFactor?: number; // Raw 1-10 scale from AI predictions
+  finishProbability?: number;
+  riskLevel?: 'high' | 'medium' | 'low' | null;
+  fightPrediction?: string;
+  prediction?: string;
+  entertainmentReason?: string;
+  scheduledRounds?: number;
   bookingDate: Date;
   completed: boolean;
   actualFunScore?: number; // Post-fight rating
