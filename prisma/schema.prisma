@@ -1,4 +1,4 @@
-// Fun Fight Predictor Database Schema
+// Finish Finder Database Schema
 generator client {
   provider = "prisma-client-js"
 }

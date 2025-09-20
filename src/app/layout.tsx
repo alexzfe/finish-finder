@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fun Fight Predictor | UFC Fight Entertainment Analysis",
+  title: "Finish Finder | UFC Fight Entertainment Analysis",
   description: "AI-powered analysis of upcoming UFC fights to predict which matches will be the most entertaining to watch.",
 };
 

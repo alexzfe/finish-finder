@@ -1,4 +1,4 @@
-# 🥊 Fun Fight Predictor
+# 🥊 Finish Finder
 
 An AI-powered web application that analyzes upcoming UFC fights to predict which matches will be the most entertaining to watch. Using machine learning algorithms and fighter statistics, the platform provides "fun scores" and detailed analysis to help UFC fans prioritize their viewing experience.
 

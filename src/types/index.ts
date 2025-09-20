@@ -1,4 +1,4 @@
-// Core types for the Fun Fight Predictor
+// Core types for the Finish Finder app
 
 export interface Fighter {
   id: string;

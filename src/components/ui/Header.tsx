@@ -7,7 +7,7 @@ export function Header() {
             <div className="text-4xl">🥊</div>
             <div>
               <h1 className="text-2xl font-bold text-white">
-                Fun Fight Predictor
+                Finish Finder
               </h1>
               <p className="text-red-400 text-sm">
                 AI-Powered UFC Entertainment Analysis
