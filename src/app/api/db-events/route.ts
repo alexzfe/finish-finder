@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import * as Sentry from '@sentry/nextjs'
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-static'
+export const revalidate = false
 
 const prisma = new PrismaClient()
 

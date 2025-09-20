@@ -3,7 +3,8 @@ import axios from 'axios'
 import * as cheerio from 'cheerio'
 import * as Sentry from '@sentry/nextjs'
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-static'
+export const revalidate = false
 
 interface FighterImageResult {
   url: string | null
@@ -16,43 +17,13 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const fighterName = searchParams.get('name')
 
-  if (!fighterName) {
-    return NextResponse.json({
-      url: '/images/fighter-placeholder.svg',
-      source: 'placeholder',
-      confidence: 0,
-      cached: false
-    })
-  }
-
-  try {
-    const primaryResult = await searchTapologyFighter(fighterName)
-    if (primaryResult.source !== 'placeholder') {
-      return NextResponse.json(primaryResult)
-    }
-
-    const ufcResult = await searchUfcFighter(fighterName)
-    if (ufcResult.source !== 'placeholder') {
-      return NextResponse.json(ufcResult)
-    }
-
-    const sherdogResult = await searchSherdogFighter(fighterName)
-    return NextResponse.json(sherdogResult)
-  } catch (error) {
-    Sentry.captureException(error, {
-      data: {
-        fighterName,
-        route: '/api/fighter-image'
-      }
-    })
-    console.error('Fighter image API error:', error)
-    return NextResponse.json({
-      url: '/images/fighter-placeholder.svg',
-      source: 'placeholder',
-      confidence: 0,
-      cached: false
-    })
-  }
+  // Image scraping disabled - return placeholder for all requests
+  return NextResponse.json({
+    url: '/images/fighter-placeholder.svg',
+    source: 'placeholder',
+    confidence: 0,
+    cached: false
+  })
 }
 
 async function searchTapologyFighter(fighterName: string): Promise<FighterImageResult> {

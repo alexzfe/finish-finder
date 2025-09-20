@@ -74,3 +74,67 @@
 [2025-09-20T17:06:23.073Z] INFO:    • UFC Fight Night - Royval vs. Kape (2025-12-13)
 [2025-09-20T17:06:23.073Z] INFO: Scraping completed: 11 events, 104 fights, 0 changes
 [2025-09-20T17:06:23.074Z] INFO: AutomatedScraper cleanup completed
+[2025-09-20T18:53:11.935Z] INFO: AutomatedScraper initialized
+[2025-09-20T18:53:11.937Z] INFO: Starting automated event update check...
+[2025-09-20T18:53:11.969Z] INFO: 📋 Scraped 0 events:
+[2025-09-20T18:53:11.970Z] WARN: ⚠️ Event missing from scrape (1/3): UFC Fight Night 260 - Ulberg vs. Reyes
+{"type":"event_missing_warning","timestamp":"2025-09-20T18:53:11.970Z","payload":{"type":"event_missing_warning","eventId":"ufc-fight-night-260-ulberg-vs-reyes","eventName":"UFC Fight Night 260 - Ulberg vs. Reyes","missingCount":1,"threshold":3}}
+[2025-09-20T18:53:12.083Z] WARN: ⚠️ Event missing from scrape (1/3): UFC 320 - Ankalaev vs. Pereira 2
+{"type":"event_missing_warning","timestamp":"2025-09-20T18:53:12.084Z","payload":{"type":"event_missing_warning","eventId":"ufc-320-ankalaev-vs-pereira-2","eventName":"UFC 320 - Ankalaev vs. Pereira 2","missingCount":1,"threshold":3}}
+[2025-09-20T18:53:12.100Z] WARN: ⚠️ Event missing from scrape (1/3): UFC Fight Night 261 - Oliveira vs. Fiziev
+{"type":"event_missing_warning","timestamp":"2025-09-20T18:53:12.101Z","payload":{"type":"event_missing_warning","eventId":"ufc-fight-night-261-oliveira-vs-fiziev","eventName":"UFC Fight Night 261 - Oliveira vs. Fiziev","missingCount":1,"threshold":3}}
+[2025-09-20T18:53:12.101Z] WARN: ⚠️ Event missing from scrape (1/3): UFC Fight Night 262 - De Ridder vs. Allen
+{"type":"event_missing_warning","timestamp":"2025-09-20T18:53:12.102Z","payload":{"type":"event_missing_warning","eventId":"ufc-fight-night-262-de-ridder-vs-allen","eventName":"UFC Fight Night 262 - De Ridder vs. Allen","missingCount":1,"threshold":3}}
+[2025-09-20T18:53:12.103Z] WARN: ⚠️ Event missing from scrape (1/3): UFC 321 - Aspinall vs. Gane
+{"type":"event_missing_warning","timestamp":"2025-09-20T18:53:12.104Z","payload":{"type":"event_missing_warning","eventId":"ufc-321-aspinall-vs-gane","eventName":"UFC 321 - Aspinall vs. Gane","missingCount":1,"threshold":3}}
+[2025-09-20T18:53:12.104Z] WARN: ⚠️ Event missing from scrape (1/3): UFC Fight Night - Garcia vs. Onama
+{"type":"event_missing_warning","timestamp":"2025-09-20T18:53:12.105Z","payload":{"type":"event_missing_warning","eventId":"ufc-fight-night-garcia-vs-onama","eventName":"UFC Fight Night - Garcia vs. Onama","missingCount":1,"threshold":3}}
+[2025-09-20T18:53:12.105Z] WARN: ⚠️ Event missing from scrape (1/3): UFC Fight Night - Nov. 8
+{"type":"event_missing_warning","timestamp":"2025-09-20T18:53:12.106Z","payload":{"type":"event_missing_warning","eventId":"ufc-fight-night-nov-8","eventName":"UFC Fight Night - Nov. 8","missingCount":1,"threshold":3}}
+[2025-09-20T18:53:12.107Z] WARN: ⚠️ Event missing from scrape (1/3): UFC 322 - Della Maddalena vs. Makhachev
+{"type":"event_missing_warning","timestamp":"2025-09-20T18:53:12.108Z","payload":{"type":"event_missing_warning","eventId":"ufc-322-della-maddalena-vs-makhachev","eventName":"UFC 322 - Della Maddalena vs. Makhachev","missingCount":1,"threshold":3}}
+[2025-09-20T18:53:12.108Z] WARN: ⚠️ Event missing from scrape (1/3): UFC Fight Night - Tsarukyan vs. Hooker
+{"type":"event_missing_warning","timestamp":"2025-09-20T18:53:12.110Z","payload":{"type":"event_missing_warning","eventId":"ufc-fight-night-tsarukyan-vs-hooker","eventName":"UFC Fight Night - Tsarukyan vs. Hooker","missingCount":1,"threshold":3}}
+[2025-09-20T18:53:12.110Z] WARN: ⚠️ Event missing from scrape (1/3): UFC 323 - Dec. 6
+{"type":"event_missing_warning","timestamp":"2025-09-20T18:53:12.112Z","payload":{"type":"event_missing_warning","eventId":"ufc-323-dec-6","eventName":"UFC 323 - Dec. 6","missingCount":1,"threshold":3}}
+[2025-09-20T18:53:12.112Z] WARN: ⚠️ Event missing from scrape (1/3): UFC Fight Night - Royval vs. Kape
+{"type":"event_missing_warning","timestamp":"2025-09-20T18:53:12.113Z","payload":{"type":"event_missing_warning","eventId":"ufc-fight-night-royval-vs-kape","eventName":"UFC Fight Night - Royval vs. Kape","missingCount":1,"threshold":3}}
+[2025-09-20T18:53:12.114Z] INFO: Scraping completed: 0 events, 0 fights, 0 changes
+[2025-09-20T18:53:12.115Z] INFO: AutomatedScraper cleanup completed
+[2025-09-20T19:10:34.701Z] INFO: AutomatedScraper initialized
+[2025-09-20T19:10:34.703Z] INFO: Starting automated event update check...
+[2025-09-20T19:10:45.726Z] INFO: 📋 Scraped 11 events:
+[2025-09-20T19:10:45.730Z] INFO:    • UFC Fight Night 260 - Ulberg vs. Reyes (2025-09-27)
+[2025-09-20T19:10:45.730Z] INFO:    • UFC 320 - Ankalaev vs. Pereira 2 (2025-10-04)
+[2025-09-20T19:10:45.731Z] INFO:    • UFC Fight Night 261 - Oliveira vs. Fiziev (2025-10-11)
+[2025-09-20T19:10:45.731Z] INFO:    • UFC Fight Night 262 - De Ridder vs. Allen (2025-10-18)
+[2025-09-20T19:10:45.731Z] INFO:    • UFC 321 - Aspinall vs. Gane (2025-10-25)
+[2025-09-20T19:10:45.731Z] INFO:    • UFC Fight Night - Garcia vs. Onama (2025-11-01)
+[2025-09-20T19:10:45.731Z] INFO:    • UFC Fight Night - Nov. 8 (2025-11-08)
+[2025-09-20T19:10:45.731Z] INFO:    • UFC 322 - Della Maddalena vs. Makhachev (2025-11-15)
+[2025-09-20T19:10:45.731Z] INFO:    • UFC Fight Night - Tsarukyan vs. Hooker (2025-11-22)
+[2025-09-20T19:10:45.731Z] INFO:    • UFC 323 - Dec. 6 (2025-12-06)
+[2025-09-20T19:10:45.731Z] INFO:    • UFC Fight Night - Royval vs. Kape (2025-12-13)
+[2025-09-20T19:10:45.732Z] INFO: ✅ Event restored after temporary absence: UFC Fight Night 260 - Ulberg vs. Reyes
+[2025-09-20T19:10:45.733Z] INFO: ✅ Event restored after temporary absence: UFC 320 - Ankalaev vs. Pereira 2
+[2025-09-20T19:10:45.734Z] INFO: ✅ Event restored after temporary absence: UFC Fight Night 261 - Oliveira vs. Fiziev
+[2025-09-20T19:10:45.735Z] INFO: ✅ Event restored after temporary absence: UFC Fight Night 262 - De Ridder vs. Allen
+[2025-09-20T19:10:45.736Z] INFO: ✅ Event restored after temporary absence: UFC 321 - Aspinall vs. Gane
+[2025-09-20T19:10:45.736Z] INFO: ✅ Event restored after temporary absence: UFC Fight Night - Garcia vs. Onama
+[2025-09-20T19:10:45.737Z] INFO: ✅ Event restored after temporary absence: UFC Fight Night - Nov. 8
+[2025-09-20T19:10:45.737Z] INFO: ✅ Event restored after temporary absence: UFC 322 - Della Maddalena vs. Makhachev
+[2025-09-20T19:10:45.738Z] INFO: ✅ Event restored after temporary absence: UFC Fight Night - Tsarukyan vs. Hooker
+[2025-09-20T19:10:45.739Z] INFO: ✅ Event restored after temporary absence: UFC 323 - Dec. 6
+[2025-09-20T19:10:45.739Z] INFO: ✅ Event restored after temporary absence: UFC Fight Night - Royval vs. Kape
+[2025-09-20T19:10:45.740Z] INFO: Scraping completed: 11 events, 104 fights, 0 changes
+[2025-09-20T19:10:45.741Z] INFO: 🤖 Generating AI predictions for event: UFC Fight Night - Garcia vs. Onama
+[2025-09-20T19:11:11.535Z] INFO: ✅ Generated AI predictions for 9 fights in UFC Fight Night - Garcia vs. Onama
+[2025-09-20T19:11:11.535Z] INFO: 🤖 Generating AI predictions for event: UFC Fight Night - Nov. 8
+[2025-09-20T19:11:24.254Z] INFO: ✅ Generated AI predictions for 4 fights in UFC Fight Night - Nov. 8
+[2025-09-20T19:11:24.254Z] INFO: 🤖 Generating AI predictions for event: UFC 322 - Della Maddalena vs. Makhachev
+[2025-09-20T19:11:52.006Z] INFO: ✅ Generated AI predictions for 9 fights in UFC 322 - Della Maddalena vs. Makhachev
+[2025-09-20T19:11:52.006Z] INFO: 🤖 Generating AI predictions for event: UFC Fight Night - Tsarukyan vs. Hooker
+[2025-09-20T19:12:18.813Z] INFO: ✅ Generated AI predictions for 8 fights in UFC Fight Night - Tsarukyan vs. Hooker
+[2025-09-20T19:12:18.813Z] INFO: 🤖 Generating AI predictions for event: UFC 323 - Dec. 6
+[2025-09-20T19:12:28.645Z] INFO: ✅ Generated AI predictions for 3 fights in UFC 323 - Dec. 6
+[2025-09-20T19:12:28.646Z] INFO: 🤖 Generating AI predictions for event: UFC Fight Night - Royval vs. Kape

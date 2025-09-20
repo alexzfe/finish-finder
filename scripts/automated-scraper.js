@@ -46,6 +46,7 @@ class AutomatedScraper {
       await this.log('Starting automated event update check...')
       const missingEventsState = await this.loadMissingEvents()
       const missingFightsState = await this.loadMissingFights()
+      const eventsNeedingPredictions = new Map()
 
       // Get current events from database
       const currentEvents = await this.prisma.event.findMany({
@@ -88,6 +89,7 @@ class AutomatedScraper {
           await this.handleNewEvent(scrapedEvent, scrapedData.fighters)
           delete missingFightsState[scrapedEvent.id]
           delete missingEventsState[scrapedEvent.id]
+          eventsNeedingPredictions.set(scrapedEvent.id, scrapedEvent.name)
 
           result.changesDetected.push({
             type: 'added',
@@ -109,6 +111,7 @@ class AutomatedScraper {
               changes,
               timestamp: new Date()
             })
+            eventsNeedingPredictions.set(existingEvent.id, existingEvent.name)
           }
         }
 
@@ -116,6 +119,15 @@ class AutomatedScraper {
         if (existingEvent && missingEventsState[existingEvent.id]) {
           delete missingEventsState[existingEvent.id]
           await this.log(`✅ Event restored after temporary absence: ${existingEvent.name}`)
+        }
+
+        const eventIdToCheck = existingEvent ? existingEvent.id : scrapedEvent.id
+        const eventNameToCheck = existingEvent ? existingEvent.name : scrapedEvent.name
+        if (!eventsNeedingPredictions.has(eventIdToCheck)) {
+          const needsPredictions = await this.eventNeedsPredictions(eventIdToCheck)
+          if (needsPredictions) {
+            eventsNeedingPredictions.set(eventIdToCheck, eventNameToCheck)
+          }
         }
       }
 
@@ -157,6 +169,10 @@ class AutomatedScraper {
       await this.log(`Scraping completed: ${result.eventsProcessed} events, ${result.fightsProcessed} fights, ${result.changesDetected.length} changes`)
       await this.saveMissingEvents(missingEventsState)
       await this.saveMissingFights(missingFightsState)
+
+      for (const [eventId, eventName] of eventsNeedingPredictions.entries()) {
+        await this.generateEventPredictions(eventId, eventName)
+      }
 
     } catch (error) {
       const errorMsg = `Scraping failed: ${error.message}`
@@ -630,6 +646,30 @@ class AutomatedScraper {
     } catch (error) {
       await this.log(`Failed to persist missing fight state: ${error.message}`, 'warn')
     }
+  }
+
+  async eventNeedsPredictions(eventId) {
+    const fights = await this.prisma.fight.findMany({
+      where: { eventId },
+      select: {
+        id: true,
+        funFactor: true,
+        predictedFunScore: true,
+        entertainmentReason: true,
+        aiDescription: true,
+        finishProbability: true
+      }
+    })
+
+    if (fights.length === 0) {
+      return false
+    }
+
+    return fights.some(fight => {
+      const hasDescription = Boolean(fight.entertainmentReason || fight.aiDescription)
+      const hasNumericPredictions = Boolean(fight.funFactor && fight.finishProbability)
+      return !hasDescription || !hasNumericPredictions
+    })
   }
 
   async getStatus() {
