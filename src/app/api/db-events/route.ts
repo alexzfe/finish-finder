@@ -84,7 +84,20 @@ export async function GET() {
         cardPosition: fight.cardPosition,
         scheduledRounds: fight.scheduledRounds,
         fightNumber: fight.fightNumber,
-        predictedFunScore: fight.predictedFunScore,
+        predictedFunScore: (() => {
+          const rawScore = fight.predictedFunScore
+          if (typeof rawScore === 'number') {
+            const scaled = rawScore <= 10 ? Math.round(rawScore * 10) : Math.round(rawScore)
+            return Math.min(100, Math.max(0, scaled))
+          }
+
+          if (typeof fight.funFactor === 'number') {
+            const fallback = Math.round(fight.funFactor * 10)
+            return Math.min(100, Math.max(0, fallback))
+          }
+
+          return 0
+        })(),
         funFactors: fight.funFactors ? JSON.parse(fight.funFactors) : [],
         aiDescription: fight.aiDescription || fight.entertainmentReason,
         funFactor: fight.funFactor,
