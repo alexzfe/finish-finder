@@ -1,0 +1,1 @@
+Read the codebase first (use docs only to augment). Then output CODEBASE_UNDERSTANDING and SELF_PRODUCTION_PLAN. Immediately begin executing the "Now" items with atomic commits, tests, doc updates (existing files only), and an Engineer's Log (why/tech/analogy/where to look) after each commit—per CLAUDE.md.
