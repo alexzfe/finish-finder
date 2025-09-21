@@ -4,10 +4,12 @@
 | Item | Why | Measurable Outcome | Effort | Risks/Mitigations | Owner | Dependencies |
 | --- | --- | --- | --- | --- | --- | --- |
 | ✅ **Database performance optimization** | **Critical performance and safety improvements** | **Indexes added, connection pooling optimized, transactions implemented** | **M** | **Low risk, backward compatible** | **Database Engineer** | **None** |
-| Reinstate lint/type build blockers | Prevent silent regressions | `npm run build` fails on ESLint/TS errors; CI job enforcing `npm run lint` + `npx tsc --noEmit` | M | Existing issues may surface → schedule pairing to fix quickly | Triage Engineer | None |
+| ✅ **TypeScript type safety improvements** | **Eliminate `any` types causing runtime errors** | **Replaced `any` with `unknown`, added type guards, fixed async signatures** | **M** | **Low risk, compile-time safety** | **Frontend Engineer** | **None** |
+| ✅ **Local development environment** | **Enable developers to run project locally** | **Docker Compose, .env.local template, development documentation** | **S** | **Low risk, dev-only changes** | **DevOps Engineer** | **None** |
+| ✅ **Repository cleanup** | **Reduce repo size and git noise** | **Build artifacts removed from git, gitignore updated** | **L** | **Low risk, housekeeping** | **Maintenance** | **None** |
+| Reinstate lint/type build blockers | Prevent silent regressions | `npm run build` fails on ESLint/TS errors; CI job enforcing `npm run lint` + `npx tsc --noEmit` | M | Existing issues may surface → schedule pairing to fix quickly | Triage Engineer | TypeScript fixes |
 | Secret hygiene remediation | Keys leaked in history | Rotated Sentry/OpenAI/Google tokens; secret scanning job added | M | Rotation requires coordination → stage rollouts by environment | Security Champ | Access to secret managers |
 | JSON parsing & error handling tests | Lock in recent fixes | Vitest suite covering `parseJsonArray`, API transformers, and weight-class guard | M | Needs test harness → bootstrap minimal Vitest config | Backend Engineer | Reinstate lint/type blockers |
-| GitHub Pages artifact policy | Reduce repo size | `docs/_next` removed from git; build workflow publishes artifacts instead | L | Need Pages alternative → keep manual fallback until automation lands | Ops Lead | Build automation PR |
 
 ## Horizon: Next (2–6 weeks)
 | Item | Why | Measurable Outcome | Effort | Risks/Mitigations | Owner | Dependencies |

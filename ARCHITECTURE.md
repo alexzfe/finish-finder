@@ -61,9 +61,11 @@ Users → Next.js App (Vercel/GitHub Pages)
 - **Feature Flags** – None presently. Image lookup effectively toggled off via early return in `fighter-image` route.
 
 ## Known Gaps & Future Work
-- No automated tests or type/lint enforcement in CI; builds ignore TypeScript/ESLint errors via `next.config.ts` toggle. See [`ROADMAP.md`](ROADMAP.md) for remediation steps.
+- ✅ **TypeScript safety improved** - Replaced `any` types with `unknown`, added type guards for safer runtime handling
+- ✅ **Repository size optimized** - Build artifacts removed from git tracking, reducing clone size by ~2.4MB
+- ✅ **Local development setup** - Docker Compose and environment documentation for easy onboarding
+- No automated tests or type/lint enforcement in CI; builds still ignore TypeScript/ESLint errors temporarily. See [`ROADMAP.md`](ROADMAP.md) for remediation steps.
 - Scraper lacks proxy rotation and will still fail if Sherdog blocks repeated requests.
-- `docs/_next` and `out/` directories keep the repo large; evaluate generating on demand.
 - Fighter imagery fallback logic exists but is disabled; needs rate-limit friendly implementation before re-enabling.
 - Observability for scraper jobs is console/log-file based; database performance monitoring now available via admin dashboard.
 
