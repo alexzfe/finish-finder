@@ -64,9 +64,9 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
         <p className="ufc-condensed mt-2 text-xs text-[var(--ufc-red)] md:text-sm">
           {(() => {
             const dateStr = typeof currentEvent.date === 'string'
-              ? currentEvent.date.split('T')[0]
-              : currentEvent.date.toISOString().split('T')[0];
-            const [year, month, day] = dateStr.split('-').map(Number);
+              ? (currentEvent.date as string).split('T')[0]
+              : (currentEvent.date as Date).toISOString().split('T')[0];
+            const [year, month, day] = (dateStr as string).split('-').map(Number);
             const safeDate = new Date(year, month - 1, day);
             return safeDate.toLocaleDateString('en-US', {
               weekday: 'long',

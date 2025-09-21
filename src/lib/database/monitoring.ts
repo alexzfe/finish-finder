@@ -426,7 +426,7 @@ export const queryMonitor = new QueryPerformanceMonitor()
  * Prisma middleware factory for query performance monitoring
  */
 export function createQueryMonitoringMiddleware() {
-  return async (params: unknown, next: unknown) => {
+  return async (params: any, next: any) => {
     const startTime = Date.now()
 
     try {

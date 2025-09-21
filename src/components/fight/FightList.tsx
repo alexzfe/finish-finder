@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, memo, useCallback } from 'react'
-import { UFCEvent, Fight } from '@/types'
+import { UFCEvent, Fight, WeightClass } from '@/types'
 import { FighterAvatar } from '@/components/fighter/FighterAvatar'
 
 interface FightListProps {
@@ -56,7 +56,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
       riskLevel: fight.riskLevel ?? null,
       weightClass: prettifyWeightClass(
         fight.weightClass || fight.fighter1?.weightClass || fight.fighter2?.weightClass
-      ),
+      ) as WeightClass,
       mainEvent: fight.mainEvent ?? (cardPosition === 'main' && index === 0)
     }
   }
@@ -148,7 +148,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <span className="ufc-condensed text-xs text-white/70">
-                {fight.position || 'Fight' }
+                {(fight as any).position || 'Fight' }
               </span>
               {fight.titleFight && (
                 <span className="ufc-condensed text-[0.6rem] tracking-[0.3em] text-white" style={{ backgroundColor: 'rgba(210,10,10,0.15)', padding: '0.15rem 0.55rem', borderRadius: '999px', border: '1px solid rgba(210,10,10,0.35)' }}>

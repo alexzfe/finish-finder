@@ -29,9 +29,9 @@ export function EventSelector({ events, selectedEvent, onEventSelect }: EventSel
               {(() => {
                 // Parse date correctly to avoid timezone issues
                 const dateStr = typeof event.date === 'string'
-                  ? event.date.split('T')[0]
-                  : event.date.toISOString().split('T')[0];
-                const [year, month, day] = dateStr.split('-').map(Number);
+                  ? (event.date as string).split('T')[0]
+                  : (event.date as Date).toISOString().split('T')[0];
+                const [year, month, day] = (dateStr as string).split('-').map(Number);
                 const safeDate = new Date(year, month - 1, day);
                 return safeDate.toLocaleDateString('en-US', {
                   weekday: 'long',

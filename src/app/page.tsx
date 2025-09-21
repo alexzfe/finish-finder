@@ -40,7 +40,7 @@ export default function Home() {
           .map((event) => ({
             ...event,
             date: new Date((event.date as string) || new Date())
-          }))
+          } as UFCEvent))
           .sort((a: UFCEvent, b: UFCEvent) => a.date.getTime() - b.date.getTime())
 
       try {
