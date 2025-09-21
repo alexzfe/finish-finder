@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { createQueryMonitoringMiddleware } from './monitoring'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -11,7 +12,7 @@ function createPrismaClient() {
     return null
   }
 
-  return new PrismaClient({
+  const client = new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     datasources: {
       db: {
@@ -19,6 +20,11 @@ function createPrismaClient() {
       }
     }
   })
+
+  // Add query performance monitoring middleware
+  client.$use(createQueryMonitoringMiddleware())
+
+  return client
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient()

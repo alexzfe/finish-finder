@@ -77,6 +77,7 @@ export const scraperLogger = new Logger('SCRAPER')
 export const imageLogger = new Logger('IMAGE_SERVICE')
 export const apiLogger = new Logger('API')
 export const uiLogger = new Logger('UI')
+export const dbLogger = new Logger('DATABASE')
 
 // Performance monitoring
 export class PerformanceMonitor {
