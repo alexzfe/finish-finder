@@ -15,7 +15,7 @@
 ## Horizon: Next (2–6 weeks)
 | Item | Why | Measurable Outcome | Effort | Risks/Mitigations | Owner | Dependencies |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Database query monitoring** | **Visibility into performance as data scales** | **Slow query logging and alerts implemented** | **M** | **Observability only, low risk** | **Database Engineer** | **Database optimization complete** |
+| ✅ **Database query monitoring** | **Visibility into performance as data scales** | **Advanced monitoring with N+1 detection, structured logging, intelligent alerts, and optimization recommendations** | **M** | **✅ Complete - Comprehensive monitoring system deployed** | **Database Engineer** | **✅ Database optimization complete** |
 | Scraper reliability hardening | Sherdog 403s & false cancellations | Proxy/backoff layer + integration tests; strike ledger configurable via admin | H | Proxy costs → evaluate lightweight rotating user agents first | Data Engineer | ✅ JSON parsing tests complete |
 | Add automated test suites | Increase confidence | CI running Vitest (≥60% stmt coverage on `src/lib/**`) + Playwright smoke for UI | H | Flaky UI tests → start with headless-only smoke path | QA Lead | ✅ Vitest bootstrap complete |
 | Observability enhancements | Improve triage | Standard log fields + scrape duration metrics + Sentry breadcrumb tagging | M | Requires schema for metrics storage → start with structured logs shipped to log store | Platform Engineer | Scraper hardening |
