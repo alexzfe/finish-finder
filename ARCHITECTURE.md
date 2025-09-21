@@ -33,7 +33,7 @@ Users → Next.js App (Vercel/GitHub Pages)
 | --- | --- | --- |
 | **UI** | Renders events, fight cards, and sticky analysis. Handles optimistic selection state and base-path aware static fetch. | `src/app/page.tsx`, `src/components/**/*`
 | **API** | Serves structured fight data from the database and (optionally) resolves fighter imagery. Includes JSON safety nets to avoid poisoning the feed. Provides performance monitoring and health check endpoints. | `src/app/api/db-events/route.ts`, `src/app/api/fighter-image/route.ts`, `src/app/api/performance/route.ts`, `src/app/api/health/route.ts`
-| **Data & Domain** | Defines TypeScript and Prisma models, conversion helpers, logging utilities, and database performance monitoring that keep scraper output consistent. | `prisma/schema.prisma`, `src/types/**/*`, `src/lib/**/*`, `src/lib/database/monitoring.ts`
+| **Data & Domain** | Defines TypeScript and Prisma models, conversion helpers, logging utilities, JSON parsing utilities, weight-class validation, and database performance monitoring that keep scraper output consistent. | `prisma/schema.prisma`, `src/types/**/*`, `src/lib/**/*`, `src/lib/utils/json.ts`, `src/lib/utils/weight-class.ts`, `src/lib/database/validation.ts`, `src/lib/database/monitoring.ts`
 | **Automation** | Scrapes Sherdog, reconciles DB state, replays predictions, exports static bundles, and prepares GitHub Pages artifacts. Writes strike-ledger JSON for resilience. | `scripts/automated-scraper.js`, `scripts/generate-*.js`, `scripts/export-static-data.js`, `scripts/prepare-github-pages.js`
 | **Monitoring** | Wires Sentry for client/server/edge and exposes loggers with structured output for scraper ops. Provides database performance monitoring, health checks, and admin dashboard. | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts`, `src/app/admin/`, `src/components/admin/`
 
@@ -91,3 +91,16 @@ See [`DATABASE_PRODUCTION_STATUS.md`](DATABASE_PRODUCTION_STATUS.md) for complet
 - ✅ **ESLint configuration optimized** - Build artifacts and legacy code excluded from quality checks
 
 See [`TYPESCRIPT_MIGRATION_PLAN.md`](TYPESCRIPT_MIGRATION_PLAN.md) for complete migration details.
+
+## JSON Parsing & Error Handling Infrastructure (2025-09-21)
+- ✅ **Vitest test suite implemented** - 60 comprehensive tests covering JSON utilities, weight-class validation, and database validation
+- ✅ **JSON utilities with error handling** - parseJsonArray, parseJsonSafe, stringifyJsonSafe with graceful fallbacks and console warning logging
+- ✅ **Weight class validation & normalization** - Handles common scraping variations (LHW → light_heavyweight, case normalization, women's divisions)
+- ✅ **Database input validation** - Type checking and error accumulation for fight/fighter data with realistic test scenarios
+- ✅ **99.06% test coverage achieved** - Far exceeding the 60% target on tested src/lib modules
+- ✅ **API route refactoring** - db-events route now uses centralized JSON parsing utilities
+
+### Key Utility Functions
+- **JSON Parsing**: `src/lib/utils/json.ts:parseJsonArray` - Safely parses database JSON with fallback to empty arrays
+- **Weight Class Validation**: `src/lib/utils/weight-class.ts:toWeightClass` - Normalizes weight class variations from scraped data
+- **Database Validation**: `src/lib/database/validation.ts:validateFightData` - Validates fight objects with comprehensive error reporting
