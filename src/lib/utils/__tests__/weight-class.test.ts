@@ -119,7 +119,7 @@ describe('Weight Class Utilities', () => {
 
     it('should handle case and whitespace normalization', () => {
       expect(toWeightClass('  LIGHTWEIGHT  ')).toBe('lightweight')
-      expect(toWeightClass('Light Weight')).toBe('light_heavyweight') // spaces become underscores
+      expect(toWeightClass('Light Weight')).toBe('lightweight') // 'light weight' normalizes to lightweight
       expect(toWeightClass('middle weight')).toBe('middleweight')
     })
 

@@ -48,7 +48,7 @@ export function toWeightClass(value: unknown, fallback: WeightClass = 'lightweig
     // Handle common variations
     const variations: Record<string, WeightClass> = {
       'light_heavy': 'light_heavyweight',
-      'light_weight': 'light_heavyweight', // 'Light Weight' becomes 'light_weight' after normalization
+      'light_weight': 'lightweight', // 'Light Weight' becomes 'light_weight' after normalization
       'lightheavy': 'light_heavyweight',
       'lhw': 'light_heavyweight',
       'hw': 'heavyweight',
