@@ -27,7 +27,7 @@ Finish Finder helps UFC fans pick the most electric fights. The system:
 
 Core repo pillars:
 - **Frontend** – Next.js App Router with client components in `src/app` and modular UI widgets under `src/components`.
-- **APIs** – Prisma-backed routes in `src/app/api`, including `/api/db-events` (event feed) and `/api/fighter-image` (scraped imagery, currently placeholder-only).
+- **APIs** – Prisma-backed routes in `src/app/api`, including `/api/db-events` (event feed), `/api/fighter-image` (scraped imagery, currently placeholder-only), `/api/health` (system health checks), and `/api/performance` (database performance metrics).
 - **Data & AI** – `src/lib/ai/hybridUFCService.ts` orchestrates scraping and prediction requests. Supporting utilities live in `src/lib`.
 - **Automation** – Node scripts in `scripts/` schedule scrapes, regenerate predictions, export static JSON, and prep GitHub Pages artifacts.
 
@@ -35,11 +35,11 @@ Core repo pillars:
 | Slice | Entrypoints | Notes |
 | --- | --- | --- |
 | UI | `src/app/page.tsx`, `src/components/**` | Fetches `/api/db-events` first, falls back to `public/data/events.json`. Sticky sidebar highlights selected fight. |
-| API | `src/app/api/db-events/route.ts`, `src/app/api/fighter-image/route.ts` | Prisma event feed with JSON safety guards; fighter-image route currently disabled to reduce third-party scraping noise. |
+| API | `src/app/api/db-events/route.ts`, `src/app/api/fighter-image/route.ts`, `src/app/api/health/route.ts`, `src/app/api/performance/route.ts` | Prisma event feed with JSON safety guards; fighter-image route currently disabled to reduce third-party scraping noise. Health and performance monitoring endpoints for observability. |
 | Data Layer | `prisma/schema.prisma`, `prisma/migrations/**` | Runs on SQLite locally and Supabase/Postgres remotely. Includes prediction usage telemetry tables. |
 | Scraper & AI | `scripts/automated-scraper.js`, `src/lib/ai/hybridUFCService.ts`, `scripts/generate-*.js` | Handles scrape → diff → persist → prediction replays. Writes audit logs under `logs/`. |
 | Static Export | `scripts/export-static-data.js`, `scripts/prepare-github-pages.js`, `docs/` | Produces GitHub Pages snapshot with `_next` assets and pre-rendered data. |
-| Monitoring | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts` | Sentry is wired for client, server, and edge; logger utilities keep console output structured. |
+| Monitoring | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts`, `src/app/admin/`, `src/lib/database/monitoring.ts` | Sentry is wired for client, server, and edge; logger utilities keep console output structured. Database performance monitoring with admin dashboard at `/admin`. |
 
 ## Quickstart
 
@@ -61,6 +61,8 @@ cp .env.example .env.local
 npm run dev               # Start Next.js with Turbopack on http://localhost:3000
 ```
 The app attempts `/api/db-events` first. Without a database it will read from `public/data/events.json`.
+
+**Admin Dashboard**: Access database performance monitoring at `http://localhost:3000/admin` (password: "admin123" in development mode).
 
 To view the static export:
 ```bash

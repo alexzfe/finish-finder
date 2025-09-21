@@ -32,17 +32,18 @@ Users → Next.js App (Vercel/GitHub Pages)
 | Layer | Responsibilities | Key Files |
 | --- | --- | --- |
 | **UI** | Renders events, fight cards, and sticky analysis. Handles optimistic selection state and base-path aware static fetch. | `src/app/page.tsx`, `src/components/**/*`
-| **API** | Serves structured fight data from the database and (optionally) resolves fighter imagery. Includes JSON safety nets to avoid poisoning the feed. | `src/app/api/db-events/route.ts`, `src/app/api/fighter-image/route.ts`
-| **Data & Domain** | Defines TypeScript and Prisma models, conversion helpers, and logging utilities that keep scraper output consistent. | `prisma/schema.prisma`, `src/types/**/*`, `src/lib/**/*`
+| **API** | Serves structured fight data from the database and (optionally) resolves fighter imagery. Includes JSON safety nets to avoid poisoning the feed. Provides performance monitoring and health check endpoints. | `src/app/api/db-events/route.ts`, `src/app/api/fighter-image/route.ts`, `src/app/api/performance/route.ts`, `src/app/api/health/route.ts`
+| **Data & Domain** | Defines TypeScript and Prisma models, conversion helpers, logging utilities, and database performance monitoring that keep scraper output consistent. | `prisma/schema.prisma`, `src/types/**/*`, `src/lib/**/*`, `src/lib/database/monitoring.ts`
 | **Automation** | Scrapes Sherdog, reconciles DB state, replays predictions, exports static bundles, and prepares GitHub Pages artifacts. Writes strike-ledger JSON for resilience. | `scripts/automated-scraper.js`, `scripts/generate-*.js`, `scripts/export-static-data.js`, `scripts/prepare-github-pages.js`
-| **Monitoring** | Wires Sentry for client/server/edge and exposes loggers with structured output for scraper ops. | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts`
+| **Monitoring** | Wires Sentry for client/server/edge and exposes loggers with structured output for scraper ops. Provides database performance monitoring, health checks, and admin dashboard. | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts`, `src/app/admin/`, `src/components/admin/`
 
 ## Data & Control Flow
 1. **Scrape** – `scripts/automated-scraper.js` runs (GitHub Action, cron, or manual). It calls `HybridUFCService` to fetch events/fights from Sherdog and stores results in the database, keeping strike counts in `logs/missing-*.json` to delay cancellations.
 2. **Predict** – The scraper (or `scripts/generate-*.js`) identifies fights lacking AI fields and batches them through OpenAI using `buildPredictionPrompt`. Results update `fights` plus `predictionUsage` metrics.
 3. **Serve** – The UI requests `/api/db-events`. When Postgres is reachable it returns Prisma-backed events; otherwise the frontend falls back to `public/data/events.json` (exported via `scripts/export-static-data.js`).
 4. **Static Mirror** – `scripts/prepare-github-pages.js` copies the production `out/` bundle into `docs/` so GitHub Pages can host a static mirror with client-side data fetching disabled.
-5. **Monitoring** – Each failure path logs to Sentry (client/server) or to the structured logger. Scraper warnings update strike ledgers but defer destructive actions until thresholds (default 3 events / 2 fights) are hit.
+5. **Monitoring** – Each failure path logs to Sentry (client/server) or to the structured logger. Scraper warnings update strike ledgers but defer destructive actions until thresholds (default 3 events / 2 fights) are hit. Database operations are automatically tracked via Prisma middleware for performance analysis.
+6. **Performance Tracking** – All database queries are monitored in real-time, with slow/critical query detection and health scoring. Admins can access performance data via `/api/health`, `/api/performance`, or the dashboard at `/admin`.
 
 ## External Integrations
 - **Sherdog** – Primary scrape target for event schedules, fight cards, and fighter identifiers.
@@ -64,14 +65,17 @@ Users → Next.js App (Vercel/GitHub Pages)
 - Scraper lacks proxy rotation and will still fail if Sherdog blocks repeated requests.
 - `docs/_next` and `out/` directories keep the repo large; evaluate generating on demand.
 - Fighter imagery fallback logic exists but is disabled; needs rate-limit friendly implementation before re-enabling.
-- Observability for scraper jobs is console/log-file only—consider centralising logs and exposing health endpoints.
+- Observability for scraper jobs is console/log-file based; database performance monitoring now available via admin dashboard.
 
-## Recent Database Improvements (2025-09-20)
+## Recent Database Improvements (2025-09-20 & 2025-09-21)
 - ✅ **Performance indexes added** for event queries and fight joins
 - ✅ **Connection pooling optimized** with singleton PrismaClient pattern
 - ✅ **Query pagination implemented** to prevent unbounded results
 - ✅ **Transaction safety added** to scraper operations for atomicity
 - ✅ **Bulk operations optimized** for fighter/fight creation
 - ✅ **JSON field validation** implemented to prevent runtime errors
+- ✅ **Query performance monitoring** with real-time dashboard and health checks
+- ✅ **Admin interface** for database performance visualization and management
+- ✅ **Comprehensive observability** with metrics collection and alerting
 
 See [`DATABASE_PRODUCTION_STATUS.md`](DATABASE_PRODUCTION_STATUS.md) for complete implementation details.
