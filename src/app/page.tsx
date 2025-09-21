@@ -6,6 +6,14 @@ import { FightList } from '@/components/fight/FightList'
 import { Header } from '@/components/ui/Header'
 import { UFCEvent, Fight } from '@/types'
 
+// Utility function to format weight class names
+const formatWeightClass = (weightClass: string): string => {
+  return weightClass
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 export default function Home() {
   const [events, setEvents] = useState<UFCEvent[]>([])
   const [currentEventIndex, setCurrentEventIndex] = useState(0)
@@ -171,7 +179,7 @@ export default function Home() {
                         {selectedFight.fighter1?.name || 'TBD'} vs {selectedFight.fighter2?.name || 'TBD'}
                       </h3>
                       <p className="text-xs uppercase tracking-[0.4em] text-white/50">
-                        {selectedFight.weightClass} • {selectedFight.scheduledRounds || 3} Rounds
+                        {formatWeightClass(selectedFight.weightClass)} • {selectedFight.scheduledRounds || 3} Rounds
                         {selectedFight.titleFight ? ' • Title Fight' : ''}
                         {selectedFight.mainEvent && !selectedFight.titleFight ? ' • Main Event' : ''}
                       </p>

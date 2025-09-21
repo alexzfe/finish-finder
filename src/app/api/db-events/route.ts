@@ -98,7 +98,7 @@ export async function GET() {
 
           return 0
         })(),
-        funFactors: fight.funFactors ? JSON.parse(fight.funFactors) : [],
+        funFactors: fight.keyFactors ? JSON.parse(fight.keyFactors) : [],
         aiDescription: fight.aiDescription || fight.entertainmentReason,
         funFactor: fight.funFactor,
         finishProbability: fight.finishProbability,

@@ -731,7 +731,7 @@ export class HybridUFCService {
             entertainmentReason: prediction.entertainmentReason,
             keyFactors: prediction.keyFactors || [],
             fightPrediction: prediction.prediction,
-            riskLevel: prediction.riskLevel ?? null
+            riskLevel: prediction.riskLevel ?? undefined
           }
         }
 
@@ -742,7 +742,7 @@ export class HybridUFCService {
           finishProbability: fight.finishProbability ?? 0,
           entertainmentReason: fight.entertainmentReason || 'AI prediction unavailable. Data generated from scraper only.',
           keyFactors: fight.keyFactors || [],
-          riskLevel: fight.riskLevel ?? null
+          riskLevel: fight.riskLevel ?? undefined
         }
       })
 

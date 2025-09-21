@@ -16,7 +16,7 @@ This handbook consolidates the key reference material for working on Finish Find
 
 ### Data Flow
 1. **Scraper run** (`node scripts/automated-scraper.js check`): fetches upcoming events, updates Prisma, increments strike counters, and regenerates predictions when required.
-2. **Prediction backfill** happens automatically within the scraper (or via `scripts/generate-event-predictions.js` for manual runs) when fights lack AI data.
+2. **Prediction backfill** happens automatically within the scraper (or via `scripts/generate-event-predictions.js` for manual runs) when fights lack AI data. OpenAI requests are chunked (default batches of 6 fights) to keep JSON responses reliable while still weighting finish probability first in the shared prompt.
 3. **Frontend** consumes `/api/db-events` (Prisma) or falls back to static JSON for GitHub Pages.
 4. **Fighter imagery** retrieved lazily by `/api/fighter-image` with Tapology → UFC → Sherdog fallback plus client caching.
 
@@ -29,6 +29,7 @@ This handbook consolidates the key reference material for working on Finish Find
 | `DATABASE_URL` | Server | Prisma connection string (Supabase recommended in production). |
 | `SHADOW_DATABASE_URL` | Server | Optional shadow DB used by Prisma migrate in hosted CI. |
 | `OPENAI_API_KEY` | Server | Required for scraper and prediction scripts. |
+| `OPENAI_PREDICTION_CHUNK_SIZE` | Server | Optional override for fights-per-request batching (default 6). |
 | `SENTRY_DSN` | Server | Backend Sentry DSN (`finish-finder_backend`). |
 | `NEXT_PUBLIC_SENTRY_DSN` | Client | Frontend Sentry DSN (`finish-finder_frontend`). |
 | `SENTRY_TRACES_SAMPLE_RATE` | Server | Backend tracing sample rate (default 0.2). |
@@ -84,7 +85,7 @@ Detailed step-by-step instructions live in `launch_plan.md` if you need a projec
 ## 5. Automation & Monitoring
 
 - **Scraper** (Sherdog + OpenAI): resilience logic ensures cards aren’t cancelled after a single miss; all actions logged to `logs/scraper.log`.
-- **Prediction backfill**: runs automatically when fights lack descriptions/scores or when cards change.
+- **Prediction backfill**: runs automatically when fights lack descriptions/scores or when cards change. Both the scraper and the manual script reuse `src/lib/ai/predictionPrompt.ts`, so finish-heavy fights continue to score highest.
 - **Sentry**: instrumentation covers client (`NEXT_PUBLIC_SENTRY_DSN`), server (`SENTRY_DSN`), edge, and scraper warnings (via `SENTRY_TOKEN`).
 - **Static export**: `npm run pages:build` writes to `/docs` for GitHub Pages hosting; optional once Vercel is live.
 
@@ -94,18 +95,31 @@ Detailed step-by-step instructions live in `launch_plan.md` if you need a projec
 - **GitHub Actions cron**: `.github/workflows/scraper.yml` triggers the container every 4 hours (plus manual `workflow_dispatch`). Secrets/variables are pulled from repository settings so the job stays zero-cost.
 - **Local dry run**: run `docker run --rm --env-file .env.local finish-finder-scraper` to verify behavior exactly as Actions will execute it.
 
+### Prediction Management Scripts
+- **Clear predictions**: `scripts/clear-predictions.js` - Wipes all AI prediction data from the database, useful when updating the prediction prompt or model. Resets `funFactor`, `finishProbability`, `entertainmentReason`, `aiDescription`, and other AI-generated fields to defaults.
+- **Verify cleared**: `scripts/verify-predictions-cleared.js` - Confirms that prediction data has been successfully cleared and shows sample fight data.
+- **Usage**: Run with proper `DATABASE_URL` environment variable:
+  ```bash
+  DATABASE_URL="..." node scripts/clear-predictions.js
+  DATABASE_URL="..." node scripts/verify-predictions-cleared.js
+  ```
+
 ---
 
 ## 6. Current Limitations & Backlog
 
-- **Database**: migrations to Supabase/Postgres not committed yet.
-- **Hosting**: production deployment not set up—still local/static.
+- **Database**: migrations to Supabase/Postgres not committed yet (Supabase is already used in production).
+- **Sherdog blocking**: repeated 403s can still short-circuit a scrape; plan to add proxy rotation or a first-party data source.
 - **Network**: sandboxed environments here cannot reach Sherdog/Tapology/OpenAI; real host must allow outbound HTTPS.
 - **Advanced analytics**: future plans include pace/stylistic metrics and user rating feedback loops.
 - **User features**: no auth, rating UI, or alerts yet.
 - **Tests**: no automated test suite; rely on manual runs.
 
 See `launch_plan.md` for staged tasks and future work items.
+
+**Future focus**
+- Add a lightweight verification job that replays the OpenAI prompt nightly to catch upstream model drift.
+- Introduce an allowlisted proxy or cache to mitigate Sherdog 403 blocks without inflating strike counts.
 
 ---
 
