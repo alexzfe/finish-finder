@@ -10,25 +10,30 @@
 
 import { PrismaClient } from '@prisma/client'
 
-// Import the singleton prisma client to avoid circular dependency issues
-let prismaForMonitoring: PrismaClient | null = null
+// Lazy-loaded prisma instance to avoid circular dependencies
+let prismaInstance: PrismaClient | null = null
 
 function getPrismaForMonitoring(): PrismaClient | null {
-  // Avoid circular imports and allow monitoring to work without database
-  if (prismaForMonitoring === null && typeof window === 'undefined') {
-    try {
-      // Dynamic import to avoid circular dependency
-      if (process.env.DATABASE_URL) {
-        prismaForMonitoring = new PrismaClient({
-          log: [], // No logging for monitoring queries to avoid recursion
-        })
-      }
-    } catch (error) {
-      // Gracefully handle when database is not available
-      prismaForMonitoring = null
-    }
+  if (typeof window !== 'undefined') return null // Client-side only
+
+  // Return cached instance if available
+  if (prismaInstance) return prismaInstance
+
+  try {
+    // Only create instance if DATABASE_URL is available
+    if (!process.env.DATABASE_URL) return null
+
+    // Import dynamically to avoid build-time issues
+    prismaInstance = new PrismaClient({
+      log: [], // Disable logging to prevent recursion
+    })
+
+    return prismaInstance
+  } catch (error) {
+    // Gracefully handle any instantiation errors
+    console.warn('Failed to create monitoring Prisma instance:', error)
+    return null
   }
-  return prismaForMonitoring
 }
 
 // Performance thresholds (configurable via environment)
