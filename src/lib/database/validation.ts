@@ -90,10 +90,17 @@ export function validateFightData(fight: unknown): { valid: boolean; errors: str
 }
 
 export function validateFighterData(fighter: unknown): { valid: boolean; errors: string[] } {
+  const errors: string[] = []
+
+  // Handle null/undefined input
+  if (!fighter || typeof fighter !== 'object') {
+    errors.push('Fighter data is required and must be an object')
+    return { valid: false, errors }
+  }
+
   // Type assertion for validation function
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fighterData = fighter as any
-  const errors: string[] = []
 
   // Required fields
   if (!fighterData.id || typeof fighterData.id !== 'string') {

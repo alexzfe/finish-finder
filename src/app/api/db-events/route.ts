@@ -1,26 +1,10 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
 import { prisma } from '@/lib/database/prisma'
+import { parseJsonArray } from '@/lib/utils/json'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-function parseJsonArray(value: unknown) {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    return []
-  }
-
-  try {
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed : []
-  } catch (error) {
-    console.warn('Failed to parse JSON payload from database, falling back to empty array.', {
-      error,
-      payloadPreview: value.slice(0, 120)
-    })
-    return []
-  }
-}
 
 export async function GET() {
   try {

@@ -8,6 +8,9 @@
     "start": "next start",
     "postinstall": "prisma generate",
     "lint": "eslint",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "predict:event": "node scripts/generate-event-predictions.js",
     "predict:list": "node scripts/generate-predictions-only.js list",
     "predict:all": "node scripts/generate-predictions-only.js all",
@@ -35,7 +38,6 @@
     "csv-writer": "^1.6.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.14",
-    "jsdom": "^27.0.0",
     "next": "15.5.3",
     "node-html-parser": "^7.0.1",
     "openai": "^5.21.0",
@@ -50,10 +52,13 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^3.2.4",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
+    "jsdom": "^27.0.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }
