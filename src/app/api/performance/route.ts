@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { queryMonitor } from '@/lib/database/monitoring'
+import { queryAnalyzer } from '@/lib/database/query-analyzer'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -34,6 +35,12 @@ export async function GET() {
       .slice(0, 5)
       .map(([query, frequency]) => ({ query, frequency }))
 
+    // Get recent queries for analysis (top slow queries + recent patterns)
+    const recentQueries = [...metrics.topSlowQueries]
+
+    // Perform advanced query analysis
+    const queryAnalysis = await queryAnalyzer.analyzeQueries(metrics, recentQueries)
+
     return NextResponse.json({
       success: true,
       data: {
@@ -57,7 +64,12 @@ export async function GET() {
           timestamp: query.timestamp
         })),
         frequentQueries: topProblematicQueries,
-        recommendations: await generateRecommendations(metrics, performanceAnalysis)
+        analysis: {
+          patterns: queryAnalysis.patterns,
+          recommendations: queryAnalysis.recommendations,
+          summary: queryAnalysis.summary
+        },
+        basicRecommendations: await generateRecommendations(metrics, performanceAnalysis)
       },
       timestamp: new Date().toISOString()
     })

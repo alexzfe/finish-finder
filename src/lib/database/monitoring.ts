@@ -9,6 +9,8 @@
  */
 
 import { PrismaClient } from '@prisma/client'
+import { structuredLogger } from './structured-logger'
+import { alertManager } from './alert-rules'
 
 // Lazy-loaded prisma instance to avoid circular dependencies
 let prismaInstance: PrismaClient | null = null
@@ -120,9 +122,14 @@ class QueryPerformanceMonitor {
     // Log performance data (always works)
     this.logQueryPerformance(queryStats)
 
+    // Enhanced structured logging
+    structuredLogger.logQuery(queryStats)
+
     // Check for alerts
     const normalizedQuery = this.normalizeQuery(stats.query)
-    this.checkAlerts(queryStats, normalizedQuery)
+    this.checkAlerts(queryStats, normalizedQuery).catch(error => {
+      console.warn('Alert checking failed:', error.message)
+    })
   }
 
   /**
@@ -194,19 +201,38 @@ class QueryPerformanceMonitor {
   /**
    * Check for performance alerts and warnings (Vercel-compatible)
    */
-  private checkAlerts(stats: QueryStats, normalizedQuery: string): void {
-    // Alert on slow queries
-    if (stats.performance === 'critical') {
-      this.sendAlert('critical', `Critical query took ${stats.duration}ms`, stats)
-    } else if (stats.performance === 'slow') {
-      this.sendAlert('warning', `Slow query took ${stats.duration}ms`, stats)
-    }
+  private async checkAlerts(stats: QueryStats, normalizedQuery: string): Promise<void> {
+    try {
+      // Get current metrics for context
+      const metrics = await this.getMetrics()
 
-    // For frequent query alerts, we'll check periodically rather than on every query
-    // This avoids the need for in-memory frequency tracking in serverless
-    this.checkFrequentQueryAlerts(normalizedQuery, stats).catch(error => {
-      console.warn('Failed to check frequent query alerts:', error.message)
-    })
+      // Evaluate advanced alert rules
+      const triggeredAlerts = alertManager.evaluateAlerts(stats, metrics)
+
+      // Process triggered alerts
+      for (const alert of triggeredAlerts) {
+        this.sendAlert(
+          alert.severity === 'critical' || alert.severity === 'high' ? 'critical' : 'warning',
+          alert.message,
+          alert.queryStats
+        )
+      }
+
+      // Legacy alert check for backwards compatibility
+      if (stats.performance === 'critical') {
+        this.sendAlert('critical', `Critical query took ${stats.duration}ms`, stats)
+      } else if (stats.performance === 'slow') {
+        this.sendAlert('warning', `Slow query took ${stats.duration}ms`, stats)
+      }
+
+      // For frequent query alerts, we'll check periodically rather than on every query
+      // This avoids the need for in-memory frequency tracking in serverless
+      this.checkFrequentQueryAlerts(normalizedQuery, stats).catch(error => {
+        console.warn('Failed to check frequent query alerts:', error.message)
+      })
+    } catch (error) {
+      console.warn('Alert evaluation failed:', error)
+    }
   }
 
   /**
