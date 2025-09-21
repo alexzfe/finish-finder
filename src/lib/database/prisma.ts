@@ -27,6 +27,8 @@ function createPrismaClient() {
       try {
         const monitoringModule = await import('./monitoring')
         const middleware = monitoringModule.createQueryMonitoringMiddleware()
+        // Type assertion needed for Prisma middleware integration
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ;(client as any).$use(middleware)
       } catch (error) {
         // Monitoring is optional - don't break the app if it fails

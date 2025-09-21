@@ -456,7 +456,7 @@ export class HybridUFCService {
     }
   }
 
-  private extractSherdogFighter(fighterCell: any, weightClass: string): {
+  private extractSherdogFighter(fighterCell: unknown, weightClass: string): {
     id: string
     name: string
     nickname?: string
@@ -466,7 +466,9 @@ export class HybridUFCService {
     draws: number
     weightClass: string
   } | null {
-    const nameNode = fighterCell.find('.fighter_result_data span[itemprop=name]').first()
+    // Type assertion for web scraping jQuery object
+    const cell = fighterCell as any
+    const nameNode = cell.find('.fighter_result_data span[itemprop=name]').first()
     if (!nameNode.length) {
       return null
     }
@@ -507,7 +509,7 @@ export class HybridUFCService {
     }
   }
 
-  private extractSherdogFeaturedFighter(fighterCard: any, weightClass: string): {
+  private extractSherdogFeaturedFighter(fighterCard: unknown, weightClass: string): {
     id: string
     name: string
     nickname?: string
@@ -517,11 +519,13 @@ export class HybridUFCService {
     draws: number
     weightClass: string
   } | null {
-    if (!fighterCard.length) {
+    // Type assertion for web scraping jQuery object
+    const card = fighterCard as any
+    if (!card.length) {
       return null
     }
 
-    const nameNode = fighterCard.find('span[itemprop=name]').first()
+    const nameNode = card.find('span[itemprop=name]').first()
     if (!nameNode.length) {
       return null
     }

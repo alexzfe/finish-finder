@@ -32,7 +32,7 @@ interface PerformanceData {
 interface HealthData {
   status: 'healthy' | 'degraded' | 'down'
   responseTime: string
-  checks: Record<string, any>
+  checks: Record<string, unknown>
 }
 
 export default function PerformanceDashboard() {

@@ -114,9 +114,9 @@ export async function GET() {
         completed: fight.completed,
         bookingDate: fight.bookingDate
       })),
-      mainCard: [] as any[],
-      prelimCard: [] as any[],
-      earlyPrelimCard: [] as any[]
+      mainCard: [] as typeof event.fights,
+      prelimCard: [] as typeof event.fights,
+      earlyPrelimCard: [] as typeof event.fights
     }))
 
     // Organize fights by card position

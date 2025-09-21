@@ -148,7 +148,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <span className="ufc-condensed text-xs text-white/70">
-                {(fight as any).position || 'Fight' }
+                {fight.cardPosition || 'Fight' }
               </span>
               {fight.titleFight && (
                 <span className="ufc-condensed text-[0.6rem] tracking-[0.3em] text-white" style={{ backgroundColor: 'rgba(210,10,10,0.15)', padding: '0.15rem 0.55rem', borderRadius: '999px', border: '1px solid rgba(210,10,10,0.35)' }}>

@@ -42,6 +42,7 @@ export function validateJsonField(value: unknown, fieldName: string): string {
 
 export function validateFightData(fight: unknown): { valid: boolean; errors: string[] } {
   const errors: string[] = []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fightData = fight as any // Type assertion for validation function
 
   // Required fields
@@ -88,33 +89,36 @@ export function validateFightData(fight: unknown): { valid: boolean; errors: str
   return { valid: errors.length === 0, errors }
 }
 
-export function validateFighterData(fighter: any): { valid: boolean; errors: string[] } {
+export function validateFighterData(fighter: unknown): { valid: boolean; errors: string[] } {
+  // Type assertion for validation function
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fighterData = fighter as any
   const errors: string[] = []
 
   // Required fields
-  if (!fighter.id || typeof fighter.id !== 'string') {
+  if (!fighterData.id || typeof fighterData.id !== 'string') {
     errors.push('Fighter ID is required and must be a string')
   }
 
-  if (!fighter.name || typeof fighter.name !== 'string') {
+  if (!fighterData.name || typeof fighterData.name !== 'string') {
     errors.push('Fighter name is required and must be a string')
   }
 
   // Validate numeric fields
-  if (fighter.wins !== null && fighter.wins !== undefined) {
-    if (typeof fighter.wins !== 'number' || fighter.wins < 0) {
+  if (fighterData.wins !== null && fighterData.wins !== undefined) {
+    if (typeof fighterData.wins !== 'number' || fighterData.wins < 0) {
       errors.push('Wins must be a non-negative number')
     }
   }
 
-  if (fighter.losses !== null && fighter.losses !== undefined) {
-    if (typeof fighter.losses !== 'number' || fighter.losses < 0) {
+  if (fighterData.losses !== null && fighterData.losses !== undefined) {
+    if (typeof fighterData.losses !== 'number' || fighterData.losses < 0) {
       errors.push('Losses must be a non-negative number')
     }
   }
 
-  if (fighter.draws !== null && fighter.draws !== undefined) {
-    if (typeof fighter.draws !== 'number' || fighter.draws < 0) {
+  if (fighterData.draws !== null && fighterData.draws !== undefined) {
+    if (typeof fighterData.draws !== 'number' || fighterData.draws < 0) {
       errors.push('Draws must be a non-negative number')
     }
   }

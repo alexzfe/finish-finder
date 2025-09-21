@@ -426,20 +426,26 @@ export const queryMonitor = new QueryPerformanceMonitor()
  * Prisma middleware factory for query performance monitoring
  */
 export function createQueryMonitoringMiddleware() {
-  return async (params: any, next: any) => {
+  // Prisma middleware types are not well-defined, using unknown
+  return async (params: unknown, next: unknown) => {
     const startTime = Date.now()
+    // Type assertion for Prisma middleware parameters
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const queryParams = params as any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nextFn = next as any
 
     try {
-      const result = await next(params)
+      const result = await nextFn(params)
       const duration = Date.now() - startTime
 
       // Record successful query
       queryMonitor.recordQuery({
-        query: `${params.model}.${params.action}`,
-        model: params.model,
-        action: params.action,
+        query: `${queryParams.model}.${queryParams.action}`,
+        model: queryParams.model,
+        action: queryParams.action,
         duration,
-        args: params.args,
+        args: queryParams.args,
         result: Array.isArray(result) ? `${result.length} records` : 'single record'
       })
 

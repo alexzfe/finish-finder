@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/database/prisma'
 import { queryMonitor } from '@/lib/database/monitoring'
+import type { HealthCheck, HealthStatus } from '@/types/unified'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -16,7 +17,7 @@ export const revalidate = 0
  */
 export async function GET() {
   const startTime = Date.now()
-  const checks: Record<string, any> = {}
+  const checks: Record<string, HealthCheck> = {}
   let overallStatus: 'healthy' | 'degraded' | 'down' = 'healthy'
 
   try {
@@ -68,7 +69,7 @@ export async function GET() {
 /**
  * Check database connectivity and basic operations
  */
-async function checkDatabaseHealth(): Promise<{ healthy: boolean; message: string; details?: any }> {
+async function checkDatabaseHealth(): Promise<{ healthy: boolean; message: string; details?: unknown }> {
   try {
     if (!prisma) {
       return {
@@ -109,7 +110,7 @@ async function checkDatabaseHealth(): Promise<{ healthy: boolean; message: strin
 /**
  * Check query performance health based on monitoring data
  */
-async function checkQueryPerformanceHealth(): Promise<{ healthy: boolean; message: string; details?: any }> {
+async function checkQueryPerformanceHealth(): Promise<{ healthy: boolean; message: string; details?: unknown }> {
   try {
     if (!queryMonitor.isEnabled()) {
       return {
@@ -177,7 +178,7 @@ async function checkQueryPerformanceHealth(): Promise<{ healthy: boolean; messag
 /**
  * Check system resource health
  */
-async function checkSystemHealth(): Promise<{ healthy: boolean; message: string; details?: any }> {
+async function checkSystemHealth(): Promise<{ healthy: boolean; message: string; details?: unknown }> {
   try {
     // Memory usage check
     const memoryUsage = process.memoryUsage()
@@ -223,7 +224,7 @@ async function checkSystemHealth(): Promise<{ healthy: boolean; message: string;
 /**
  * Check external service availability
  */
-async function checkExternalServicesHealth(): Promise<{ healthy: boolean; message: string; details?: any }> {
+async function checkExternalServicesHealth(): Promise<{ healthy: boolean; message: string; details?: unknown }> {
   const services: Record<string, boolean> = {}
   const timeouts: Record<string, number> = {}
 

@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+// Kept for future base path configuration
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const repoBase = process.env.NEXT_PUBLIC_BASE_PATH?.replace(/^\/+|\/+$/g, "") ?? "";
 
 const nextConfig: NextConfig = {

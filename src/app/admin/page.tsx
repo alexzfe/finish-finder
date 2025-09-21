@@ -55,7 +55,7 @@ export default function AdminPage() {
           </form>
           {process.env.NODE_ENV === 'development' && (
             <p className="text-xs text-gray-500 mt-4 text-center">
-              Development mode: Use password "admin123" or any password
+              Development mode: Use password &quot;admin123&quot; or any password
             </p>
           )}
         </div>
