@@ -25,7 +25,7 @@ export async function GET() {
       criticalQueryRate: metrics.totalQueries > 0
         ? Math.round((metrics.criticalQueries / metrics.totalQueries) * 100 * 100) / 100
         : 0,
-      healthScore: calculateHealthScore(metrics)
+      healthScore: await calculateHealthScore(metrics)
     }
 
     // Get top problematic query patterns
@@ -57,7 +57,7 @@ export async function GET() {
           timestamp: query.timestamp
         })),
         frequentQueries: topProblematicQueries,
-        recommendations: generateRecommendations(metrics, performanceAnalysis)
+        recommendations: await generateRecommendations(metrics, performanceAnalysis)
       },
       timestamp: new Date().toISOString()
     })
@@ -74,7 +74,7 @@ export async function GET() {
 /**
  * Calculate overall database health score (0-100)
  */
-function calculateHealthScore(metrics: typeof queryMonitor.getMetrics extends () => infer R ? R : never): number {
+async function calculateHealthScore(metrics: Awaited<ReturnType<typeof queryMonitor.getMetrics>>): Promise<number> {
   if (metrics.totalQueries === 0) return 100
 
   // Base score starts at 100
@@ -99,10 +99,10 @@ function calculateHealthScore(metrics: typeof queryMonitor.getMetrics extends ()
 /**
  * Generate performance recommendations based on metrics
  */
-function generateRecommendations(
-  metrics: typeof queryMonitor.getMetrics extends () => infer R ? R : never,
+async function generateRecommendations(
+  metrics: Awaited<ReturnType<typeof queryMonitor.getMetrics>>,
   analysis: { slowQueryRate: number; criticalQueryRate: number; healthScore: number }
-): string[] {
+): Promise<string[]> {
   const recommendations: string[] = []
 
   if (analysis.criticalQueryRate > 1) {

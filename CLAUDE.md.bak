@@ -1,0 +1,39 @@
+# From your repo root — create/update the prime directive
+cat > CLAUDE.md <<'MD'
+# Prime Directive for Claude Code — Codebase-First → Self Plan → Execute
+## Mission
+1) **Understand the codebase first**: map components, entrypoints, data flow, deps, build/test/CI. Use existing docs only to augment context (not as source of truth).
+2) **Produce YOUR production plan** (Now/Next/Later) for changes you will make.
+3) **Execute the “Now” items** immediately with small, safe commits and (if applicable) migrations.
+4) **After every implementation**, do BOTH:
+   - **Update relevant existing docs** only (no new .md files): ROADMAP.md, ARCHITECTURE.md, README.md, OPERATIONS.md, TESTING.md, STYLEGUIDE.md, SECURITY.md. Keep edits concise: what changed, why, how to run/verify.
+   - **Engineer’s Log (Teaching Mode)** in your message: explain *why*, *what tech/patterns*, and include a simple analogy, plus “where to look” (files/lines, doc sections).
+
+## Boundaries
+- **Truth order:** Code/tests > docs > comments. If code and docs disagree, call it out briefly and follow code.
+- **Docs:** Edit only existing docs; **do not create new `.md` files** unless I later say so.
+- **Safety:** Backward-compatible, transactional, reversible changes; no secrets; follow repo lint/type/format/style rules.
+
+## Working Order
+A) **CODEBASE_UNDERSTANDING** (bullets/tables with file:line anchors):
+   components, entrypoints, module boundaries, data flow, key deps, build/test/CI, hot paths, pitfalls (N+1, unbounded scans), security/privacy notes, perf signals.
+B) **SELF_PRODUCTION_PLAN** (Now/Next/Later): for each item list Why/Impact • files/functions/tables • intended changes • tests • effort (S/M/L) • risk & rollback • verification (commands/metrics/SLO) • deps. Include migration choreography if needed (expand/contract, backfill, dual-read/write).
+C) **EXECUTE “Now”** in atomic commits. For each commit provide:
+   1. Conventional commit header (feat|fix|refactor|perf|test|ci|build(scope): summary)
+   2. Short rationale tied back to the plan
+   3. Unified code diffs (minimal, self-contained)
+   4. Tests (added/updated)
+   5. Verification steps (exact commands & expected results)
+   6. Risk & rollback (one line)
+   7. **Doc updates** (diffs to existing docs only)
+   8. **Engineer’s Log** (why/tech/analogy/where-to-look)
+
+## Handy Recon (use if needed; otherwise ask once for minimal paths/outputs)
+- `git status -sb && git branch --show-current && git describe --tags --always || true`
+- `command -v tree >/dev/null && tree -a -I 'node_modules|.git|dist|build|venv|.venv|target|.next|.turbo|__pycache__' -L 3 || true`
+- JS/TS: `pnpm|yarn|npm run lint && … run typecheck && … run test -i`
+- Prisma/SQL (only if present): `npx prisma validate && npx prisma migrate status`
+MD
+
+git add CLAUDE.md && git commit -m "chore: set codebase-first prime directive for Claude Code"
+

@@ -36,9 +36,10 @@ export default function Home() {
 
       const normalizeEvents = (rawEvents: unknown[]): UFCEvent[] =>
         rawEvents
-          .map((event: unknown) => ({
+          .filter((event): event is Record<string, unknown> => typeof event === 'object' && event !== null)
+          .map((event) => ({
             ...event,
-            date: new Date(event.date)
+            date: new Date((event.date as string) || new Date())
           }))
           .sort((a: UFCEvent, b: UFCEvent) => a.date.getTime() - b.date.getTime())
 

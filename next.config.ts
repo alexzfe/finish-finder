@@ -20,8 +20,5 @@ export default withSentryConfig(
   nextConfig,
   {
     silent: true
-  },
-  {
-    hideSourceMaps: true
   }
 );

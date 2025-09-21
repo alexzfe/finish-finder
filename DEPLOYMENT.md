@@ -69,9 +69,9 @@ node scripts/automated-scraper.js check
 - **Live Site**: https://finish-finder.vercel.app/
 - **API Endpoints**:
   - Main Data: https://finish-finder.vercel.app/api/db-events ✅
-  - Health Check: https://finish-finder.vercel.app/api/health (requires migration)
-  - Performance: https://finish-finder.vercel.app/api/performance (requires migration)
-- **Admin Dashboard**: https://finish-finder.vercel.app/admin (requires migration)
+  - Health Check: https://finish-finder.vercel.app/api/health ✅
+  - Performance: https://finish-finder.vercel.app/api/performance ✅
+- **Admin Dashboard**: https://finish-finder.vercel.app/admin ✅
 - **Database**: 5 UFC events with 66 fights and AI predictions
 - **Architecture**: Vercel + Supabase PostgreSQL with connection pooling + monitoring
 - **Data Pipeline**: Sherdog scraping → PostgreSQL → API → Next.js frontend
