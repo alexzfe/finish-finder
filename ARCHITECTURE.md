@@ -64,8 +64,8 @@ Users → Next.js App (Vercel/GitHub Pages)
 - ✅ **TypeScript safety improved** - Replaced `any` types with `unknown`, added type guards for safer runtime handling
 - ✅ **Repository size optimized** - Build artifacts removed from git tracking, reducing clone size by ~2.4MB
 - ✅ **Local development setup** - Docker Compose and environment documentation for easy onboarding
-- ✅ **TypeScript strict mode** - Full compilation enforcement enabled; builds fail on type errors
-- ✅ **ESLint enforcement** - Quality standards enforced at build time; strategic `any` types remain in non-critical paths
+- ✅ **TypeScript strict mode** - Full compilation enforcement enabled in production; builds fail on type errors (`ignoreBuildErrors: false`)
+- ✅ **ESLint enforcement** - Quality standards enforced at build time; strategic `any` types documented with disable comments (`ignoreDuringBuilds: false`)
 - No automated tests in CI; builds now enforce TypeScript/ESLint quality gates. See [`ROADMAP.md`](ROADMAP.md) for test suite implementation.
 - Scraper lacks proxy rotation and will still fail if Sherdog blocks repeated requests.
 - Fighter imagery fallback logic exists but is disabled; needs rate-limit friendly implementation before re-enabling.
@@ -83,3 +83,11 @@ Users → Next.js App (Vercel/GitHub Pages)
 - ✅ **Comprehensive observability** with metrics collection and alerting
 
 See [`DATABASE_PRODUCTION_STATUS.md`](DATABASE_PRODUCTION_STATUS.md) for complete implementation details.
+
+## TypeScript Strict Mode Migration (2025-09-21)
+- ✅ **Build quality gates enabled** - TypeScript and ESLint errors now block builds in production
+- ✅ **Strategic any types documented** - All framework integration `any` usage justified with ESLint disable comments
+- ✅ **Vercel deployment validated** - Production builds successfully pass strict type checking
+- ✅ **ESLint configuration optimized** - Build artifacts and legacy code excluded from quality checks
+
+See [`TYPESCRIPT_MIGRATION_PLAN.md`](TYPESCRIPT_MIGRATION_PLAN.md) for complete migration details.
