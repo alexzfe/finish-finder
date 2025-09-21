@@ -175,7 +175,7 @@ class StructuredQueryLogger {
   /**
    * Redact sensitive fields from objects
    */
-  private redactSensitiveFields(obj: any): any {
+  private redactSensitiveFields(obj: unknown): unknown {
     const sensitiveFields = ['password', 'token', 'apiKey', 'secret', 'email', 'phone']
 
     if (Array.isArray(obj)) {
@@ -183,7 +183,7 @@ class StructuredQueryLogger {
     }
 
     if (obj && typeof obj === 'object') {
-      const redacted = { ...obj }
+      const redacted = { ...obj } as Record<string, unknown>
 
       for (const key of Object.keys(redacted)) {
         if (sensitiveFields.some(field => key.toLowerCase().includes(field))) {
