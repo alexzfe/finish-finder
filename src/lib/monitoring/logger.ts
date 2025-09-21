@@ -114,7 +114,7 @@ export class PerformanceMonitor {
       } catch (error) {
         this.end(operation, logger)
         if (logger) {
-          logger.error(`Operation failed: ${operation}`, { error: error.message })
+          logger.error(`Operation failed: ${operation}`, { error: error instanceof Error ? error.message : 'Unknown error' })
         }
         reject(error)
       }
@@ -158,7 +158,7 @@ export class HealthChecker {
       // This would check database connectivity
       return { healthy: true, message: 'Database connection OK' }
     } catch (error) {
-      return { healthy: false, message: `Database error: ${error.message}` }
+      return { healthy: false, message: `Database error: ${error instanceof Error ? error.message : 'Unknown error'}` }
     }
   }
 

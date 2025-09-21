@@ -136,7 +136,7 @@ export function useFighterImages(fighterNames: (string | undefined)[]): Record<s
             confidence: result.confidence,
             cached: result.cached,
             loading: false,
-            error: result.error || null
+            error: (result as any).error || null
           }
         }
 

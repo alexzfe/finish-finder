@@ -42,44 +42,45 @@ export function validateJsonField(value: unknown, fieldName: string): string {
 
 export function validateFightData(fight: unknown): { valid: boolean; errors: string[] } {
   const errors: string[] = []
+  const fightData = fight as any // Type assertion for validation function
 
   // Required fields
-  if (!fight.id || typeof fight.id !== 'string') {
+  if (!fightData.id || typeof fightData.id !== 'string') {
     errors.push('Fight ID is required and must be a string')
   }
 
-  if (!fight.fighter1Id || typeof fight.fighter1Id !== 'string') {
+  if (!fightData.fighter1Id || typeof fightData.fighter1Id !== 'string') {
     errors.push('Fighter1 ID is required and must be a string')
   }
 
-  if (!fight.fighter2Id || typeof fight.fighter2Id !== 'string') {
+  if (!fightData.fighter2Id || typeof fightData.fighter2Id !== 'string') {
     errors.push('Fighter2 ID is required and must be a string')
   }
 
-  if (!fight.eventId || typeof fight.eventId !== 'string') {
+  if (!fightData.eventId || typeof fightData.eventId !== 'string') {
     errors.push('Event ID is required and must be a string')
   }
 
-  if (!fight.weightClass || typeof fight.weightClass !== 'string') {
+  if (!fightData.weightClass || typeof fightData.weightClass !== 'string') {
     errors.push('Weight class is required and must be a string')
   }
 
   // Validate numeric fields
-  if (fight.fightNumber !== null && fight.fightNumber !== undefined) {
-    if (typeof fight.fightNumber !== 'number' || fight.fightNumber < 1) {
+  if (fightData.fightNumber !== null && fightData.fightNumber !== undefined) {
+    if (typeof fightData.fightNumber !== 'number' || fightData.fightNumber < 1) {
       errors.push('Fight number must be a positive number')
     }
   }
 
-  if (fight.scheduledRounds !== null && fight.scheduledRounds !== undefined) {
-    if (typeof fight.scheduledRounds !== 'number' || fight.scheduledRounds < 1) {
+  if (fightData.scheduledRounds !== null && fightData.scheduledRounds !== undefined) {
+    if (typeof fightData.scheduledRounds !== 'number' || fightData.scheduledRounds < 1) {
       errors.push('Scheduled rounds must be a positive number')
     }
   }
 
   // Validate boolean fields
-  if (fight.titleFight !== null && fight.titleFight !== undefined) {
-    if (typeof fight.titleFight !== 'boolean') {
+  if (fightData.titleFight !== null && fightData.titleFight !== undefined) {
+    if (typeof fightData.titleFight !== 'boolean') {
       errors.push('Title fight must be a boolean')
     }
   }

@@ -9,10 +9,10 @@ const nextConfig: NextConfig = {
     unoptimized: false, // Enable image optimization on Vercel
   },
   eslint: {
-    ignoreDuringBuilds: true, // TODO: Re-enable after fixing remaining any types
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true, // TODO: Re-enable after fixing remaining type errors
+    ignoreBuildErrors: false,
   },
 };
 
