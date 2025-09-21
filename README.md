@@ -1,198 +1,112 @@
-# 🥊 Finish Finder
+# Finish Finder
 
-An AI-powered UFC fight entertainment analyzer that helps fans discover the most exciting upcoming matchups. Built with real-time data scraping from Sherdog and OpenAI-powered analysis, Finish Finder provides entertainment scores, finish probabilities, and detailed breakdowns to help UFC fans prioritize their viewing experience.
+AI-assisted UFC fight discovery built with Next.js 15, Prisma, and an automated scraping + prediction pipeline. Finish Finder ranks upcoming bouts by entertainment value using live data from Sherdog and OpenAI-generated analysis, then serves the experience via a themed UFC UI.
 
-## 🌐 Live Demo
+## Table of Contents
+1. [Overview](#overview)
+2. [Architecture Snapshot](#architecture-snapshot)
+3. [Quickstart](#quickstart)
+   - [Prerequisites](#prerequisites)
+   - [Setup](#setup)
+   - [Run Locally](#run-locally)
+   - [Database Tasks](#database-tasks)
+   - [Automation Commands](#automation-commands)
+4. [Deployment](#deployment)
+5. [Documentation](#documentation)
+6. [Project Status](#project-status)
 
-**[🚀 Production Site (Vercel + Supabase) →](https://finish-finder.vercel.app/)**
+## Overview
+Finish Finder helps UFC fans pick the most electric fights. The system:
+- Scrapes upcoming UFC cards and fighter data from Sherdog.
+- Persists the data in PostgreSQL (SQLite for local play).
+- Calls OpenAI to score finish probability, fun factor, and risk.
+- Delivers a responsive, UFC-styled interface with sticky fight insights.
+- Exports static JSON bundles for GitHub Pages while supporting a dynamic API on Vercel/Supabase.
 
-**[📄 Static Site (GitHub Pages) →](https://alexzfe.github.io/finish-finder/)**
+Core repo pillars:
+- **Frontend** – Next.js App Router with client components in `src/app` and modular UI widgets under `src/components`.
+- **APIs** – Prisma-backed routes in `src/app/api`, including `/api/db-events` (event feed) and `/api/fighter-image` (scraped imagery, currently placeholder-only).
+- **Data & AI** – `src/lib/ai/hybridUFCService.ts` orchestrates scraping and prediction requests. Supporting utilities live in `src/lib`.
+- **Automation** – Node scripts in `scripts/` schedule scrapes, regenerate predictions, export static JSON, and prep GitHub Pages artifacts.
 
-## ✨ Features
+## Architecture Snapshot
+| Slice | Entrypoints | Notes |
+| --- | --- | --- |
+| UI | `src/app/page.tsx`, `src/components/**` | Fetches `/api/db-events` first, falls back to `public/data/events.json`. Sticky sidebar highlights selected fight. |
+| API | `src/app/api/db-events/route.ts`, `src/app/api/fighter-image/route.ts` | Prisma event feed with JSON safety guards; fighter-image route currently disabled to reduce third-party scraping noise. |
+| Data Layer | `prisma/schema.prisma`, `prisma/migrations/**` | Runs on SQLite locally and Supabase/Postgres remotely. Includes prediction usage telemetry tables. |
+| Scraper & AI | `scripts/automated-scraper.js`, `src/lib/ai/hybridUFCService.ts`, `scripts/generate-*.js` | Handles scrape → diff → persist → prediction replays. Writes audit logs under `logs/`. |
+| Static Export | `scripts/export-static-data.js`, `scripts/prepare-github-pages.js`, `docs/` | Produces GitHub Pages snapshot with `_next` assets and pre-rendered data. |
+| Monitoring | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts` | Sentry is wired for client, server, and edge; logger utilities keep console output structured. |
 
-### 🎯 Core Functionality
-- **Real UFC Data**: Live scraping from Sherdog for accurate fight cards and fighter information
-- **OpenAI Analysis**: GPT-powered entertainment predictions with detailed reasoning
-- **Fun Score Rating**: 1-10 scoring system for fight entertainment potential
-- **UFC-Style Interface**: Authentic design matching the official UFC website
-- **Sticky Fight Details**: Interactive sidebar that follows your scroll with fight breakdowns
-- **Finish Probability**: AI-calculated odds of knockouts and submissions
-- **Key Factors Analysis**: Breakdown of what makes each fight exciting
-- **Redundant Fighter Imagery**: Tapology → UFC.com → Sherdog fallbacks keep avatars live even when a source rate-limits
-
-### 📊 AI Analysis Factors
-- **Striking Power & Aggression**: Knockout artists, heavy hitters, volume strikers
-- **Submission Threat**: Grappling specialists and submission artists
-- **Fighting Styles Clash**: Striker vs grappler dynamics and counter-fighting
-- **Recent Form**: Win streaks, spectacular finishes, and momentum
-- **Historical Performance**: Fight of the Night bonuses and finish rates
-- **Title Implications**: Championship fights and rankings impact
-- **Personal Narratives**: Rivalries, comebacks, and career-defining moments
-
-## 🛠️ Technology Stack
-
-### Frontend
-- **Next.js 15**: React framework with App Router
-- **TypeScript**: Type-safe development
-- **Tailwind CSS**: UFC-style responsive design
-- **React Hooks**: Modern state management
-
-### Backend & AI
-- **OpenAI GPT-4**: AI-powered fight analysis and predictions
-- **Sherdog Scraper**: Real-time UFC fight card data collection
-- **Cheerio**: HTML parsing for web scraping
-- **Axios**: HTTP client for data fetching
-
-### Data & Deployment
-- **Static JSON**: GitHub Pages compatible data storage
-- **GitHub Pages**: Automated deployment pipeline
-
-## 🚀 Getting Started
+## Quickstart
 
 ### Prerequisites
-- Node.js 18+ installed
-- npm package manager
-- OpenAI API key (for AI analysis)
+- Node.js 20.x (or newer 18+ release that supports `fetch`).
+- npm 9+
+- PostgreSQL database for persistent runs (SQLite is bundled for local exploration).
+- OpenAI API key with access to `gpt-4o` (used by prediction helpers).
 
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/alexzfe/finish-finder.git
-   cd finish-finder
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Add your OpenAI API key to .env
-   OPENAI_API_KEY=your_api_key_here
-   # Optional but recommended for monitoring:
-   # Server-side Sentry DSN for scraper/API alerts
-   SENTRY_DSN=your_sentry_dsn
-   # Client-side DSN to capture browser errors
-   NEXT_PUBLIC_SENTRY_DSN=your_public_sentry_dsn
-   # Adjust sample rates for tracing or session replay if desired
-   SENTRY_TRACES_SAMPLE_RATE=0.1
-   NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0.1
-   ```
-
-4. **Start the development server**
-   ```bash
-   npm run dev
-   ```
-
-5. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
-## 📱 Usage
-
-### Navigating the Interface
-1. **Browse Events**: Use navigation arrows to switch between upcoming UFC events
-2. **View Fight Cards**: Fights are organized by Main Card, Preliminary Card, and Early Prelims
-3. **Click Fighters**: Select any fight to see detailed AI analysis in the sticky sidebar
-4. **Fun Scores**: Each fight displays an entertainment rating from 1-10
-
-### Understanding Fun Scores
-- **8-10**: 🔥 **MUST-WATCH** - Guaranteed fireworks and entertainment
-- **6-7**: ⭐ **ENTERTAINING** - Good action throughout the bout
-- **4-5**: 👍 **SOLID FIGHT** - Some excitement moments
-- **1-3**: 👌 **TECHNICAL** - Decision likely, lower action
-
-### Fight Analysis Details
-- **Entertainment Reason**: AI explanation of why the fight will be exciting
-- **Key Factors**: Tags highlighting what makes the fight interesting
-- **Finish Probability**: Percentage chance of knockout or submission
-- **Analyst Pick**: Brief prediction of how the fight will unfold
-
-## 🎯 Project Status
-
-### ✅ Current Features
-- **Live UFC Data**: Real-time scraping from Sherdog with accurate fight information
-- **OpenAI Integration**: GPT-4 powered entertainment analysis and predictions
-- **UFC-Style Interface**: Authentic design matching official UFC website styling
-- **Responsive Layout**: Optimized for desktop and mobile viewing
-- **GitHub Pages Deployment**: Automated static site generation and hosting
-- **Interactive Fight Cards**: Click-to-view detailed analysis with sticky sidebar
-- **Entertainment Scoring**: AI-calculated fun scores and finish probabilities
-
-### 🔧 Technical Implementation
-- **Sherdog Scraper**: `HybridUFCService` class handles data collection and AI analysis
-- **Static Site Generation**: Build process exports data to JSON for GitHub Pages
-- **UFC Design System**: Condensed headline fonts, Tailwind-inspired utility classes, and responsive layouts tuned to UFC.com styling
-- **Component Architecture**: Modular React components with TypeScript and memoized fight lists for performance
-- **Resilient Data Pipeline**: Scraper only cancels events/fights after repeated misses, tracked in `logs/missing-events.json` and `logs/missing-fights.json`
-- **Monitoring**: Sentry instrumentation across client, server, edge and scraper via `sentry.*.config.ts` and API route hooks
-
-### 🚧 Future Enhancements
-- Admin dashboard for data management
-- Historical fight outcome analysis
-- Enhanced fighter statistics integration
-- User preferences and fight alerts
-- Alert surface for upcoming fight cancellations/reschedules
-
-## ⏱ Monitoring & Reliability
-- **Sentry**: Frontend (`NEXT_PUBLIC_SENTRY_DSN`) and backend (`SENTRY_DSN`) events stream into dedicated Sentry projects for fast triage.
-- **Structured Logs**: Scraper writes JSON warning lines whenever a fight or event disappears; cancellation only happens after configurable thresholds.
-- **Strike Ledgers**: `logs/missing-events.json` and `logs/missing-fights.json` preserve state between runs so temporary site glitches do not blank the card.
-
-## 🌐 Deployment
-
-### GitHub Pages (Current)
-The live site is automatically deployed to GitHub Pages at:
-**https://alexzfe.github.io/finish-finder/**
-
-### Building for GitHub Pages
+### Setup
 ```bash
-# Build static site with latest UFC data
-npm run pages:build
-
-# Commit and push to deploy
-git add .
-git commit -m "Update GitHub Pages deployment"
-git push
+npm install
+cp .env.example .env.local
+# populate .env.local with private keys (OpenAI, Sentry, DATABASE_URL, etc.)
 ```
 
-### Local Development
+### Run Locally
 ```bash
-# Start development server
-npm run dev
+npm run dev               # Start Next.js with Turbopack on http://localhost:3000
+```
+The app attempts `/api/db-events` first. Without a database it will read from `public/data/events.json`.
 
-# Access at http://localhost:3000
+To view the static export:
+```bash
+npm run pages:build       # Regenerates docs/ and public/data snapshots
 ```
 
-## 🧭 Developer Resources
+### Database Tasks
+```bash
+npm run db:push           # Push Prisma schema to the configured database
+npm run db:migrate        # Create + apply a local development migration
+npm run db:reset          # Reset schema and reseed (destructive)
+```
+SQLite lives at `prisma/dev.db`. For Postgres deployments, set `DATABASE_URL` in `.env.local` or the host environment before running these commands.
 
-- [Developer Handbook](docs/handbook/README.md) – architecture, data flow, automation, and known gaps.
-- [Launch Plan](launch_plan.md) – roadmap to the hosted (Vercel + Supabase) release.
-- [Deployment Workflow](docs/handbook/README.md#4-deployment-workflow-vercel--supabase) – provisioning steps for Vercel, Supabase, and scheduled scraper jobs.
-- [Environment & Secrets](docs/handbook/README.md#2-environment--secrets) – variables required for local and production deployments.
-- [Database & Migrations](docs/handbook/README.md#3-database--migrations) – Prisma/PostgreSQL migration checklist.
+### Automation Commands
+```bash
+npm run scraper:check     # Scrape Sherdog, diff against DB, queue predictions
+npm run scraper:status    # Summarise strike counters and pending predictions
+npm run scraper:schedule  # Prepare scheduled execution metadata
+npm run predict:event     # Generate AI predictions for the newest event(s)
+npm run predict:all       # Regenerate predictions for every tracked fight
+npm run pages:build       # Refresh GitHub Pages bundle under docs/
+```
+Scraper and prediction commands require `DATABASE_URL` and `OPENAI_API_KEY`. They also honour `SCRAPER_CANCEL_THRESHOLD` and `SCRAPER_FIGHT_CANCEL_THRESHOLD` for strike-ledger logic. Logs are written to `logs/scraper.log`, `logs/missing-events.json`, and `logs/missing-fights.json`.
 
-## 📄 License
+## Deployment
+Recommended production topology:
+1. **Vercel + Supabase** – Deploy the Next.js app to Vercel (`npm run build`) and point Prisma at Supabase Postgres.
+2. **Secrets** – Configure `DATABASE_URL`, `OPENAI_API_KEY`, `SENTRY_*`, `NEXT_PUBLIC_SENTRY_*`, and scraper thresholds in Vercel env settings and GitHub Actions secrets.
+3. **Automated Scraper** – Use `.github/workflows/scraper.yml` or your scheduler of choice to build the Dockerfile and run `scripts/automated-scraper.js check` every 4 hours.
+4. **Static Mirror (Optional)** – After successful scrapes, run `npm run pages:build` and publish `docs/` to GitHub Pages for a static fallback.
 
-This project is licensed under the MIT License.
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`OPERATIONS.md`](OPERATIONS.md) for deeper diagrams, runbooks, and deployment checklists.
 
-## 🤝 Contributing
+## Documentation
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) – Context, containers, components, and key data flows.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) – Branch strategy, code review expectations, and required checks.
+- [`OPERATIONS.md`](OPERATIONS.md) – Runbooks for scrapes, predictions, migrations, and incident response.
+- [`TESTING.md`](TESTING.md) – Testing philosophy, coverage targets, and how to add new suites.
+- [`STYLEGUIDE.md`](STYLEGUIDE.md) – UI, TypeScript, and logging conventions.
+- [`SECURITY.md`](SECURITY.md) – Threat model, secrets policy, and dependency hygiene.
+- [`docs/handbook/README.md`](docs/handbook/README.md) – Legacy handbook retained for reference; superseded by the documents above.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📊 Data Sources
-
-- **Fight Data**: Scraped from [Sherdog.com](https://sherdog.com) UFC organization pages
-- **AI Analysis**: Powered by OpenAI GPT-4 for entertainment predictions
-- **Fighter Information**: Real-time extraction of records, weight classes, and fight history
+## Project Status
+- Active prototype with production aspirations; database migrations for Supabase live under `prisma/migrations/`.
+- Automated testing is not yet implemented—`npm run lint` is the only guard. ROADMAP highlights next steps for coverage.
+- `docs/_next/` and `out/` store large static exports checked into git; consider pruning or generating on-demand for lighter clones.
+- Secrets must never be committed. Regenerate any keys that were previously stored in version control and rely on `.env.local` going forward.
 
 ---
-
-**⚠️ Disclaimer**: This application is for entertainment purposes only. Fight predictions are based on AI analysis and should not be used as the sole basis for betting decisions. UFC and fight data is sourced from publicly available information.
-
+Licensed under the MIT License.

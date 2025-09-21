@@ -1,0 +1,105 @@
+# Operations
+
+## Table of Contents
+1. [Environment Variables](#environment-variables)
+2. [Runbooks](#runbooks)
+   - [Daily Scraper Job](#daily-scraper-job)
+   - [Manual Scrape & Prediction Replay](#manual-scrape--prediction-replay)
+   - [Static Export Refresh](#static-export-refresh)
+   - [Database Migration](#database-migration)
+3. [Observability](#observability)
+4. [Incident Response](#incident-response)
+5. [Backups & Data Retention](#backups--data-retention)
+
+## Environment Variables
+| Name | Scope | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | Server / Scraper | PostgreSQL connection string. Use Supabase in production; SQLite only for local dev. |
+| `SHADOW_DATABASE_URL` | CI / Migrations | Required for `prisma migrate deploy` on managed Postgres. |
+| `OPENAI_API_KEY` | Scraper / Scripts | Auth for prediction prompts (gpt-4o). |
+| `OPENAI_PREDICTION_CHUNK_SIZE` | Scraper / Scripts | Overrides default batch size (6 fights per OpenAI call). |
+| `SENTRY_DSN` | Server / Scraper | Backend Sentry project. |
+| `NEXT_PUBLIC_SENTRY_DSN` | Client | Frontend Sentry project. |
+| `SENTRY_TRACES_SAMPLE_RATE` | Server | Trace sample rate (0.0–1.0). |
+| `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` | Client | Client trace sample rate. |
+| `NEXT_PUBLIC_SENTRY_REPLAY_SESSION_SAMPLE_RATE` | Client | Session replay sample rate. |
+| `NEXT_PUBLIC_SENTRY_REPLAY_ON_ERROR_SAMPLE_RATE` | Client | Replay sampling on errors. |
+| `SENTRY_TOKEN` | CI / Operations | Token for Sentry CLI when publishing source maps. |
+| `SCRAPER_CANCEL_THRESHOLD` | Scraper | Number of consecutive misses before cancelling an event (default 3). |
+| `SCRAPER_FIGHT_CANCEL_THRESHOLD` | Scraper | Misses before removing a fight (default 2). |
+| `NEXT_PUBLIC_BASE_PATH` | Client | Base path for static deployments (GitHub Pages). |
+
+Store sensitive values in platform secret managers (Vercel, GitHub Actions, 1Password). Never commit real keys.
+
+## Runbooks
+
+### Daily Scraper Job
+1. Scheduler triggers `.github/workflows/scraper.yml` every 4 hours.
+2. Workflow builds the Dockerfile and runs `scripts/automated-scraper.js check` with environment secrets.
+3. Outputs:
+   - Updated database records (events, fights, prediction usage).
+   - Logs in `logs/scraper.log` (persisted if mounted volume).
+   - Strike ledgers in `logs/missing-events.json` and `logs/missing-fights.json`.
+4. Validate job success:
+   - GitHub Actions run green.
+   - No warning spikes in Sentry `SCRAPER` service.
+   - Strike counters reset when events return.
+
+### Manual Scrape & Prediction Replay
+```bash
+# Ensure DATABASE_URL + OPENAI_API_KEY are exported
+node scripts/automated-scraper.js check
+node scripts/generate-event-predictions.js            # newest event only
+node scripts/generate-predictions-only.js all         # full backfill
+```
+- Use `node scripts/automated-scraper.js status` to inspect strike counts.
+- For clean-room reruns, execute `node scripts/clear-predictions.js` followed by `node scripts/verify-predictions-cleared.js` before regenerating.
+
+### Static Export Refresh
+```bash
+npm run pages:build
+```
+This writes:
+- `public/data/events.json` – canonical JSON feed.
+- `docs/` – static Next.js export for GitHub Pages. Ensure GitHub Pages is configured to serve from `docs/` on `main`.
+
+### Database Migration
+1. Update `prisma/schema.prisma`.
+2. Generate migration:
+   ```bash
+   npm run db:migrate
+   ```
+3. Apply to Prod:
+   ```bash
+   DATABASE_URL=... SHADOW_DATABASE_URL=... npx prisma migrate deploy
+   ```
+4. Confirm schema:
+   ```bash
+   npx prisma db pull
+   ```
+5. Update relevant runbooks and docs if new columns impact scraper or UI.
+
+## Observability
+- **Sentry**
+  - Client: `sentry.client.config.ts` configured via `NEXT_PUBLIC_SENTRY_*`.
+  - Server & Edge: `sentry.server.config.ts`, `sentry.edge.config.ts` use `SENTRY_DSN`.
+  - Scraper: Initialised inside automation scripts when env vars are present (TODO in ROADMAP to wire fully).
+- **Logs**
+  - `logs/scraper.log` – append-only log with timestamps.
+  - `logs/missing-events.json` / `logs/missing-fights.json` – track absence counts.
+  - `src/lib/monitoring/logger.ts` – use `scraperLogger`, `apiLogger`, etc. for structured console output.
+- **Metrics** – Not yet implemented. ROADMAP recommends adding basic scrape duration and OpenAI usage metrics.
+
+## Incident Response
+| Symptom | Checks | Remediation |
+| --- | --- | --- |
+| **No events in UI** | `/api/db-events` returns 500 or empty. Check Postgres availability and scrape logs. | Run manual scrape. If API parsing fails, inspect `Sentry` breadcrumb and `logs/scraper.log`. Static fallback available at `public/data/events.json`. |
+| **Event removed unexpectedly** | Strike ledger counts may have crossed threshold. | Lower thresholds or reset counters by deleting entry in `logs/missing-events.json`. Confirm Sherdog still lists event before reinstating manually. |
+| **Sherdog 403 blocks scraper** | Scraper logs warning with code `SHERDOG_BLOCKED`. | Wait and retry later; avoid back-to-back reruns. Consider adding proxy rotation (see ROADMAP). |
+| **OpenAI failures** | Look for rate-limit or auth errors in scraper log. | Back off for a few minutes. Verify key validity. Switch to smaller batch size by setting `OPENAI_PREDICTION_CHUNK_SIZE=3`. |
+| **Fighter images missing** | `fighter-image` route currently returns placeholder. | No action required. Feature gated until rate-limiting strategy is in place. |
+
+## Backups & Data Retention
+- **Database** – Rely on managed Postgres backups (Supabase PITR or provider snapshots). Schedule nightly exports at minimum.
+- **Static Data** – `public/data/events.json` can be archived per release tag for forensic comparisons.
+- **Logs** – Ship `logs/*.json` and `logs/*.log` to long-term storage (S3, CloudWatch) before rotation if you need historical strike ledger context.
