@@ -119,7 +119,7 @@ async function checkQueryPerformanceHealth(): Promise<{ healthy: boolean; messag
       }
     }
 
-    const metrics = queryMonitor.getMetrics()
+    const metrics = await queryMonitor.getMetrics()
 
     if (metrics.totalQueries === 0) {
       return {

@@ -15,7 +15,7 @@ export const revalidate = 0
  */
 export async function GET() {
   try {
-    const metrics = queryMonitor.getMetrics()
+    const metrics = await queryMonitor.getMetrics()
 
     // Calculate performance percentages
     const performanceAnalysis = {
@@ -141,7 +141,7 @@ function generateRecommendations(
  */
 export async function DELETE() {
   try {
-    queryMonitor.clearMetrics()
+    await queryMonitor.clearMetrics()
 
     return NextResponse.json({
       success: true,

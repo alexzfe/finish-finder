@@ -141,3 +141,20 @@ model PredictionUsage {
 
   @@map("prediction_usage")
 }
+
+model QueryMetric {
+  id          String   @id @default(cuid())
+  query       String   // Normalized query pattern
+  model       String?  // Prisma model name (Event, Fight, etc.)
+  action      String?  // Prisma action (findMany, create, etc.)
+  duration    Int      // Query duration in milliseconds
+  performance String   // Performance classification: fast, moderate, slow, critical
+  timestamp   DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Indexes for efficient querying
+  @@index([timestamp])
+  @@index([performance])
+  @@index([model, action])
+  @@map("query_metrics")
+}

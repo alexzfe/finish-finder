@@ -10,6 +10,27 @@
 
 import { PrismaClient } from '@prisma/client'
 
+// Import the singleton prisma client to avoid circular dependency issues
+let prismaForMonitoring: PrismaClient | null = null
+
+function getPrismaForMonitoring(): PrismaClient | null {
+  // Avoid circular imports and allow monitoring to work without database
+  if (prismaForMonitoring === null && typeof window === 'undefined') {
+    try {
+      // Dynamic import to avoid circular dependency
+      if (process.env.DATABASE_URL) {
+        prismaForMonitoring = new PrismaClient({
+          log: [], // No logging for monitoring queries to avoid recursion
+        })
+      }
+    } catch (error) {
+      // Gracefully handle when database is not available
+      prismaForMonitoring = null
+    }
+  }
+  return prismaForMonitoring
+}
+
 // Performance thresholds (configurable via environment)
 const SLOW_QUERY_THRESHOLD_MS = Number(process.env.SLOW_QUERY_THRESHOLD_MS) || 1000
 const CRITICAL_QUERY_THRESHOLD_MS = Number(process.env.CRITICAL_QUERY_THRESHOLD_MS) || 5000
@@ -42,8 +63,6 @@ export interface PerformanceMetrics {
 }
 
 class QueryPerformanceMonitor {
-  private queryStats: QueryStats[] = []
-  private queryFrequency: Map<string, number> = new Map()
   private enabled: boolean
 
   constructor() {
@@ -76,7 +95,7 @@ class QueryPerformanceMonitor {
   }
 
   /**
-   * Record a query execution for monitoring
+   * Record a query execution for monitoring (Vercel-compatible)
    */
   recordQuery(stats: Omit<QueryStats, 'performance' | 'timestamp'>): void {
     if (!this.enabled) return
@@ -87,22 +106,42 @@ class QueryPerformanceMonitor {
       timestamp: new Date()
     }
 
-    // Store for analysis (keep last 1000 queries in memory)
-    this.queryStats.push(queryStats)
-    if (this.queryStats.length > 1000) {
-      this.queryStats.shift()
-    }
+    // Store in database for persistence across serverless invocations
+    this.storeQueryMetric(queryStats).catch(error => {
+      // Gracefully handle storage errors - monitoring shouldn't break the app
+      console.warn('Failed to store query metric:', error.message)
+    })
 
-    // Track frequency
-    const normalizedQuery = this.normalizeQuery(stats.query)
-    const currentFreq = this.queryFrequency.get(normalizedQuery) || 0
-    this.queryFrequency.set(normalizedQuery, currentFreq + 1)
-
-    // Log performance data
+    // Log performance data (always works)
     this.logQueryPerformance(queryStats)
 
     // Check for alerts
+    const normalizedQuery = this.normalizeQuery(stats.query)
     this.checkAlerts(queryStats, normalizedQuery)
+  }
+
+  /**
+   * Store query metrics in database for Vercel compatibility
+   */
+  private async storeQueryMetric(stats: QueryStats): Promise<void> {
+    const prisma = getPrismaForMonitoring()
+    if (!prisma) return // Gracefully skip if no database
+
+    try {
+      await prisma.queryMetric.create({
+        data: {
+          query: this.normalizeQuery(stats.query),
+          model: stats.model || null,
+          action: stats.action || null,
+          duration: stats.duration,
+          performance: stats.performance,
+          timestamp: stats.timestamp,
+        }
+      })
+    } catch (error) {
+      // Don't let monitoring errors break the application
+      console.warn('QueryMetric storage failed:', error)
+    }
   }
 
   /**
@@ -148,7 +187,7 @@ class QueryPerformanceMonitor {
   }
 
   /**
-   * Check for performance alerts and warnings
+   * Check for performance alerts and warnings (Vercel-compatible)
    */
   private checkAlerts(stats: QueryStats, normalizedQuery: string): void {
     // Alert on slow queries
@@ -158,10 +197,36 @@ class QueryPerformanceMonitor {
       this.sendAlert('warning', `Slow query took ${stats.duration}ms`, stats)
     }
 
-    // Alert on frequent queries that might benefit from optimization
-    const frequency = this.queryFrequency.get(normalizedQuery) || 0
-    if (frequency > 0 && frequency % FREQUENT_QUERY_THRESHOLD === 0) {
-      this.sendAlert('info', `Query executed ${frequency} times`, stats)
+    // For frequent query alerts, we'll check periodically rather than on every query
+    // This avoids the need for in-memory frequency tracking in serverless
+    this.checkFrequentQueryAlerts(normalizedQuery, stats).catch(error => {
+      console.warn('Failed to check frequent query alerts:', error.message)
+    })
+  }
+
+  /**
+   * Check for frequent query alerts using database lookup
+   */
+  private async checkFrequentQueryAlerts(normalizedQuery: string, stats: QueryStats): Promise<void> {
+    const prisma = getPrismaForMonitoring()
+    if (!prisma) return
+
+    try {
+      // Check frequency from last hour to avoid too many alerts
+      const lastHour = new Date(Date.now() - 60 * 60 * 1000)
+      const frequency = await prisma.queryMetric.count({
+        where: {
+          query: normalizedQuery,
+          timestamp: { gte: lastHour }
+        }
+      })
+
+      // Alert on significant frequency milestones
+      if (frequency > 0 && frequency % FREQUENT_QUERY_THRESHOLD === 0) {
+        this.sendAlert('info', `Query executed ${frequency} times in last hour`, stats)
+      }
+    } catch (error) {
+      // Silently handle errors to avoid breaking the application
     }
   }
 
@@ -196,10 +261,12 @@ class QueryPerformanceMonitor {
   }
 
   /**
-   * Get current performance metrics
+   * Get current performance metrics (Vercel-compatible - from database)
    */
-  getMetrics(): PerformanceMetrics {
-    if (this.queryStats.length === 0) {
+  async getMetrics(): Promise<PerformanceMetrics> {
+    const prisma = getPrismaForMonitoring()
+    if (!prisma) {
+      // Return empty metrics if no database
       return {
         totalQueries: 0,
         averageDuration: 0,
@@ -210,38 +277,126 @@ class QueryPerformanceMonitor {
       }
     }
 
-    const totalQueries = this.queryStats.length
-    const averageDuration = this.queryStats.reduce((sum, stat) => sum + stat.duration, 0) / totalQueries
-    const slowQueries = this.queryStats.filter(stat => stat.performance === 'slow').length
-    const criticalQueries = this.queryStats.filter(stat => stat.performance === 'critical').length
+    try {
+      // Get metrics from last 24 hours for reasonable performance
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
-    // Get top 10 slowest queries
-    const topSlowQueries = [...this.queryStats]
-      .sort((a, b) => b.duration - a.duration)
-      .slice(0, 10)
+      const [metrics, slowCount, criticalCount, topSlow, frequencyData] = await Promise.all([
+        // Basic aggregations
+        prisma.queryMetric.aggregate({
+          where: { timestamp: { gte: since } },
+          _count: { id: true },
+          _avg: { duration: true }
+        }),
+        // Slow query count
+        prisma.queryMetric.count({
+          where: {
+            timestamp: { gte: since },
+            performance: 'slow'
+          }
+        }),
+        // Critical query count
+        prisma.queryMetric.count({
+          where: {
+            timestamp: { gte: since },
+            performance: 'critical'
+          }
+        }),
+        // Top slowest queries
+        prisma.queryMetric.findMany({
+          where: { timestamp: { gte: since } },
+          orderBy: { duration: 'desc' },
+          take: 10,
+          select: {
+            query: true,
+            model: true,
+            action: true,
+            duration: true,
+            performance: true,
+            timestamp: true
+          }
+        }),
+        // Query frequency analysis
+        prisma.queryMetric.groupBy({
+          by: ['query'],
+          where: { timestamp: { gte: since } },
+          _count: { query: true },
+          orderBy: { _count: { query: 'desc' } },
+          take: 20
+        })
+      ])
 
-    // Convert frequency map to object
-    const queryFrequency: Record<string, number> = {}
-    this.queryFrequency.forEach((count, query) => {
-      queryFrequency[query] = count
-    })
+      // Convert frequency data to expected format
+      const queryFrequency: Record<string, number> = {}
+      frequencyData.forEach(item => {
+        queryFrequency[item.query] = item._count.query
+      })
 
-    return {
-      totalQueries,
-      averageDuration: Math.round(averageDuration * 100) / 100,
-      slowQueries,
-      criticalQueries,
-      queryFrequency,
-      topSlowQueries
+      // Convert topSlow to expected format
+      const topSlowQueries: QueryStats[] = topSlow.map(item => ({
+        query: item.query,
+        model: item.model || undefined,
+        action: item.action || undefined,
+        duration: item.duration,
+        performance: item.performance as QueryPerformance,
+        timestamp: item.timestamp
+      }))
+
+      return {
+        totalQueries: metrics._count.id || 0,
+        averageDuration: Math.round((metrics._avg.duration || 0) * 100) / 100,
+        slowQueries: slowCount,
+        criticalQueries: criticalCount,
+        queryFrequency,
+        topSlowQueries
+      }
+    } catch (error) {
+      console.warn('Failed to fetch query metrics:', error)
+      // Return empty metrics on database error
+      return {
+        totalQueries: 0,
+        averageDuration: 0,
+        slowQueries: 0,
+        criticalQueries: 0,
+        queryFrequency: {},
+        topSlowQueries: []
+      }
     }
   }
 
   /**
-   * Clear performance data (useful for testing or periodic cleanup)
+   * Clear performance data (useful for testing or periodic cleanup) - Vercel-compatible
    */
-  clearMetrics(): void {
-    this.queryStats = []
-    this.queryFrequency.clear()
+  async clearMetrics(): Promise<void> {
+    const prisma = getPrismaForMonitoring()
+    if (!prisma) return
+
+    try {
+      await prisma.queryMetric.deleteMany({})
+      console.log('Query metrics cleared successfully')
+    } catch (error) {
+      console.warn('Failed to clear query metrics:', error)
+    }
+  }
+
+  /**
+   * Clean up old metrics (keep last 7 days) - for production maintenance
+   */
+  async cleanupOldMetrics(): Promise<void> {
+    const prisma = getPrismaForMonitoring()
+    if (!prisma) return
+
+    try {
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      const result = await prisma.queryMetric.deleteMany({
+        where: {
+          timestamp: { lt: weekAgo }
+        }
+      })
+      console.log(`Cleaned up ${result.count} old query metrics`)
+    } catch (error) {
+      console.warn('Failed to cleanup old query metrics:', error)
+    }
   }
 
   /**
