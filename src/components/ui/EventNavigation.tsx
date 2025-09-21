@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { UFCEvent, Fight } from '@/types'
+import { UFCEvent } from '@/types'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid'
 
 interface EventNavigationProps {
@@ -28,9 +27,6 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
   if (!currentEvent) {
     return null
   }
-
-  // Sort fights from last to first (main event at top, early prelims at bottom)
-  const sortedFights = [...(currentEvent.fightCard || [])].reverse()
 
   return (
     <div className="relative rounded-xl border border-white/5 bg-black/55 px-10 pb-6 pt-6 text-white md:px-12">

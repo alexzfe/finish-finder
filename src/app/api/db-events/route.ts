@@ -8,6 +8,23 @@ export const revalidate = 0
 // Initialize Prisma client only when DATABASE_URL is available
 let prisma: PrismaClient | null = null
 
+function parseJsonArray(value: unknown) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : []
+  } catch (error) {
+    console.warn('Failed to parse JSON payload from database, falling back to empty array.', {
+      error,
+      payloadPreview: value.slice(0, 120)
+    })
+    return []
+  }
+}
+
 function getPrismaClient() {
   if (!process.env.DATABASE_URL) {
     throw new Error('DATABASE_URL not configured')
@@ -98,7 +115,7 @@ export async function GET() {
 
           return 0
         })(),
-        funFactors: fight.keyFactors ? JSON.parse(fight.keyFactors) : [],
+        funFactors: parseJsonArray(fight.keyFactors ?? fight.funFactors),
         aiDescription: fight.aiDescription || fight.entertainmentReason,
         funFactor: fight.funFactor,
         finishProbability: fight.finishProbability,

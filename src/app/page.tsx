@@ -7,7 +7,10 @@ import { Header } from '@/components/ui/Header'
 import { UFCEvent, Fight } from '@/types'
 
 // Utility function to format weight class names
-const formatWeightClass = (weightClass: string): string => {
+const formatWeightClass = (weightClass?: string | null): string => {
+  if (!weightClass) {
+    return 'TBD'
+  }
   return weightClass
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
