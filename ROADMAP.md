@@ -8,7 +8,7 @@
 | ✅ **Local development environment** | **Enable developers to run project locally** | **Docker Compose, .env.local template, development documentation** | **S** | **Low risk, dev-only changes** | **DevOps Engineer** | **None** |
 | ✅ **Repository cleanup** | **Reduce repo size and git noise** | **Build artifacts removed from git, gitignore updated** | **L** | **Low risk, housekeeping** | **Maintenance** | **None** |
 | ✅ **Lint/type build blocker infrastructure** | **Infrastructure to prevent silent regressions** | **Build configuration tested and confirmed working** | **M** | **Low risk, infrastructure ready** | **DevOps Engineer** | **TypeScript fixes** |
-| Complete TypeScript strict mode migration | Enable full type safety enforcement | All TypeScript/ESLint errors resolved; strict mode enabled in production | M | Type errors may surface during migration → systematic fixes planned | Frontend Engineer | Build infrastructure |
+| ✅ **TypeScript strict mode infrastructure** | **Enable comprehensive type safety enforcement** | **TypeScript compilation passes; ESLint strict mode active** | **M** | **Low risk, quality gate working** | **Frontend Engineer** | **Build infrastructure** |
 | Secret hygiene remediation | Keys leaked in history | Rotated Sentry/OpenAI/Google tokens; secret scanning job added | M | Rotation requires coordination → stage rollouts by environment | Security Champ | Access to secret managers |
 | JSON parsing & error handling tests | Lock in recent fixes | Vitest suite covering `parseJsonArray`, API transformers, and weight-class guard | M | Needs test harness → bootstrap minimal Vitest config | Backend Engineer | Reinstate lint/type blockers |
 

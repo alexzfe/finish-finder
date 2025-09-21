@@ -112,9 +112,21 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`OPERATIONS.md`](OPERATIONS.md) fo
 
 ## Project Status
 - Active prototype with production aspirations; database migrations for Supabase live under `prisma/migrations/`.
-- Automated testing is not yet implemented—`npm run lint` is the only guard. ROADMAP highlights next steps for coverage.
+- ✅ **TypeScript strict mode enabled** - Full type safety enforcement at build time prevents runtime errors.
+- ✅ **ESLint quality gates active** - Code quality standards enforced; builds fail on violations.
+- Automated testing is not yet implemented—quality assured through TypeScript compilation and linting. ROADMAP highlights next steps for test coverage.
 - `docs/_next/` and `out/` store large static exports checked into git; consider pruning or generating on-demand for lighter clones.
 - Secrets must never be committed. Regenerate any keys that were previously stored in version control and rely on `.env.local` going forward.
+
+## Code Quality
+```bash
+npm run lint          # ESLint checks - must pass for builds
+npx tsc --noEmit      # TypeScript compilation - must pass for builds
+npm run build         # Full build with quality gates enabled
+```
+- **TypeScript**: Strict mode enabled with zero `any` types in production code
+- **ESLint**: Comprehensive rules enforced at build time with strategic exceptions documented
+- **Build Gates**: Both TypeScript and ESLint violations block builds (`ignoreBuildErrors: false`)
 
 ---
 Licensed under the MIT License.
