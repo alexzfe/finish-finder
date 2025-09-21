@@ -153,7 +153,7 @@ describe('JSON Utilities', () => {
     })
 
     it('should handle BigInt values gracefully', () => {
-      const bigIntValue = BigInt(123456789012345678901234567890n)
+      const bigIntValue = BigInt('123456789012345678901234567890')
       expect(stringifyJsonSafe(bigIntValue, 'bigintField')).toBe('[]')
       expect(consoleWarnSpy).toHaveBeenCalled()
     })

@@ -33,11 +33,13 @@ describe('Weight Class Utilities', () => {
         'womens_strawweight',
         'womens_flyweight',
         'womens_bantamweight',
-        'womens_featherweight'
+        'womens_featherweight',
+        'catchweight',
+        'unknown'
       ]
 
       expect(WEIGHT_CLASSES).toEqual(expectedClasses)
-      expect(WEIGHT_CLASSES).toHaveLength(13)
+      expect(WEIGHT_CLASSES).toHaveLength(15)
     })
 
     it('should be readonly', () => {
@@ -162,7 +164,9 @@ describe('Weight Class Utilities', () => {
         womens_strawweight: "Women's Strawweight",
         womens_flyweight: "Women's Flyweight",
         womens_bantamweight: "Women's Bantamweight",
-        womens_featherweight: "Women's Featherweight"
+        womens_featherweight: "Women's Featherweight",
+        catchweight: 'Catchweight',
+        unknown: 'Unknown Weight Class'
       }
 
       Object.entries(expectedDisplayNames).forEach(([weightClass, expectedDisplay]) => {

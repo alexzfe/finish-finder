@@ -16,7 +16,9 @@ export const WEIGHT_CLASSES: WeightClass[] = [
   'womens_strawweight',
   'womens_flyweight',
   'womens_bantamweight',
-  'womens_featherweight'
+  'womens_featherweight',
+  'catchweight',
+  'unknown'
 ] as const
 
 /**
@@ -99,7 +101,9 @@ export function getWeightClassDisplayName(weightClass: WeightClass): string {
     womens_strawweight: "Women's Strawweight",
     womens_flyweight: "Women's Flyweight",
     womens_bantamweight: "Women's Bantamweight",
-    womens_featherweight: "Women's Featherweight"
+    womens_featherweight: "Women's Featherweight",
+    catchweight: 'Catchweight',
+    unknown: 'Unknown Weight Class'
   }
 
   return displayNames[weightClass] || weightClass
