@@ -25,12 +25,20 @@
    - `NEXT_PUBLIC_SENTRY_DSN`: Frontend Sentry DSN
    - `SCRAPER_CANCEL_THRESHOLD`: (optional) Default: 3
    - `SCRAPER_FIGHT_CANCEL_THRESHOLD`: (optional) Default: 2
+   - `SLOW_QUERY_THRESHOLD_MS`: (optional) Default: 1000
+   - `CRITICAL_QUERY_THRESHOLD_MS`: (optional) Default: 5000
+   - `FREQUENT_QUERY_THRESHOLD`: (optional) Default: 100
+   - `DISABLE_QUERY_MONITORING`: (optional) Default: false
+   - `QUERY_LOGGING_VERBOSE`: (optional) Default: false
 
 ### 3. Database Migration
-After deployment, run migrations:
+After deployment, run migrations to create the monitoring tables:
 ```bash
 npx prisma migrate deploy
 ```
+
+**Important**: The new query performance monitoring system requires the `query_metrics` table. Ensure this migration is applied for the admin dashboard to work:
+- Migration: `20250921051500_add_query_metrics_for_monitoring`
 
 ### 4. Data Population
 
@@ -59,10 +67,15 @@ node scripts/automated-scraper.js check
 **Production deployment successfully completed!**
 
 - **Live Site**: https://finish-finder.vercel.app/
-- **API Endpoint**: https://finish-finder.vercel.app/api/db-events
+- **API Endpoints**:
+  - Main Data: https://finish-finder.vercel.app/api/db-events ✅
+  - Health Check: https://finish-finder.vercel.app/api/health (requires migration)
+  - Performance: https://finish-finder.vercel.app/api/performance (requires migration)
+- **Admin Dashboard**: https://finish-finder.vercel.app/admin (requires migration)
 - **Database**: 5 UFC events with 66 fights and AI predictions
-- **Architecture**: Vercel + Supabase PostgreSQL with connection pooling
+- **Architecture**: Vercel + Supabase PostgreSQL with connection pooling + monitoring
 - **Data Pipeline**: Sherdog scraping → PostgreSQL → API → Next.js frontend
+- **Monitoring**: Real-time query performance tracking and admin dashboard
 
 ## GitHub Pages Deployment (Static)
 
@@ -92,4 +105,43 @@ npm run dev
 DATABASE_URL="postgresql://user:password@localhost:5432/finish_finder"
 npx prisma migrate dev
 npm run dev
-```# Force redeploy Sat Sep 20 04:14:09 PM -05 2025
+```
+
+## Monitoring System Deployment
+
+### Admin Dashboard Access
+After migration, the admin dashboard will be available at:
+- **URL**: https://finish-finder.vercel.app/admin
+- **Password**: "admin123" (development mode)
+
+### API Endpoints
+- **Health Check**: `/api/health` - System status and connectivity
+- **Performance**: `/api/performance` - Database query metrics and analysis
+
+### Troubleshooting Monitoring
+
+#### 404 Errors on New Endpoints
+If monitoring endpoints return 404:
+1. **Run Migration**: `npx prisma migrate deploy`
+2. **Check Environment Variables**: Ensure monitoring variables are set in Vercel
+3. **Force Redeploy**: Trigger new deployment in Vercel dashboard
+
+#### Empty Monitoring Data
+If admin dashboard shows no data:
+1. **Generate Traffic**: Visit main site to trigger database queries
+2. **Check Database**: Verify `query_metrics` table exists
+3. **Environment Check**: Ensure `DISABLE_QUERY_MONITORING=false`
+
+#### Admin Dashboard Not Loading
+1. **Check Migration**: Verify database schema is updated
+2. **Check Build**: Ensure no TypeScript/build errors
+3. **Check Routes**: Verify `/admin` route exists in build output
+
+### Testing Checklist
+- [ ] Health endpoint responds with system status
+- [ ] Performance endpoint returns metrics
+- [ ] Admin dashboard loads authentication form
+- [ ] Database migration applied successfully
+- [ ] Monitoring data accumulates over time
+
+# Force redeploy Sat Sep 20 04:14:09 PM -05 2025
