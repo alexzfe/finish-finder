@@ -23,13 +23,13 @@ function createPrismaClient() {
   // Add monitoring middleware only after successful client creation
   if (typeof window === 'undefined' && process.env.DATABASE_URL) {
     // Use setTimeout to defer middleware registration until after module initialization
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const { createQueryMonitoringMiddleware } = await import('./monitoring')
         client.$use(createQueryMonitoringMiddleware())
       } catch (error) {
         // Monitoring is optional - don't break the app if it fails
-        console.warn('Could not load monitoring middleware:', error.message)
+        console.warn('Could not load monitoring middleware:', error instanceof Error ? error.message : 'Unknown error')
       }
     }, 0)
   }
