@@ -139,7 +139,7 @@ describe('JSON Utilities', () => {
     })
 
     it('should handle circular references gracefully', () => {
-      const circular: any = { a: 1 }
+      const circular: Record<string, unknown> = { a: 1 }
       circular.self = circular
 
       expect(stringifyJsonSafe(circular, 'testField')).toBe('[]')
@@ -159,7 +159,7 @@ describe('JSON Utilities', () => {
     })
 
     it('should include field name in error messages', () => {
-      const circular: any = {}
+      const circular: Record<string, unknown> = {}
       circular.self = circular
 
       stringifyJsonSafe(circular, 'customField')
@@ -170,7 +170,7 @@ describe('JSON Utilities', () => {
     })
 
     it('should handle field name being undefined', () => {
-      const circular: any = {}
+      const circular: Record<string, unknown> = {}
       circular.self = circular
 
       stringifyJsonSafe(circular)

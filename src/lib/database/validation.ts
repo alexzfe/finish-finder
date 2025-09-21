@@ -10,7 +10,7 @@ export function validateJsonField(value: unknown, fieldName: string): string {
   if (typeof value === 'string') {
     try {
       // Validate that it's proper JSON
-      const parsed = JSON.parse(value)
+      JSON.parse(value)
       // Return the original string if valid
       return value
     } catch (error) {

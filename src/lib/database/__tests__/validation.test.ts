@@ -47,7 +47,7 @@ describe('Database Validation Utilities', () => {
     })
 
     it('should handle non-serializable objects', () => {
-      const circular: any = { a: 1 }
+      const circular: Record<string, unknown> = { a: 1 }
       circular.self = circular
 
       expect(validateJsonField(circular, 'circularField')).toBe('[]')
