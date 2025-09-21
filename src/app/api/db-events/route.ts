@@ -114,9 +114,12 @@ export async function GET() {
         completed: fight.completed,
         bookingDate: fight.bookingDate
       })),
-      mainCard: [] as typeof event.fights,
-      prelimCard: [] as typeof event.fights,
-      earlyPrelimCard: [] as typeof event.fights
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      mainCard: [] as any[],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      prelimCard: [] as any[],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      earlyPrelimCard: [] as any[]
     }))
 
     // Organize fights by card position

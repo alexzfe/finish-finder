@@ -17,19 +17,21 @@ export const revalidate = 0
  */
 export async function GET() {
   const startTime = Date.now()
-  const checks: Record<string, HealthCheck> = {}
+  const checks: Record<string, unknown> = {}
   let overallStatus: 'healthy' | 'degraded' | 'down' = 'healthy'
 
   try {
     // Database connectivity check
     checks.database = await checkDatabaseHealth()
-    if (!checks.database.healthy) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(checks.database as any).healthy) {
       overallStatus = 'down'
     }
 
     // Query performance check
     checks.queryPerformance = await checkQueryPerformanceHealth()
-    if (!checks.queryPerformance.healthy && overallStatus === 'healthy') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(checks.queryPerformance as any).healthy && overallStatus === 'healthy') {
       overallStatus = 'degraded'
     }
 
@@ -38,7 +40,8 @@ export async function GET() {
 
     // External services check (if applicable)
     checks.externalServices = await checkExternalServicesHealth()
-    if (!checks.externalServices.healthy && overallStatus === 'healthy') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(checks.externalServices as any).healthy && overallStatus === 'healthy') {
       overallStatus = 'degraded'
     }
 

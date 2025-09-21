@@ -126,6 +126,7 @@ export const performanceMonitor = new PerformanceMonitor()
 
 // Error boundary for React components
 export class ErrorTracker {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static captureError(error: Error, context?: Record<string, any>): void {
     const errorInfo = {
       message: error.message,
@@ -142,6 +143,7 @@ export class ErrorTracker {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static captureException(error: unknown, context?: Record<string, any>): void {
     if (error instanceof Error) {
       this.captureError(error, context)

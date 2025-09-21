@@ -260,6 +260,7 @@ export interface PerformanceMetric {
 export interface ErrorReport {
   id: string
   error: Error
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   context: Record<string, any>
   timestamp: Date
   service: string
@@ -367,14 +368,17 @@ export interface CacheConfig {
 
 // ===== TYPE GUARDS =====
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isUnifiedFighter(obj: any): obj is UnifiedFighter {
   return obj && typeof obj.id === 'string' && typeof obj.name === 'string'
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isUnifiedFight(obj: any): obj is UnifiedFight {
   return obj && typeof obj.id === 'string' && isUnifiedFighter(obj.fighter1) && isUnifiedFighter(obj.fighter2)
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isUnifiedEvent(obj: any): obj is UnifiedEvent {
   return obj && typeof obj.id === 'string' && typeof obj.name === 'string' && Array.isArray(obj.fightCard)
 }

@@ -455,11 +455,11 @@ export function createQueryMonitoringMiddleware() {
 
       // Record failed query
       queryMonitor.recordQuery({
-        query: `${params.model}.${params.action}`,
-        model: params.model,
-        action: params.action,
+        query: `${queryParams.model}.${queryParams.action}`,
+        model: queryParams.model,
+        action: queryParams.action,
         duration,
-        args: params.args,
+        args: queryParams.args,
         error: error instanceof Error ? error.message : 'Unknown error'
       })
 

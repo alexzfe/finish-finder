@@ -467,6 +467,7 @@ export class HybridUFCService {
     weightClass: string
   } | null {
     // Type assertion for web scraping jQuery object
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cell = fighterCell as any
     const nameNode = cell.find('.fighter_result_data span[itemprop=name]').first()
     if (!nameNode.length) {
@@ -485,10 +486,10 @@ export class HybridUFCService {
       return null
     }
 
-    const recordText = fighterCell.find('.record em').text().trim()
+    const recordText = cell.find('.record em').text().trim()
     const { wins, losses, draws } = this.parseRecord(recordText)
 
-    const imgTitle = fighterCell.find('img').attr('title') || ''
+    const imgTitle = cell.find('img').attr('title') || ''
     let nickname: string | undefined
     const nicknameMatch = imgTitle.match(/'(.*?)'/)
     if (nicknameMatch && nicknameMatch[1]) {
@@ -520,6 +521,7 @@ export class HybridUFCService {
     weightClass: string
   } | null {
     // Type assertion for web scraping jQuery object
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const card = fighterCard as any
     if (!card.length) {
       return null
@@ -535,10 +537,10 @@ export class HybridUFCService {
       return null
     }
 
-    const recordText = fighterCard.find('.record').text().trim()
+    const recordText = card.find('.record').text().trim()
     const { wins, losses, draws } = this.parseRecord(recordText)
 
-    const imgTitle = fighterCard.find('img').attr('title') || ''
+    const imgTitle = card.find('img').attr('title') || ''
     let nickname: string | undefined
     const nicknameMatch = imgTitle.match(/'(.*?)'/)
     if (nicknameMatch && nicknameMatch[1]) {
