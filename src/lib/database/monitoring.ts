@@ -52,8 +52,8 @@ export interface QueryStats {
   duration: number
   performance: QueryPerformance
   timestamp: Date
-  args?: any
-  result?: any
+  args?: unknown
+  result?: unknown
   error?: string
 }
 
@@ -426,7 +426,7 @@ export const queryMonitor = new QueryPerformanceMonitor()
  * Prisma middleware factory for query performance monitoring
  */
 export function createQueryMonitoringMiddleware() {
-  return async (params: any, next: any) => {
+  return async (params: unknown, next: unknown) => {
     const startTime = Date.now()
 
     try {

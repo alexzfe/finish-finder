@@ -3,7 +3,7 @@ interface LogEntry {
   level: 'info' | 'warn' | 'error' | 'debug'
   service: string
   message: string
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
 }
 
 class Logger {
@@ -13,7 +13,7 @@ class Logger {
     this.serviceName = serviceName
   }
 
-  private log(level: LogEntry['level'], message: string, meta?: Record<string, any>): void {
+  private log(level: LogEntry['level'], message: string, meta?: Record<string, unknown>): void {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -45,19 +45,19 @@ class Logger {
     }
   }
 
-  info(message: string, meta?: Record<string, any>): void {
+  info(message: string, meta?: Record<string, unknown>): void {
     this.log('info', message, meta)
   }
 
-  warn(message: string, meta?: Record<string, any>): void {
+  warn(message: string, meta?: Record<string, unknown>): void {
     this.log('warn', message, meta)
   }
 
-  error(message: string, meta?: Record<string, any>): void {
+  error(message: string, meta?: Record<string, unknown>): void {
     this.log('error', message, meta)
   }
 
-  debug(message: string, meta?: Record<string, any>): void {
+  debug(message: string, meta?: Record<string, unknown>): void {
     if (process.env.NODE_ENV === 'development') {
       this.log('debug', message, meta)
     }

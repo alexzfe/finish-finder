@@ -40,7 +40,7 @@ export function validateJsonField(value: unknown, fieldName: string): string {
   return JSON.stringify([])
 }
 
-export function validateFightData(fight: any): { valid: boolean; errors: string[] } {
+export function validateFightData(fight: unknown): { valid: boolean; errors: string[] } {
   const errors: string[] = []
 
   // Required fields

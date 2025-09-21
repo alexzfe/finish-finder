@@ -212,8 +212,8 @@ export interface EventChange {
 }
 
 export interface ChangeDetail {
-  old: any
-  new: any
+  old: unknown
+  new: unknown
 }
 
 export interface AutomationConfig {
@@ -245,7 +245,7 @@ export interface LogEntry {
   level: LogLevel
   service: string
   message: string
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
   traceId?: string
 }
 
@@ -254,7 +254,7 @@ export interface PerformanceMetric {
   duration: number
   timestamp: Date
   success: boolean
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface ErrorReport {
@@ -340,7 +340,7 @@ export interface ApiResponse<T> {
   data?: T
   error?: string
   timestamp: string
-  meta?: Record<string, any>
+  meta?: Record<string, unknown>
 }
 
 export interface PaginatedResponse<T> {

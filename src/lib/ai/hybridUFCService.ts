@@ -456,7 +456,7 @@ export class HybridUFCService {
     }
   }
 
-  private extractSherdogFighter(fighterCell: any, weightClass: string): {
+  private extractSherdogFighter(fighterCell: unknown, weightClass: string): {
     id: string
     name: string
     nickname?: string
@@ -507,7 +507,7 @@ export class HybridUFCService {
     }
   }
 
-  private extractSherdogFeaturedFighter(fighterCard: any, weightClass: string): {
+  private extractSherdogFeaturedFighter(fighterCard: unknown, weightClass: string): {
     id: string
     name: string
     nickname?: string

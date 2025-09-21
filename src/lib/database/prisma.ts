@@ -25,7 +25,7 @@ function createPrismaClient() {
     // Use setTimeout to defer middleware registration until after module initialization
     setTimeout(() => {
       try {
-        const { createQueryMonitoringMiddleware } = require('./monitoring')
+        const { createQueryMonitoringMiddleware } = await import('./monitoring')
         client.$use(createQueryMonitoringMiddleware())
       } catch (error) {
         // Monitoring is optional - don't break the app if it fails

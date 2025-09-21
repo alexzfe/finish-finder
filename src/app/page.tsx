@@ -34,9 +34,9 @@ export default function Home() {
     const fetchEvents = async () => {
       setLoading(true)
 
-      const normalizeEvents = (rawEvents: any[]): UFCEvent[] =>
+      const normalizeEvents = (rawEvents: unknown[]): UFCEvent[] =>
         rawEvents
-          .map((event: any) => ({
+          .map((event: unknown) => ({
             ...event,
             date: new Date(event.date)
           }))
