@@ -17,11 +17,13 @@ AI-assisted UFC fight discovery built with Next.js 15, Prisma, and an automated 
 
 ## Overview
 Finish Finder helps UFC fans pick the most electric fights. The system:
-- Scrapes upcoming UFC cards and fighter data from Sherdog.
+- Scrapes upcoming UFC cards and fighter data from Sherdog (currently manual only).
 - Persists the data in PostgreSQL (SQLite for local play).
 - Calls OpenAI to score finish probability, fun factor, and risk.
 - Delivers a responsive, UFC-styled interface with sticky fight insights.
 - Exports static JSON bundles for GitHub Pages while supporting a dynamic API on Vercel/Supabase.
+
+> ⚠️ **Automated Scraping Status**: Currently disabled due to Sherdog blocking GitHub Actions IPs. See [SCRAPING_DISABLED.md](SCRAPING_DISABLED.md) for manual scraping instructions.
 
 Core repo pillars:
 - **Frontend** – Next.js App Router with client components in `src/app` and modular UI widgets under `src/components`.
@@ -74,8 +76,10 @@ npm run db:reset          # Reset schema and reseed (destructive)
 SQLite lives at `prisma/dev.db`. For Postgres deployments, set `DATABASE_URL` in `.env.local` or the host environment before running these commands.
 
 ### Automation Commands
+**⚠️ Note**: Automated scraping is disabled. Use these commands manually:
+
 ```bash
-npm run scraper:check     # Scrape Sherdog, diff against DB, queue predictions
+npm run scraper:check     # Manual scraping (run locally to avoid IP blocking)
 npm run scraper:status    # Summarise strike counters and pending predictions
 npm run scraper:schedule  # Prepare scheduled execution metadata
 npm run predict:event     # Generate AI predictions for the newest event(s)
@@ -84,11 +88,13 @@ npm run pages:build       # Refresh GitHub Pages bundle under docs/
 ```
 Scraper and prediction commands require `DATABASE_URL` and `OPENAI_API_KEY`. They also honour `SCRAPER_CANCEL_THRESHOLD` and `SCRAPER_FIGHT_CANCEL_THRESHOLD` for strike-ledger logic. Logs are written to `logs/scraper.log`, `logs/missing-events.json`, and `logs/missing-fights.json`.
 
+For detailed manual scraping instructions, see [SCRAPING_DISABLED.md](SCRAPING_DISABLED.md).
+
 ## Deployment
 Recommended production topology:
 1. **Vercel + Supabase** – Deploy the Next.js app to Vercel (`npm run build`) and point Prisma at Supabase Postgres.
 2. **Secrets** – Configure `DATABASE_URL`, `OPENAI_API_KEY`, `SENTRY_*`, `NEXT_PUBLIC_SENTRY_*`, and scraper thresholds in Vercel env settings and GitHub Actions secrets.
-3. **Automated Scraper** – Use `.github/workflows/scraper.yml` or your scheduler of choice to build the Dockerfile and run `scripts/automated-scraper.js check` every 4 hours.
+3. **Automated Scraper** – ⚠️ Currently disabled due to IP blocking. Manual scraping required until alternative solution is implemented.
 4. **Static Mirror (Optional)** – After successful scrapes, run `npm run pages:build` and publish `docs/` to GitHub Pages for a static fallback.
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`OPERATIONS.md`](OPERATIONS.md) for deeper diagrams, runbooks, and deployment checklists.

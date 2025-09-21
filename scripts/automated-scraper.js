@@ -6,6 +6,7 @@ require('ts-node/register')
 // Import from TypeScript source
 const { HybridUFCService } = require('../src/lib/ai/hybridUFCService.ts')
 const { PrismaClient } = require('@prisma/client')
+const { validateJsonField, validateFightData, validateFighterData } = require('../src/lib/database/validation.ts')
 const fs = require('fs/promises')
 const path = require('path')
 let Sentry = null
@@ -236,70 +237,102 @@ class AutomatedScraper {
     await this.log(`Adding new event: ${event.name}`)
 
     try {
-      // Ensure all fighters exist in database
-      for (const fighter of fighters) {
-        await this.prisma.fighter.upsert({
-          where: { id: fighter.id },
-          update: {
-            name: fighter.name,
-            nickname: fighter.nickname,
-            wins: fighter.wins,
-            losses: fighter.losses,
-            draws: fighter.draws,
-            weightClass: fighter.weightClass,
-            record: fighter.record,
-            updatedAt: new Date()
-          },
-          create: {
-            id: fighter.id,
-            name: fighter.name,
-            nickname: fighter.nickname,
-            wins: fighter.wins,
-            losses: fighter.losses,
-            draws: fighter.draws,
-            weightClass: fighter.weightClass,
-            record: fighter.record
+      // Use transaction to ensure atomicity
+      await this.prisma.$transaction(async (tx) => {
+        // Validate and prepare fighter data for bulk operations
+        const validatedFighters = []
+        for (const fighter of fighters) {
+          const validation = validateFighterData(fighter)
+          if (!validation.valid) {
+            await this.log(`⚠️ Skipping invalid fighter data: ${validation.errors.join(', ')}`, 'warn')
+            continue
+          }
+          validatedFighters.push(fighter)
+        }
+
+        const fighterUpserts = validatedFighters.map(fighter =>
+          tx.fighter.upsert({
+            where: { id: fighter.id },
+            update: {
+              name: fighter.name,
+              nickname: fighter.nickname,
+              wins: fighter.wins,
+              losses: fighter.losses,
+              draws: fighter.draws,
+              weightClass: fighter.weightClass,
+              record: fighter.record,
+              updatedAt: new Date()
+            },
+            create: {
+              id: fighter.id,
+              name: fighter.name,
+              nickname: fighter.nickname,
+              wins: fighter.wins,
+              losses: fighter.losses,
+              draws: fighter.draws,
+              weightClass: fighter.weightClass,
+              record: fighter.record
+            }
+          })
+        )
+
+        // Execute all fighter operations in parallel within transaction
+        await Promise.all(fighterUpserts)
+
+        // Create the event
+        const createdEvent = await tx.event.create({
+          data: {
+            id: event.id,
+            name: event.name,
+            date: new Date(event.date),
+            location: event.location,
+            venue: event.venue
           }
         })
-      }
 
-      // Create the event
-      const createdEvent = await this.prisma.event.create({
-        data: {
-          id: event.id,
-          name: event.name,
-          date: new Date(event.date),
-          location: event.location,
-          venue: event.venue
+        // Validate and prepare fight data for bulk creation
+        const validatedFights = []
+        for (const fight of event.fightCard) {
+          const validation = validateFightData(fight)
+          if (!validation.valid) {
+            await this.log(`⚠️ Skipping invalid fight data: ${validation.errors.join(', ')}`, 'warn')
+            continue
+          }
+          validatedFights.push(fight)
         }
+
+        const fightData = validatedFights.map(fight => ({
+          id: fight.id,
+          eventId: createdEvent.id,
+          fighter1Id: fight.fighter1Id,
+          fighter2Id: fight.fighter2Id,
+          weightClass: fight.weightClass,
+          titleFight: fight.titleFight || false,
+          mainEvent: fight.mainEvent || false,
+          cardPosition: fight.cardPosition || 'preliminary',
+          scheduledRounds: fight.scheduledRounds || 3,
+          fightNumber: fight.fightNumber,
+          // NO AI predictions here - defaults only with validated JSON
+          funFactor: 0,
+          finishProbability: 0,
+          predictedFunScore: 0,
+          funFactors: validateJsonField([], 'funFactors'),
+          keyFactors: validateJsonField([], 'keyFactors')
+        }))
+
+        // Bulk create fights
+        if (fightData.length > 0) {
+          await tx.fight.createMany({
+            data: fightData,
+            skipDuplicates: true
+          })
+        }
+
+        await this.log(`✅ Successfully created event ${event.name} with ${validatedFighters.length}/${fighters.length} fighters and ${validatedFights.length}/${event.fightCard.length} fights in transaction`)
       })
 
-      // Create fights WITHOUT AI predictions (will be added separately)
-      for (const fight of event.fightCard) {
-        await this.prisma.fight.create({
-          data: {
-            id: fight.id,
-            eventId: createdEvent.id,
-            fighter1Id: fight.fighter1Id,
-            fighter2Id: fight.fighter2Id,
-            weightClass: fight.weightClass,
-            titleFight: fight.titleFight || false,
-            mainEvent: fight.mainEvent || false,
-            cardPosition: fight.cardPosition || 'preliminary',
-            scheduledRounds: fight.scheduledRounds || 3,
-            fightNumber: fight.fightNumber,
-            // NO AI predictions here - defaults only
-            funFactor: 0,
-            finishProbability: 0,
-            predictedFunScore: 0,
-            funFactors: JSON.stringify([]),
-            keyFactors: JSON.stringify([])
-          }
-        })
-      }
-
     } catch (error) {
-      await this.log(`Failed to add new event ${event.name}: ${error.message}`, 'error')
+      await this.log(`❌ Transaction failed for event ${event.name}: ${error.message}`, 'error')
       throw error
     }
   }
@@ -352,11 +385,11 @@ class AutomatedScraper {
             funFactor: enrichedFight.funFactor || 0,
             finishProbability: enrichedFight.finishProbability || 0,
             entertainmentReason: enrichedFight.entertainmentReason,
-            keyFactors: JSON.stringify(enrichedFight.keyFactors || []),
+            keyFactors: validateJsonField(enrichedFight.keyFactors || [], 'keyFactors'),
             fightPrediction: enrichedFight.fightPrediction,
             riskLevel: enrichedFight.riskLevel,
             predictedFunScore: enrichedFight.predictedFunScore || (enrichedFight.funFactor * 10),
-            funFactors: JSON.stringify(enrichedFight.funFactors || []),
+            funFactors: validateJsonField(enrichedFight.funFactors || [], 'funFactors'),
             aiDescription: enrichedFight.aiDescription || enrichedFight.entertainmentReason,
             updatedAt: new Date()
           }

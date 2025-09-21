@@ -1,9 +1,11 @@
-name: Automated Scraper
+name: Automated Scraper (DISABLED)
 
+# Temporarily disabled due to Sherdog 403 blocking
+# To re-enable: uncomment the schedule section below
 on:
-  schedule:
-    - cron: '0 */4 * * *'
-  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 */4 * * *'
+  workflow_dispatch: # Keep manual trigger available
 
 jobs:
   run-scraper:

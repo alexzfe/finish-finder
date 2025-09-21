@@ -33,27 +33,40 @@ Store sensitive values in platform secret managers (Vercel, GitHub Actions, 1Pas
 
 ## Runbooks
 
-### Daily Scraper Job
-1. Scheduler triggers `.github/workflows/scraper.yml` every 4 hours.
-2. Workflow builds the Dockerfile and runs `scripts/automated-scraper.js check` with environment secrets.
-3. Outputs:
-   - Updated database records (events, fights, prediction usage).
-   - Logs in `logs/scraper.log` (persisted if mounted volume).
-   - Strike ledgers in `logs/missing-events.json` and `logs/missing-fights.json`.
-4. Validate job success:
-   - GitHub Actions run green.
-   - No warning spikes in Sentry `SCRAPER` service.
-   - Strike counters reset when events return.
+### Daily Scraper Job (CURRENTLY DISABLED)
+**⚠️ AUTOMATED SCRAPING TEMPORARILY DISABLED**
+
+The scheduled scraper has been disabled due to Sherdog returning 403 (blocked) responses to GitHub Actions runners.
+
+**Previous Setup (now disabled):**
+1. Scheduler triggered `.github/workflows/scraper.yml` every 4 hours.
+2. Workflow built Dockerfile and ran `scripts/automated-scraper.js check` with environment secrets.
+
+**Current Status:**
+- Scheduled runs: **DISABLED** (commented out in workflow)
+- Manual trigger: **AVAILABLE** via workflow_dispatch
+- Local scraping: **FUNCTIONAL** (see Manual Scrape section below)
 
 ### Manual Scrape & Prediction Replay
+**✅ RECOMMENDED APPROACH WHILE AUTOMATION IS DISABLED**
+
 ```bash
-# Ensure DATABASE_URL + OPENAI_API_KEY are exported
+# Ensure DATABASE_URL + OPENAI_API_KEY are exported in your local environment
+export DATABASE_URL="your_postgres_connection_string"
+export OPENAI_API_KEY="your_openai_api_key"
+
+# Run scraper locally (avoids GitHub Actions IP blocking)
 node scripts/automated-scraper.js check
+
+# Generate predictions for events
 node scripts/generate-event-predictions.js            # newest event only
 node scripts/generate-predictions-only.js all         # full backfill
 ```
+
+**Troubleshooting:**
 - Use `node scripts/automated-scraper.js status` to inspect strike counts.
 - For clean-room reruns, execute `node scripts/clear-predictions.js` followed by `node scripts/verify-predictions-cleared.js` before regenerating.
+- If you get 403 errors locally, wait 30-60 minutes before retrying (Sherdog rate limiting).
 
 ### Static Export Refresh
 ```bash
@@ -95,7 +108,7 @@ This writes:
 | --- | --- | --- |
 | **No events in UI** | `/api/db-events` returns 500 or empty. Check Postgres availability and scrape logs. | Run manual scrape. If API parsing fails, inspect `Sentry` breadcrumb and `logs/scraper.log`. Static fallback available at `public/data/events.json`. |
 | **Event removed unexpectedly** | Strike ledger counts may have crossed threshold. | Lower thresholds or reset counters by deleting entry in `logs/missing-events.json`. Confirm Sherdog still lists event before reinstating manually. |
-| **Sherdog 403 blocks scraper** | Scraper logs warning with code `SHERDOG_BLOCKED`. | Wait and retry later; avoid back-to-back reruns. Consider adding proxy rotation (see ROADMAP). |
+| **Sherdog 403 blocks scraper** | Scraper logs warning with code `SHERDOG_BLOCKED`. GitHub Actions IPs are commonly blocked. | **Use local scraping instead of GitHub Actions.** Wait 30-60 minutes between retries. GitHub Actions automation is currently disabled for this reason. |
 | **OpenAI failures** | Look for rate-limit or auth errors in scraper log. | Back off for a few minutes. Verify key validity. Switch to smaller batch size by setting `OPENAI_PREDICTION_CHUNK_SIZE=3`. |
 | **Fighter images missing** | `fighter-image` route currently returns placeholder. | No action required. Feature gated until rate-limiting strategy is in place. |
 

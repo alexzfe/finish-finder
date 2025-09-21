@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import * as Sentry from '@sentry/nextjs'
+import { prisma } from '@/lib/database/prisma'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-// Initialize Prisma client only when DATABASE_URL is available
-let prisma: PrismaClient | null = null
 
 function parseJsonArray(value: unknown) {
   if (typeof value !== 'string' || value.trim().length === 0) {
@@ -25,21 +22,13 @@ function parseJsonArray(value: unknown) {
   }
 }
 
-function getPrismaClient() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL not configured')
-  }
-  if (!prisma) {
-    prisma = new PrismaClient()
-  }
-  return prisma
-}
-
 export async function GET() {
   try {
-    const prismaClient = getPrismaClient()
+    if (!process.env.DATABASE_URL || !prisma) {
+      throw new Error('DATABASE_URL not configured')
+    }
     // Get upcoming events with their fights and fighters
-    const events = await prismaClient.event.findMany({
+    const events = await prisma.event.findMany({
       where: {
         date: {
           gte: new Date() // Only upcoming events
@@ -59,7 +48,8 @@ export async function GET() {
       },
       orderBy: {
         date: 'asc'
-      }
+      },
+      take: 50 // Limit results for performance
     })
 
     // Transform the data to match the expected format
@@ -124,9 +114,9 @@ export async function GET() {
         completed: fight.completed,
         bookingDate: fight.bookingDate
       })),
-      mainCard: [],
-      prelimCard: [],
-      earlyPrelimCard: []
+      mainCard: [] as any[],
+      prelimCard: [] as any[],
+      earlyPrelimCard: [] as any[]
     }))
 
     // Organize fights by card position
@@ -155,9 +145,5 @@ export async function GET() {
       success: false,
       error: 'Failed to fetch events from database'
     }, { status: 500 })
-  } finally {
-    if (prisma) {
-      await prisma.$disconnect()
-    }
   }
 }

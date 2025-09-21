@@ -65,3 +65,13 @@ Users → Next.js App (Vercel/GitHub Pages)
 - `docs/_next` and `out/` directories keep the repo large; evaluate generating on demand.
 - Fighter imagery fallback logic exists but is disabled; needs rate-limit friendly implementation before re-enabling.
 - Observability for scraper jobs is console/log-file only—consider centralising logs and exposing health endpoints.
+
+## Recent Database Improvements (2025-09-20)
+- ✅ **Performance indexes added** for event queries and fight joins
+- ✅ **Connection pooling optimized** with singleton PrismaClient pattern
+- ✅ **Query pagination implemented** to prevent unbounded results
+- ✅ **Transaction safety added** to scraper operations for atomicity
+- ✅ **Bulk operations optimized** for fighter/fight creation
+- ✅ **JSON field validation** implemented to prevent runtime errors
+
+See [`DATABASE_PRODUCTION_STATUS.md`](DATABASE_PRODUCTION_STATUS.md) for complete implementation details.

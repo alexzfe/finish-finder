@@ -3,6 +3,7 @@
 ## Horizon: Now (0–2 weeks)
 | Item | Why | Measurable Outcome | Effort | Risks/Mitigations | Owner | Dependencies |
 | --- | --- | --- | --- | --- | --- | --- |
+| ✅ **Database performance optimization** | **Critical performance and safety improvements** | **Indexes added, connection pooling optimized, transactions implemented** | **M** | **Low risk, backward compatible** | **Database Engineer** | **None** |
 | Reinstate lint/type build blockers | Prevent silent regressions | `npm run build` fails on ESLint/TS errors; CI job enforcing `npm run lint` + `npx tsc --noEmit` | M | Existing issues may surface → schedule pairing to fix quickly | Triage Engineer | None |
 | Secret hygiene remediation | Keys leaked in history | Rotated Sentry/OpenAI/Google tokens; secret scanning job added | M | Rotation requires coordination → stage rollouts by environment | Security Champ | Access to secret managers |
 | JSON parsing & error handling tests | Lock in recent fixes | Vitest suite covering `parseJsonArray`, API transformers, and weight-class guard | M | Needs test harness → bootstrap minimal Vitest config | Backend Engineer | Reinstate lint/type blockers |
@@ -11,6 +12,7 @@
 ## Horizon: Next (2–6 weeks)
 | Item | Why | Measurable Outcome | Effort | Risks/Mitigations | Owner | Dependencies |
 | --- | --- | --- | --- | --- | --- | --- |
+| **Database query monitoring** | **Visibility into performance as data scales** | **Slow query logging and alerts implemented** | **M** | **Observability only, low risk** | **Database Engineer** | **Database optimization complete** |
 | Scraper reliability hardening | Sherdog 403s & false cancellations | Proxy/backoff layer + integration tests; strike ledger configurable via admin | H | Proxy costs → evaluate lightweight rotating user agents first | Data Engineer | JSON parsing tests |
 | Add automated test suites | Increase confidence | CI running Vitest (≥60% stmt coverage on `src/lib/**`) + Playwright smoke for UI | H | Flaky UI tests → start with headless-only smoke path | QA Lead | Reinstate build blockers, Vitest bootstrap |
 | Observability enhancements | Improve triage | Standard log fields + scrape duration metrics + Sentry breadcrumb tagging | M | Requires schema for metrics storage → start with structured logs shipped to log store | Platform Engineer | Scraper hardening |
@@ -19,6 +21,8 @@
 ## Horizon: Later (6–12+ weeks)
 | Item | Why | Measurable Outcome | Effort | Risks/Mitigations | Owner | Dependencies |
 | --- | --- | --- | --- | --- | --- | --- |
+| **Database partitioning strategy** | **Scale to handle historical data growth** | **Event partitioning by date implemented** | **L** | **High complexity, requires careful migration** | **Database Engineer** | **Query monitoring baseline** |
+| **Read replica implementation** | **Separate read/write workloads** | **Read replica configured with lag monitoring** | **L** | **Data consistency challenges** | **Database Engineer** | **Query monitoring, partitioning** |
 | Prediction pipeline optimisation | Reduce OpenAI cost/latency | Batched inference with caching; 30% fewer tokens per scrape | H | Model drift risk → add evaluation dataset | ML Engineer | Observability metrics |
 | Real-time data ingestion | Decrease reliance on scraping | Integrate UFC API or partner data feed; fallback scrape used only as backup | H | Licensing constraints → secure legal approval before build | Product Lead | Scraper hardening |
 | Personalisation & notifications | Increase engagement | User preferences stored; email/push notifications for high-fun fights | H | Requires auth & consent flows | Product Team | Data pipeline stabilised |
