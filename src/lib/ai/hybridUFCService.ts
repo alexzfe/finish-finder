@@ -1029,19 +1029,32 @@ export class HybridUFCService {
     // Try to get fight details from multiple sources
     let fightDetails = await this.fetchFightDetails(realEvent)
 
-    // Enrich fighter records from Tapology if missing/unknown (opt-in to avoid long runs)
-    if (process.env.TAPOLOGY_ENRICH_RECORDS === 'true') {
+    // Enrich fighter records from Tapology if missing/unknown
+    // Default to true locally, can be disabled by setting TAPOLOGY_ENRICH_RECORDS=false
+    const shouldEnrich = process.env.TAPOLOGY_ENRICH_RECORDS?.toLowerCase() !== 'false'
+    if (shouldEnrich) {
       try {
         const missingRecords = fightDetails.fighters.filter(f => !f.record || /^0-0-0$/.test(f.record)).length
+        console.log(`🔍 Found ${missingRecords}/${fightDetails.fighters.length} fighters with missing records, attempting Tapology enrichment...`)
+
         if (missingRecords > 0) {
           const enriched = await this.enrichFighterRecordsFromTapology(realEvent, fightDetails.fighters)
           if (enriched && enriched.length) {
+            const enrichedCount = enriched.filter(f => f.record && !/^0-0-0$/.test(f.record)).length
+            console.log(`✅ Tapology enrichment completed: ${enrichedCount}/${enriched.length} fighters now have records`)
             fightDetails = { ...fightDetails, fighters: enriched }
+          } else {
+            console.log(`⚠️ Tapology enrichment returned no results`)
           }
+        } else {
+          console.log(`ℹ️ All fighters already have records, skipping Tapology enrichment`)
         }
       } catch (e) {
         console.warn('⚠️ Tapology enrichment failed:', (e as Error)?.message || e)
+        console.warn('Continuing with basic fighter data from Wikipedia...')
       }
+    } else {
+      console.log('ℹ️ Tapology enrichment disabled (TAPOLOGY_ENRICH_RECORDS=false)')
     }
 
     const eventId = this.slugify(realEvent.name)
