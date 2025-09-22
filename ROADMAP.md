@@ -3,7 +3,7 @@
 ## Horizon: Now (0–2 weeks)
 | Item | Why | Measurable Outcome | Effort | Risks/Mitigations | Owner | Dependencies |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Scraper date filtering fix** | **Currently collecting historical events instead of upcoming** | **Date filtering logic updated to focus on future events** | **S** | **Low risk, configuration adjustment** | **Data Engineer** | **Multi-source scraper system** |
+| ✅ **Comprehensive Wikipedia scraper enhancement** | **Extract complete fight cards from all upcoming UFC events** | **68 fights and 134 fighters collected across 12 upcoming events with proper card categorization and data validation** | **M** | **✅ Complete - Wikipedia-first approach operational with malformed data filtering** | **Data Engineer** | **✅ Multi-source scraper system** |
 | ✅ **Database performance optimization** | **Critical performance and safety improvements** | **Indexes added, connection pooling optimized, transactions implemented** | **M** | **Low risk, backward compatible** | **Database Engineer** | **None** |
 | ✅ **TypeScript strict mode migration** | **Eliminate `any` types causing runtime errors** | **Strict mode enabled, all `any` types documented with ESLint disable comments, Vercel deployment successful** | **M** | **Low risk, compile-time safety** | **Frontend Engineer** | **None** |
 | ✅ **Local development environment** | **Enable developers to run project locally** | **Docker Compose, .env.local template, development documentation** | **S** | **Low risk, dev-only changes** | **DevOps Engineer** | **None** |

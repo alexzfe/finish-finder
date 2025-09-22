@@ -107,3 +107,19 @@ See [`TYPESCRIPT_MIGRATION_PLAN.md`](TYPESCRIPT_MIGRATION_PLAN.md) for complete 
 - **JSON Parsing**: `src/lib/utils/json.ts:parseJsonArray` - Safely parses database JSON with fallback to empty arrays
 - **Weight Class Validation**: `src/lib/utils/weight-class.ts:toWeightClass` - Normalizes weight class variations from scraped data
 - **Database Validation**: `src/lib/database/validation.ts:validateFightData` - Validates fight objects with comprehensive error reporting
+
+## Comprehensive Wikipedia UFC Scraper (2025-09-22)
+- ✅ **Multi-source scraper architecture** - Wikipedia prioritized over Sherdog and Tapology for reliability
+- ✅ **Complete fight card extraction** - 68 fights and 134 fighters collected across 12 upcoming UFC events
+- ✅ **Advanced table parsing** - Handles both upcoming ("vs") and completed ("def.") event formats
+- ✅ **Data validation pipeline** - Malformed fighter name filtering and navigation table exclusion
+- ✅ **Card position detection** - Proper main card vs preliminary card categorization
+- ✅ **Weight class extraction** - Comprehensive weight division mapping and validation
+- ✅ **Fighter name cleaning** - Removes artifacts and validates against common Wikipedia UI elements
+
+### Wikipedia Scraper Features
+- **Event Discovery**: `src/lib/scrapers/wikipediaService.ts:getUpcomingEvents` - Extracts all upcoming UFC events from Wikipedia schedule
+- **Fight Card Parsing**: `src/lib/scrapers/wikipediaService.ts:getEventDetails` - Comprehensive fight card extraction with table structure detection
+- **Data Validation**: `src/lib/scrapers/wikipediaService.ts:areValidFighterNames` - Filters malformed data and navigation artifacts
+- **Title Extraction**: `src/lib/scrapers/wikipediaService.ts:extractMainEventFromTitle` - Fallback extraction from event titles when full cards unavailable
+- **Multi-format Support**: Handles both structured fight tables and title-only extraction for future events

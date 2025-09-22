@@ -391,6 +391,30 @@ export class WikipediaUFCService {
         })
       }
 
+      // For upcoming events, try to extract main event from page title when no fight card is found
+      if (fights.length === 0) {
+        const mainEventFight = this.extractMainEventFromTitle($, wikipediaUrl)
+        if (mainEventFight) {
+          fights.push(mainEventFight)
+
+          // Add fighters
+          if (!fightersMap.has(mainEventFight.fighter1Name)) {
+            fightersMap.set(mainEventFight.fighter1Name, {
+              id: this.generateFighterId(mainEventFight.fighter1Name),
+              name: mainEventFight.fighter1Name,
+              source: 'wikipedia'
+            })
+          }
+          if (!fightersMap.has(mainEventFight.fighter2Name)) {
+            fightersMap.set(mainEventFight.fighter2Name, {
+              id: this.generateFighterId(mainEventFight.fighter2Name),
+              name: mainEventFight.fighter2Name,
+              source: 'wikipedia'
+            })
+          }
+        }
+      }
+
       const fighters = Array.from(fightersMap.values())
 
       console.log(`✅ Found ${fights.length} fights and ${fighters.length} fighters on Wikipedia event page`)
@@ -407,7 +431,8 @@ export class WikipediaUFCService {
     const sections: Array<{ heading: string, content: cheerio.Cheerio<any> }> = []
 
     // First, try to find structured fight card sections by headings (individual event pages)
-    const fightCardHeadings = ['main card', 'preliminary card', 'early preliminary card']
+    // Note: Completed events use "Results" while upcoming events use "Fight card"
+    const fightCardHeadings = ['main card', 'preliminary card', 'early preliminary card', 'fight card', 'results']
 
     fightCardHeadings.forEach(headingText => {
       $('h2, h3, h4').each((_, element) => {
@@ -445,16 +470,23 @@ export class WikipediaUFCService {
         const $table = $(table)
         const tableText = $table.text().toLowerCase()
 
-        // Look for tables that contain fight-related keywords
-        const hasFightKeywords = tableText.includes('vs') ||
-                                tableText.includes('method') ||
-                                tableText.includes('round') ||
-                                tableText.includes('decision') ||
-                                tableText.includes('submission') ||
-                                tableText.includes('ko/tko') ||
-                                tableText.includes('weight')
+        // Look for tables that contain fight-related keywords but exclude navigation tables
+        const hasFightKeywords = (tableText.includes('def.') || tableText.includes('vs')) &&
+                                (tableText.includes('method') || tableText.includes('round') ||
+                                 tableText.includes('decision') || tableText.includes('submission') ||
+                                 (tableText.includes('main card') && tableText.includes('preliminary')))
 
-        if (hasFightKeywords) {
+        // Exclude navigation tables and other non-fight tables
+        const isNavigationTable = $table.hasClass('navbox') ||
+                                 $table.hasClass('infobox') ||
+                                 tableText.includes('ultimate fighting championship events') ||
+                                 tableText.includes('mixed martial arts') ||
+                                 tableText.includes('vte2024') ||
+                                 tableText.includes('.mw-parser-output') ||
+                                 (tableText.length > 5000) || // Very long navigation tables
+                                 tableText.includes('« 2023  2025 »')
+
+        if (hasFightKeywords && !isNavigationTable) {
           // Create a section for this table
           sections.push({
             heading: 'Fight Results',
@@ -473,49 +505,86 @@ export class WikipediaUFCService {
     // Determine card position based on heading
     const cardPosition = this.determineCardPosition(section.heading)
 
-    // Look for tables within the section
-    const tables = section.content.find('table')
-
-    if (tables.length > 0) {
-      // Parse table-based fight cards
-      tables.each((_, table) => {
-        const $table = $(table)
-        const sectionFights = this.parseTableFights($, $table, cardPosition)
-        fights.push(...sectionFights)
-      })
-    } else {
-      // Parse list-based fight cards or direct content
-      const sectionFights = this.parseListFights($, section.content, cardPosition)
+    // Check if the content itself is a table
+    if (section.content.is('table')) {
+      const sectionFights = this.parseTableFights($, section.content, cardPosition)
       fights.push(...sectionFights)
+    } else {
+      // Look for tables within the section
+      const tables = section.content.find('table')
+
+      if (tables.length > 0) {
+        // Parse table-based fight cards
+        tables.each((_, table) => {
+          const $table = $(table)
+          const sectionFights = this.parseTableFights($, $table, cardPosition)
+          fights.push(...sectionFights)
+        })
+      } else {
+        // Parse list-based fight cards or direct content
+        const sectionFights = this.parseListFights($, section.content, cardPosition)
+        fights.push(...sectionFights)
+      }
     }
 
     return fights
   }
 
-  private parseTableFights($: cheerio.CheerioAPI, $table: cheerio.Cheerio<any>, cardPosition: string): WikipediaFight[] {
+  private parseTableFights($: cheerio.CheerioAPI, $table: cheerio.Cheerio<any>, defaultCardPosition: string): WikipediaFight[] {
     const fights: WikipediaFight[] = []
 
-    // Look for table rows (skip header)
-    const rows = $table.find('tr').slice(1)
+    // Look for table rows and track current card position
+    let currentCardPosition = defaultCardPosition
+    const rows = $table.find('tr')
 
     rows.each((_, row) => {
       const $row = $(row)
-      const cells = $row.find('td')
+      const cells = $row.find('td, th')
 
-      if (cells.length >= 2) {
-        // Try to extract fight information from table cells
-        // Common format: Weight Class | Fighters | Method | Round | Time
-
-        let weightClass = 'Unknown'
-        let fightersText = ''
-
-        if (cells.length >= 2) {
-          weightClass = $(cells[0]).text().trim()
-          fightersText = $(cells[1]).text().trim()
+      // Check if this row is a section header (like "Main card", "Preliminary card")
+      if (cells.length === 1) {
+        const sectionText = $(cells[0]).text().trim().toLowerCase()
+        if (sectionText.includes('main card')) {
+          currentCardPosition = 'main'
+        } else if (sectionText.includes('preliminary card')) {
+          currentCardPosition = 'preliminary'
+        } else if (sectionText.includes('early preliminary')) {
+          currentCardPosition = 'early preliminary'
         }
+        return // Skip to next row
+      }
 
-        const fight = this.parseFighterText($, $(cells[1]), weightClass, cardPosition)
-        if (fight) {
+      // Skip header rows (Weight class, Method, etc.)
+      if (cells.length > 0 && $(cells[0]).text().trim().toLowerCase().includes('weight class')) {
+        return // Skip header row
+      }
+
+      if (cells.length >= 4) {
+        // UFC result table format: Weight Class | Fighter1 | def./vs | Fighter2 | Method | Round | Time | Notes
+        const weightClass = $(cells[0]).text().trim()
+        const fighter1Name = this.cleanFighterName($(cells[1]).text().trim())
+        const separator = $(cells[2]).text().trim().toLowerCase()
+        const fighter2Name = this.cleanFighterName($(cells[3]).text().trim())
+
+        // Check if this looks like a fight (has def. or vs separator)
+        if ((separator.includes('def') || separator.includes('vs')) &&
+            this.areValidFighterNames(fighter1Name, fighter2Name)) {
+
+          const fightId = `${fighter1Name}-vs-${fighter2Name}`.toLowerCase()
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '')
+
+          const fight: WikipediaFight = {
+            id: fightId,
+            fighter1Name,
+            fighter2Name,
+            weightClass: weightClass || 'Unknown',
+            cardPosition: currentCardPosition,
+            titleFight: weightClass.toLowerCase().includes('championship') ||
+                       fighter1Name.includes('(c)') || fighter2Name.includes('(c)')
+          }
+
           fights.push(fight)
         }
       }
@@ -582,19 +651,36 @@ export class WikipediaUFCService {
   private parseFighterText($: cheerio.CheerioAPI, $element: cheerio.Cheerio<any>, weightClass: string, cardPosition: string): WikipediaFight | null {
     const text = $element.text().trim()
 
+    // Skip obvious non-fight content
+    if (this.isNonFightContent(text)) {
+      return null
+    }
+
     // Try to parse "Fighter A vs Fighter B" format
     let fighter1Name = ''
     let fighter2Name = ''
     let fighter1Url: string | undefined
     let fighter2Url: string | undefined
 
-    // Look for "vs" or "v." separators
-    const vsMatch = text.match(/(.+?)\s+(?:vs\.?|v\.)\s+(.+?)(?:\s+\(|$)/)
+    // Look for "vs" or "v." separators (upcoming events) or "def." patterns (completed events)
+    const vsMatch = text.match(/(.+?)\s+(?:vs\.?|v\.)\s+(.+?)(?:\s*\(.*?\)|\s*$|\s+\d+|\s+[–—-])/i)
+    const defMatch = text.match(/(.+?)\s+(?:def\.|defeated|beat)\s+(.+?)(?:\s*\(.*?\)|\s*$|\s+[–—-])/i)
 
     if (vsMatch) {
-      fighter1Name = vsMatch[1].trim()
-      fighter2Name = vsMatch[2].trim()
+      fighter1Name = this.cleanFighterName(vsMatch[1])
+      fighter2Name = this.cleanFighterName(vsMatch[2])
+    } else if (defMatch) {
+      fighter1Name = this.cleanFighterName(defMatch[1])
+      fighter2Name = this.cleanFighterName(defMatch[2])
+    }
 
+    // Additional validation - fighter names should be reasonable
+    if (fighter1Name && fighter2Name && !this.areValidFighterNames(fighter1Name, fighter2Name)) {
+      return null
+    }
+
+    // Only proceed if we found fighter names
+    if (fighter1Name && fighter2Name) {
       // Try to get Wikipedia URLs for fighters
       const links = $element.find('a')
       if (links.length >= 2) {
@@ -657,5 +743,140 @@ export class WikipediaUFCService {
       .replace(/[^a-z0-9]/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '')
+  }
+
+  private isNonFightContent(text: string): boolean {
+    const lowerText = text.toLowerCase()
+
+    // Skip obvious non-fight content patterns
+    const skipPatterns = [
+      // Navigation and metadata
+      'navigation', 'menu', 'edit', 'view source', 'talk', 'contributions',
+      'log in', 'create account', 'main page', 'contents', 'current events',
+      'random article', 'about wikipedia', 'contact us', 'donate',
+
+      // References and citations
+      'references', 'external links', 'see also', 'further reading',
+      'categories:', 'hidden categories:', 'cite', 'citation needed',
+
+      // Common Wikipedia boilerplate
+      'this article', 'may refer to', 'disambiguation', 'redirect',
+      'stub', 'expand', 'cleanup', 'neutrality', 'verify',
+
+      // Event info that's not fights
+      'attendance:', 'venue:', 'location:', 'date:', 'broadcaster:',
+      'pay-per-view', 'fight pass', 'espn+', 'preliminary card',
+
+      // Numbers without context (likely navigation artifacts)
+      /^\d+$/,
+      /^\d+\s*\(/,
+      /\)\s*\d+$/
+    ]
+
+    return skipPatterns.some(pattern => {
+      if (typeof pattern === 'string') {
+        return lowerText.includes(pattern)
+      } else {
+        return pattern.test(text)
+      }
+    })
+  }
+
+  private areValidFighterNames(fighter1: string, fighter2: string): boolean {
+    // Both names must exist and be reasonable
+    if (!fighter1 || !fighter2 || fighter1.length < 2 || fighter2.length < 2) {
+      return false
+    }
+
+    // Names shouldn't be mostly numbers or weird artifacts
+    const invalidPatterns = [
+      /^\d+\s*\(/,           // "316 ("
+      /\)\s*\d+\)$/,         // "name 2)"
+      /^[^a-zA-Z]*$/,        // Only non-letters
+      /^\d+[^a-zA-Z]*$/,     // Starts with number, no letters
+      /^[^\w\s]+$/,          // Only special characters
+      /edit|view|talk|main|page|navigation|menu/i  // Wikipedia UI elements
+    ]
+
+    if (invalidPatterns.some(pattern => pattern.test(fighter1) || pattern.test(fighter2))) {
+      return false
+    }
+
+    // Names should contain at least some letters
+    if (!/[a-zA-Z]/.test(fighter1) || !/[a-zA-Z]/.test(fighter2)) {
+      return false
+    }
+
+    // Names shouldn't be the same (probably parsing error)
+    if (fighter1.toLowerCase() === fighter2.toLowerCase()) {
+      return false
+    }
+
+    return true
+  }
+
+  private cleanFighterName(name: string): string {
+    return name
+      .trim()
+      // Remove common artifacts
+      .replace(/^\d+\s*\(\s*/, '')  // "316 (" at start
+      .replace(/\s*\d+\)\s*$/, '')  // " 2)" at end
+      .replace(/\s*\([^)]*\)\s*$/, '')  // Remove parenthetical at end
+      .replace(/[–—-]\s*$/, '')  // Remove trailing dashes
+      .replace(/^\s*[–—-]/, '')   // Remove leading dashes
+      // Clean up extra whitespace
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  private extractMainEventFromTitle($: cheerio.CheerioAPI, wikipediaUrl: string): WikipediaFight | null {
+    // Try multiple sources for event title
+    const sources = [
+      $('h1#firstHeading').text().trim(), // Main page title
+      $('.infobox-above').text().trim(),   // Infobox title
+      $('.infobox-title').text().trim(),   // Alternative infobox title
+    ]
+
+    // Also check the page text for event subtitle patterns
+    const pageText = $('body').text()
+    const subtitleMatch = pageText.match(/UFC \d+: [^.]{5,50}vs\.?[^.]{5,50}/i)
+    if (subtitleMatch) {
+      sources.push(subtitleMatch[0])
+    }
+
+    for (const source of sources) {
+      if (!source) continue
+
+      // Pattern for various UFC event formats:
+      // "UFC Fight Night: Fighter vs Fighter"
+      // "UFC 320: Fighter vs Fighter"
+      // "UFC 320: Fighter vs. Fighter 2" (with rematch number)
+      const titleMatch = source.match(/UFC.*?:\s*(.+?)\s+vs\.?\s+(.+?)(?:\s+\d+)?(?:\s|$)/i)
+
+      if (titleMatch) {
+        const fighter1Name = this.cleanFighterName(titleMatch[1])
+        const fighter2Name = this.cleanFighterName(titleMatch[2])
+
+        if (this.areValidFighterNames(fighter1Name, fighter2Name)) {
+          const fightId = `${fighter1Name}-vs-${fighter2Name}`.toLowerCase()
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '')
+
+          console.log(`🎯 Extracted main event from "${source}": ${fighter1Name} vs ${fighter2Name}`)
+
+          return {
+            id: fightId,
+            fighter1Name,
+            fighter2Name,
+            weightClass: 'Unknown',
+            cardPosition: 'main',
+            titleFight: source.toLowerCase().includes('championship') || source.includes('(c)')
+          }
+        }
+      }
+    }
+
+    return null
   }
 }
