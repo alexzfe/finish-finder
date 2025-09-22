@@ -11,6 +11,24 @@ interface WikipediaUFCEvent {
   source: 'wikipedia'
 }
 
+interface WikipediaFight {
+  id: string
+  fighter1Name: string
+  fighter2Name: string
+  weightClass: string
+  cardPosition: string
+  titleFight: boolean
+  fighter1WikipediaUrl?: string
+  fighter2WikipediaUrl?: string
+}
+
+interface WikipediaFighter {
+  id: string
+  name: string
+  wikipediaUrl?: string
+  source: 'wikipedia'
+}
+
 export class WikipediaUFCService {
   private getBrowserHeaders(): Record<string, string> {
     return {
@@ -89,17 +107,19 @@ export class WikipediaUFCService {
         const cells = $row.find('td')
 
         if (cells.length >= 4) {
-          // Use nth-child selectors as specified in the analysis
-          const eventCell = $(cells[0]) // Event name
-          const dateCell = $(cells[1])  // Date
-          const venueCell = $(cells[2]) // Venue
-          const locationCell = $(cells[3]) // Location
+          // Table structure: #, Event, Date, Venue, Location, Attendance, Ref.
+          const eventCell = $(cells[1]) // Event name (column 1)
+          const dateCell = $(cells[2])  // Date (column 2)
+          const venueCell = $(cells[3]) // Venue (column 3)
+          const locationCell = $(cells[4]) // Location (column 4)
 
           // Extract event name and Wikipedia link
           const eventLink = eventCell.find('a').first()
           const eventName = eventLink.text().trim() || eventCell.text().trim()
-          const wikipediaUrl = eventLink.attr('href') ?
-            `https://en.wikipedia.org${eventLink.attr('href')}` : undefined
+          const href = eventLink.attr('href')
+          const wikipediaUrl = href ?
+            `https://en.wikipedia.org${href}` : undefined
+
 
           // Extract date - clean up any extra whitespace or formatting
           const dateText = dateCell.text().trim().replace(/\s+/g, ' ')
@@ -235,15 +255,246 @@ export class WikipediaUFCService {
     }
   }
 
-  async getEventDetails(wikipediaUrl: string): Promise<any> {
-    // This would fetch detailed fight card information from the event's Wikipedia page
-    // For now, return basic structure
-    console.log(`🔍 Fetching event details from: ${wikipediaUrl}`)
+  async getEventDetails(wikipediaUrl: string): Promise<{ fights: WikipediaFight[], fighters: WikipediaFighter[] }> {
+    console.log(`🔍 Fetching fight card from: ${wikipediaUrl}`)
 
-    // TODO: Implement detailed event scraping
-    return {
-      fights: [],
-      fighters: []
+    try {
+      await this.humanLikeDelay()
+
+      const response = await axios.get(wikipediaUrl, {
+        headers: this.getBrowserHeaders(),
+        timeout: 15000
+      })
+
+      const $ = cheerio.load(response.data)
+      const fights: WikipediaFight[] = []
+      const fightersMap = new Map<string, WikipediaFighter>()
+
+      // Look for fight card sections
+      const fightCardSections = this.findFightCardSections($)
+
+      for (const section of fightCardSections) {
+        const sectionFights = this.parseFightCardSection($, section)
+        fights.push(...sectionFights)
+
+        // Extract fighters from fights
+        sectionFights.forEach(fight => {
+          if (!fightersMap.has(fight.fighter1Name)) {
+            fightersMap.set(fight.fighter1Name, {
+              id: this.generateFighterId(fight.fighter1Name),
+              name: fight.fighter1Name,
+              wikipediaUrl: fight.fighter1WikipediaUrl,
+              source: 'wikipedia'
+            })
+          }
+
+          if (!fightersMap.has(fight.fighter2Name)) {
+            fightersMap.set(fight.fighter2Name, {
+              id: this.generateFighterId(fight.fighter2Name),
+              name: fight.fighter2Name,
+              wikipediaUrl: fight.fighter2WikipediaUrl,
+              source: 'wikipedia'
+            })
+          }
+        })
+      }
+
+      const fighters = Array.from(fightersMap.values())
+
+      console.log(`✅ Found ${fights.length} fights and ${fighters.length} fighters on Wikipedia event page`)
+
+      return { fights, fighters }
+
+    } catch (error: any) {
+      console.error('❌ Failed to fetch Wikipedia fight details:', error?.message || error)
+      return { fights: [], fighters: [] }
     }
+  }
+
+  private findFightCardSections($: cheerio.CheerioAPI): Array<{ heading: string, content: cheerio.Cheerio<any> }> {
+    const sections: Array<{ heading: string, content: cheerio.Cheerio<any> }> = []
+
+    // Find all tables that contain fight-like data
+    const allTables = $('table')
+
+    allTables.each((i, table) => {
+      const $table = $(table)
+      const tableText = $table.text().toLowerCase()
+
+      // Look for tables that contain fight-related keywords
+      const hasFightKeywords = tableText.includes('vs') ||
+                              tableText.includes('method') ||
+                              tableText.includes('round') ||
+                              tableText.includes('decision') ||
+                              tableText.includes('submission') ||
+                              tableText.includes('ko/tko') ||
+                              tableText.includes('weight')
+
+      if (hasFightKeywords) {
+        // Create a section for this table
+        sections.push({
+          heading: 'Fight Results',
+          content: $table
+        })
+      }
+    })
+    return sections
+  }
+
+  private parseFightCardSection($: cheerio.CheerioAPI, section: { heading: string, content: cheerio.Cheerio<any> }): WikipediaFight[] {
+    const fights: WikipediaFight[] = []
+
+    // Determine card position based on heading
+    const cardPosition = this.determineCardPosition(section.heading)
+
+    // Look for tables within the section
+    const tables = section.content.find('table')
+
+    if (tables.length > 0) {
+      // Parse table-based fight cards
+      tables.each((_, table) => {
+        const $table = $(table)
+        const sectionFights = this.parseTableFights($, $table, cardPosition)
+        fights.push(...sectionFights)
+      })
+    } else {
+      // Parse list-based fight cards or direct content
+      const sectionFights = this.parseListFights($, section.content, cardPosition)
+      fights.push(...sectionFights)
+    }
+
+    return fights
+  }
+
+  private parseTableFights($: cheerio.CheerioAPI, $table: cheerio.Cheerio<any>, cardPosition: string): WikipediaFight[] {
+    const fights: WikipediaFight[] = []
+
+    // Look for table rows (skip header)
+    const rows = $table.find('tr').slice(1)
+
+    rows.each((_, row) => {
+      const $row = $(row)
+      const cells = $row.find('td')
+
+      if (cells.length >= 2) {
+        // Try to extract fight information from table cells
+        // Common format: Weight Class | Fighters | Method | Round | Time
+
+        let weightClass = 'Unknown'
+        let fightersText = ''
+
+        if (cells.length >= 2) {
+          weightClass = $(cells[0]).text().trim()
+          fightersText = $(cells[1]).text().trim()
+        }
+
+        const fight = this.parseFighterText($, $(cells[1]), weightClass, cardPosition)
+        if (fight) {
+          fights.push(fight)
+        }
+      }
+    })
+
+    return fights
+  }
+
+  private parseListFights($: cheerio.CheerioAPI, $content: cheerio.Cheerio<any>, cardPosition: string): WikipediaFight[] {
+    const fights: WikipediaFight[] = []
+
+    // Look for list items or paragraphs containing fight information
+    $content.find('li, p').each((_, element) => {
+      const $element = $(element)
+      const text = $element.text().trim()
+
+      // Look for "vs" or "v." patterns
+      if (text.includes(' vs ') || text.includes(' v. ')) {
+        const fight = this.parseFighterText($, $element, 'Unknown', cardPosition)
+        if (fight) {
+          fights.push(fight)
+        }
+      }
+    })
+
+    return fights
+  }
+
+  private parseFighterText($: cheerio.CheerioAPI, $element: cheerio.Cheerio<any>, weightClass: string, cardPosition: string): WikipediaFight | null {
+    const text = $element.text().trim()
+
+    // Try to parse "Fighter A vs Fighter B" format
+    let fighter1Name = ''
+    let fighter2Name = ''
+    let fighter1Url: string | undefined
+    let fighter2Url: string | undefined
+
+    // Look for "vs" or "v." separators
+    const vsMatch = text.match(/(.+?)\s+(?:vs\.?|v\.)\s+(.+?)(?:\s+\(|$)/)
+
+    if (vsMatch) {
+      fighter1Name = vsMatch[1].trim()
+      fighter2Name = vsMatch[2].trim()
+
+      // Try to get Wikipedia URLs for fighters
+      const links = $element.find('a')
+      if (links.length >= 2) {
+        fighter1Url = links.eq(0).attr('href')
+        fighter2Url = links.eq(1).attr('href')
+
+        if (fighter1Url && fighter1Url.startsWith('/')) {
+          fighter1Url = `https://en.wikipedia.org${fighter1Url}`
+        }
+        if (fighter2Url && fighter2Url.startsWith('/')) {
+          fighter2Url = `https://en.wikipedia.org${fighter2Url}`
+        }
+      }
+
+      // Check for title fight indicators
+      const titleFight = text.toLowerCase().includes('championship') ||
+                        text.includes('(c)') ||
+                        text.toLowerCase().includes('title')
+
+      // Extract weight class if it's in the text
+      const weightMatch = text.match(/(heavyweight|light heavyweight|middleweight|welterweight|lightweight|featherweight|bantamweight|flyweight|women's|catchweight)/i)
+      if (weightMatch) {
+        weightClass = weightMatch[1]
+      }
+
+      if (fighter1Name && fighter2Name) {
+        const fightId = `${fighter1Name}-vs-${fighter2Name}`.toLowerCase()
+          .replace(/[^a-z0-9]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+
+        return {
+          id: fightId,
+          fighter1Name,
+          fighter2Name,
+          weightClass,
+          cardPosition,
+          titleFight,
+          fighter1WikipediaUrl: fighter1Url,
+          fighter2WikipediaUrl: fighter2Url
+        }
+      }
+    }
+
+    return null
+  }
+
+  private determineCardPosition(heading: string): string {
+    const headingLower = heading.toLowerCase()
+
+    if (headingLower.includes('main')) return 'main'
+    if (headingLower.includes('preliminary') || headingLower.includes('prelim')) return 'preliminary'
+    if (headingLower.includes('early')) return 'early preliminary'
+
+    return 'preliminary' // default
+  }
+
+  private generateFighterId(fighterName: string): string {
+    return fighterName.toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
   }
 }

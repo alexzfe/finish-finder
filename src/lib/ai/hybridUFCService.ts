@@ -14,6 +14,7 @@ interface RealUFCEvent {
   detailUrl?: string
   mainFights?: string[]
   source: string
+  wikipediaUrl?: string
 }
 
 interface UFCEvent {
@@ -217,7 +218,8 @@ export class HybridUFCService {
       venue: event.venue,
       location: event.location,
       status: 'upcoming' as const,
-      source: 'wikipedia'
+      source: 'wikipedia',
+      wikipediaUrl: event.wikipediaUrl
     }))
   }
 
@@ -556,6 +558,96 @@ export class HybridUFCService {
       fights,
       fighters: Array.from(fighterMap.values())
     }
+  }
+
+  // Multi-source fight details fetching with fallback
+  private async fetchFightDetails(realEvent: RealUFCEvent): Promise<{ fights: Fight[], fighters: Fighter[] }> {
+    // Try sources based on event source and availability
+    const sources = []
+
+    // If event came from Sherdog (has detailUrl), try Sherdog first
+    if (realEvent.detailUrl && realEvent.source === 'sherdog') {
+      sources.push({ name: 'Sherdog', fn: () => this.fetchSherdogFightDetails(realEvent) })
+    }
+
+    // Add Wikipedia if we have a Wikipedia URL
+    if (realEvent.source === 'wikipedia' && realEvent.wikipediaUrl) {
+      sources.push({ name: 'Wikipedia', fn: () => this.fetchWikipediaFightDetails(realEvent.wikipediaUrl!) })
+    }
+
+    // Try Tapology as fallback
+    sources.push({ name: 'Tapology', fn: () => this.fetchTapologyFightDetails(realEvent) })
+
+    for (const source of sources) {
+      try {
+        console.log(`🔍 Fetching fight details from ${source.name}...`)
+        const fightDetails = await source.fn()
+
+        if (fightDetails.fights.length > 0) {
+          console.log(`✅ Found ${fightDetails.fights.length} fights from ${source.name}`)
+          return fightDetails
+        } else {
+          console.log(`⚠️ No fights found from ${source.name}, trying next source...`)
+        }
+
+      } catch (error: any) {
+        console.log(`❌ ${source.name} fight details failed:`, error?.message || error)
+      }
+    }
+
+    console.warn(`⚠️ No fight details found from any source for ${realEvent.name}`)
+    return { fights: [], fighters: [] }
+  }
+
+  // Fetch fight details from Wikipedia
+  private async fetchWikipediaFightDetails(wikipediaUrl: string): Promise<{ fights: Fight[], fighters: Fighter[] }> {
+    const result = await this.wikipediaService.getEventDetails(wikipediaUrl)
+
+    // Convert Wikipedia fights to internal Fight format
+    const fights: Fight[] = result.fights.map(wikiF => ({
+      id: wikiF.id,
+      fighter1Id: this.generateFighterId(wikiF.fighter1Name),
+      fighter2Id: this.generateFighterId(wikiF.fighter2Name),
+      fighter1Name: wikiF.fighter1Name,
+      fighter2Name: wikiF.fighter2Name,
+      weightClass: wikiF.weightClass,
+      cardPosition: wikiF.cardPosition as 'main' | 'preliminary' | 'early-preliminary',
+      scheduledRounds: wikiF.titleFight ? 5 : 3, // Title fights are 5 rounds, regular fights are 3
+      status: 'scheduled' as const,
+      titleFight: wikiF.titleFight
+    }))
+
+    // Convert Wikipedia fighters to internal Fighter format
+    const fighters: Fighter[] = result.fighters.map(wikiF => ({
+      id: wikiF.id,
+      name: wikiF.name,
+      nickname: '',
+      record: '0-0-0',
+      weightClass: 'Unknown',
+      age: 0, // Not available from Wikipedia scraping
+      height: 'Unknown',
+      reach: 'Unknown',
+      wins: 0,
+      losses: 0,
+      draws: 0,
+      nationality: 'Unknown',
+      fightingStyle: 'Unknown'
+    }))
+
+    return { fights, fighters }
+  }
+
+  // Placeholder for Tapology fight details (could be implemented later)
+  private async fetchTapologyFightDetails(realEvent: RealUFCEvent): Promise<{ fights: Fight[], fighters: Fighter[] }> {
+    // For now, return empty as Tapology fight details are more complex to parse
+    return { fights: [], fighters: [] }
+  }
+
+  private generateFighterId(fighterName: string): string {
+    return fighterName.toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
   }
 
   private extractSherdogFighter(fighterCell: unknown, weightClass: string): {
@@ -938,7 +1030,8 @@ export class HybridUFCService {
   private async buildEventWithFights(realEvent: RealUFCEvent): Promise<{ event: UFCEvent, fighters: Fighter[] } | null> {
     console.log(`🧩 Building fight card for ${realEvent.name} (${realEvent.date})`)
 
-    const fightDetails = await this.fetchSherdogFightDetails(realEvent)
+    // Try to get fight details from multiple sources
+    const fightDetails = await this.fetchFightDetails(realEvent)
 
     const eventId = this.slugify(realEvent.name)
     const fightCard = fightDetails.fights
