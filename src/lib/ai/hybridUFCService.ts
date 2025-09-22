@@ -2,6 +2,8 @@ import OpenAI from 'openai'
 import axios from 'axios'
 import * as cheerio from 'cheerio'
 import { buildPredictionPrompt } from './predictionPrompt'
+import { WikipediaUFCService } from '../scrapers/wikipediaService'
+import { TapologyUFCService } from '../scrapers/tapologyService'
 
 interface RealUFCEvent {
   name: string
@@ -83,6 +85,8 @@ type SherdogBlockCode = 'SHERDOG_BLOCKED'
 export class HybridUFCService {
   private openai: OpenAI | null = null
   private sherdogBlocked: boolean = false
+  private wikipediaService: WikipediaUFCService
+  private tapologyService: TapologyUFCService
 
   constructor(enableAI: boolean = true) {
     if (enableAI && process.env.OPENAI_API_KEY) {
@@ -92,6 +96,10 @@ export class HybridUFCService {
     } else if (enableAI && !process.env.OPENAI_API_KEY) {
       console.warn('⚠️ OpenAI API key not found. AI predictions will be disabled.')
     }
+
+    // Initialize alternative scraper services
+    this.wikipediaService = new WikipediaUFCService()
+    this.tapologyService = new TapologyUFCService()
   }
 
   // Get realistic browser headers to avoid bot detection
@@ -143,31 +151,88 @@ export class HybridUFCService {
   async searchRealUFCEvents(limit: number): Promise<RealUFCEvent[]> {
     this.sherdogBlocked = false
 
-    try {
-      console.log('🔍 Fetching upcoming UFC events from Sherdog...')
+    // Try multiple sources in order of preference: Sherdog -> Wikipedia -> Tapology
+    const sources = [
+      { name: 'Sherdog', fn: () => this.fetchSherdogEvents(limit) },
+      { name: 'Wikipedia', fn: () => this.fetchWikipediaEvents(limit) },
+      { name: 'Tapology', fn: () => this.fetchTapologyEvents(limit) }
+    ]
 
-      const events = await this.fetchSherdogEvents(limit)
+    for (const source of sources) {
+      try {
+        console.log(`🔍 Fetching upcoming UFC events from ${source.name}...`)
 
-      console.log(`✅ Retrieved ${events.length} upcoming events from Sherdog`)
-      return events
+        const events = await source.fn()
 
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 403) {
-        this.sherdogBlocked = true
-        const blockedError = new Error('Sherdog responded with HTTP 403 (blocked)') as Error & { code?: SherdogBlockCode }
-        blockedError.name = 'SherdogBlockedError'
-        blockedError.code = 'SHERDOG_BLOCKED'
-        console.warn('⚠️ Sherdog blocked the request with HTTP 403. Treating as transient protection.');
-        throw blockedError
+        if (events && events.length > 0) {
+          console.log(`✅ Retrieved ${events.length} upcoming events from ${source.name}`)
+          return events
+        } else {
+          console.log(`⚠️ No events found from ${source.name}, trying next source...`)
+        }
+
+      } catch (error: any) {
+        console.log(`❌ ${source.name} failed:`, error?.message || error)
+
+        // Set blocked flag specifically for Sherdog
+        if (source.name === 'Sherdog') {
+          if (axios.isAxiosError(error) && error.response?.status === 403) {
+            this.sherdogBlocked = true
+            console.warn('⚠️ Sherdog blocked the request with HTTP 403. Trying alternative sources...')
+          } else if (error?.code === 'SHERDOG_BLOCKED') {
+            this.sherdogBlocked = true
+            console.warn('⚠️ Sherdog blocked detected. Trying alternative sources...')
+          }
+        }
+
+        // Continue to next source unless this is the last one
+        if (source === sources[sources.length - 1]) {
+          console.error('❌ All sources failed. No events available.')
+
+          // If Sherdog was blocked, throw the specific error for backwards compatibility
+          if (this.sherdogBlocked) {
+            const blockedError = new Error('All sources failed, Sherdog blocked') as Error & { code?: SherdogBlockCode }
+            blockedError.name = 'SherdogBlockedError'
+            blockedError.code = 'SHERDOG_BLOCKED'
+            throw blockedError
+          }
+        }
       }
-
-      console.error('❌ Error searching for real events:', error)
-      return []
     }
+
+    return []
   }
 
   isSherdogBlocked(): boolean {
     return this.sherdogBlocked
+  }
+
+  // Fetch events from Wikipedia
+  private async fetchWikipediaEvents(limit: number): Promise<RealUFCEvent[]> {
+    const wikipediaEvents = await this.wikipediaService.getUpcomingEvents(limit)
+
+    return wikipediaEvents.map(event => ({
+      name: event.name,
+      date: event.date,
+      venue: event.venue,
+      location: event.location,
+      status: 'upcoming' as const,
+      source: 'wikipedia'
+    }))
+  }
+
+  // Fetch events from Tapology
+  private async fetchTapologyEvents(limit: number): Promise<RealUFCEvent[]> {
+    const tapologyEvents = await this.tapologyService.getUpcomingEvents(limit)
+
+    return tapologyEvents.map(event => ({
+      name: event.name,
+      date: event.date,
+      venue: event.venue,
+      location: event.location,
+      status: 'upcoming' as const,
+      source: 'tapology'
+    }))
   }
 
 

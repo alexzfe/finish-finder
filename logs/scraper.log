@@ -138,3 +138,22 @@
 [2025-09-20T19:12:18.813Z] INFO: 🤖 Generating AI predictions for event: UFC 323 - Dec. 6
 [2025-09-20T19:12:28.645Z] INFO: ✅ Generated AI predictions for 3 fights in UFC 323 - Dec. 6
 [2025-09-20T19:12:28.646Z] INFO: 🤖 Generating AI predictions for event: UFC Fight Night - Royval vs. Kape
+[2025-09-22T00:39:57.634Z] INFO: AutomatedScraper initialized
+[2025-09-22T00:39:57.636Z] INFO: Starting automated event update check...
+[2025-09-22T00:39:57.678Z] ERROR: Scraping failed: 
+Invalid `this.prisma.event.findMany()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:59:53
+
+  56 const eventsNeedingPredictions = new Map()
+  57 
+  58 // Get current events from database
+→ 59 const currentEvents = await this.prisma.event.findMany(
+error: Environment variable not found: DATABASE_URL.
+  -->  schema.prisma:7
+   | 
+ 6 |   provider = "postgresql"
+ 7 |   url      = env("DATABASE_URL")
+   | 
+
+Validation Error Count: 1
+[2025-09-22T00:39:57.686Z] INFO: AutomatedScraper cleanup completed
