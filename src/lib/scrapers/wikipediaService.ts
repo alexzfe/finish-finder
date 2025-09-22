@@ -52,7 +52,7 @@ export class WikipediaUFCService {
     return new Promise(resolve => setTimeout(resolve, delay))
   }
 
-  async getUpcomingEvents(limit: number = 10): Promise<WikipediaUFCEvent[]> {
+  async getUpcomingEvents(limit: number = 50): Promise<WikipediaUFCEvent[]> {
     console.log('🔍 Fetching upcoming UFC events from Wikipedia...')
 
     try {
@@ -67,27 +67,105 @@ export class WikipediaUFCService {
       const $ = cheerio.load(response.data)
       const events: WikipediaUFCEvent[] = []
 
-      // Look for tables with sticky-header class that contain scheduled events
-      const tables = $('table.sticky-header')
-
-      if (!tables.length) {
-        console.warn('⚠️ Could not find sticky-header tables on Wikipedia')
-        return []
-      }
-
-      // Find the table that contains future events by looking for dates in 2024/2025
+      // Look for the "Scheduled events" table specifically
       let targetTable: cheerio.Cheerio<any> | undefined
 
-      for (let i = 0; i < tables.length; i++) {
-        const table = tables.eq(i)
-        const tableText = table.text()
+      // First, try to find the table under the "Scheduled events" heading
+      $('h2, h3').each((_, element) => {
+        const $heading = $(element)
+        const headingText = $heading.text().trim().toLowerCase()
 
-        if (tableText.includes('2024') || tableText.includes('2025') || tableText.includes('2026')) {
-          // Check if this table has event data (should have 4+ columns)
-          const headerCells = table.find('tr').first().find('th, td')
-          if (headerCells.length >= 4) {
-            targetTable = table
-            break
+        if (headingText.includes('scheduled events') || headingText.includes('upcoming events')) {
+          // Try multiple strategies to find the table
+
+          // Strategy 1: Look in the immediate section after the heading
+          const headingParent = $heading.parent()
+          const tablesAfterHeading = headingParent.nextAll().find('table')
+
+          // Filter out navigation/template tables and find data tables
+          tablesAfterHeading.each((_, table) => {
+            const $table = $(table)
+            const firstRowCells = $table.find('tr').first().find('th, td')
+            const headerText = firstRowCells.map((_, el) => $(el).text().trim()).get().join(' ')
+
+            // Skip navigation tables (usually have CSS/template content or single columns)
+            if (firstRowCells.length >= 4 &&
+                !headerText.includes('.mw-parser-output') &&
+                !headerText.includes('Ultimate Fighting Championship') &&
+                (headerText.toLowerCase().includes('event') || headerText.toLowerCase().includes('date'))) {
+              targetTable = $table
+              console.log(`✅ Found data table with ${firstRowCells.length} columns`)
+              return false // Stop searching
+            }
+          })
+
+          // Strategy 2: If not found, search the entire page for data tables with future dates
+          if (!targetTable) {
+            const allTables = $('table')
+            let bestTable: cheerio.Cheerio<any> | undefined
+            let bestScore = -1
+
+            allTables.each((_, table) => {
+              const $table = $(table)
+              const tableText = $table.text()
+              const rows = $table.find('tr')
+              const firstRowCells = $table.find('tr').first().find('th, td')
+              const headerText = firstRowCells.map((_, el) => $(el).text().trim()).get().join(' ').toLowerCase()
+
+              // Score table based on how likely it is to be the scheduled events table
+              let score = 0
+
+              // Must have future dates
+              if (!tableText.includes('2025') && !tableText.includes('2026')) return
+
+              // Must have multiple columns
+              if (firstRowCells.length < 3) return
+
+              // Must not be navigation/template table
+              if (headerText.includes('.mw-parser-output') ||
+                  headerText.includes('ultimate fighting championship')) return
+
+              // Boost score for table characteristics
+              if (headerText.includes('event')) score += 3
+              if (headerText.includes('date')) score += 3
+              if (headerText.includes('venue')) score += 2
+              if (headerText.includes('location')) score += 2
+              if (rows.length > 1 && rows.length <= 20) score += 2 // Right size for upcoming events
+              if (firstRowCells.length === 4 || firstRowCells.length === 5) score += 1 // Likely event table columns
+
+              if (score > bestScore) {
+                bestTable = $table
+                bestScore = score
+              }
+            })
+
+            if (bestTable && bestScore >= 5) { // Require good confidence
+              targetTable = bestTable
+            }
+          }
+        }
+      })
+
+      // Fallback: look for sticky-header tables with future dates, but prefer smaller tables (upcoming events)
+      if (!targetTable) {
+        console.log('⚠️ Scheduled events heading not found, trying sticky-header fallback')
+        const tables = $('table.sticky-header')
+
+        for (let i = 0; i < tables.length; i++) {
+          const table = tables.eq(i)
+          const tableText = table.text()
+          const rows = table.find('tr')
+
+          if (tableText.includes('2025') || tableText.includes('2026')) {
+            // Prefer smaller tables (upcoming events typically have fewer rows than past events)
+            if (rows.length <= 20) { // Upcoming events should be much smaller than past events
+              const headerCells = table.find('tr').first().find('th, td')
+              if (headerCells.length >= 4) {
+                targetTable = table
+                console.log(`✅ Selected smaller table with ${rows.length} rows as likely upcoming events`)
+                break
+              }
+            }
           }
         }
       }
@@ -97,21 +175,35 @@ export class WikipediaUFCService {
         return []
       }
 
+
       // Parse table rows (skip header row)
       const rows = targetTable.find('tr').slice(1)
 
       rows.each((index: number, element: any) => {
-        if (events.length >= limit) return false
+        // Process all rows in the table (no limit for upcoming events)
 
         const $row = $(element)
         const cells = $row.find('td')
 
         if (cells.length >= 4) {
-          // Table structure: #, Event, Date, Venue, Location, Attendance, Ref.
-          const eventCell = $(cells[1]) // Event name (column 1)
-          const dateCell = $(cells[2])  // Date (column 2)
-          const venueCell = $(cells[3]) // Venue (column 3)
-          const locationCell = $(cells[4]) // Location (column 4)
+          // Detect table structure based on number of columns
+          let eventCell, dateCell, venueCell, locationCell
+
+          if (cells.length >= 7) {
+            // Past events table structure: #, Event, Date, Venue, Location, Attendance, Ref.
+            eventCell = $(cells[1]) // Event name (column 1)
+            dateCell = $(cells[2])  // Date (column 2)
+            venueCell = $(cells[3]) // Venue (column 3)
+            locationCell = $(cells[4]) // Location (column 4)
+          } else if (cells.length >= 4) {
+            // Scheduled events table structure: Event, Date, Venue, Location, Ref.
+            eventCell = $(cells[0]) // Event name (column 0)
+            dateCell = $(cells[1])  // Date (column 1)
+            venueCell = $(cells[2]) // Venue (column 2)
+            locationCell = $(cells[3]) // Location (column 3)
+          } else {
+            return true // Skip rows with insufficient columns
+          }
 
           // Extract event name and Wikipedia link
           const eventLink = eventCell.find('a').first()

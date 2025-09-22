@@ -239,7 +239,7 @@ export class HybridUFCService {
 
 
   // Main method to get upcoming UFC events with real data (NO AI PREDICTIONS)
-  async getUpcomingUFCEvents(limit: number = 5): Promise<{ events: UFCEvent[], fighters: Fighter[] }> {
+  async getUpcomingUFCEvents(limit: number = 50): Promise<{ events: UFCEvent[], fighters: Fighter[] }> {
     try {
       console.log('🌐 Starting UFC data collection (events only, no AI predictions)...')
 
