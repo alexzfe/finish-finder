@@ -29,11 +29,11 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
   }
 
   return (
-    <div className="relative rounded-xl border border-white/5 bg-black/55 px-10 pb-6 pt-6 text-white md:px-12">
+    <div className="relative rounded-xl border border-white/5 bg-black/55 px-6 pb-6 pt-6 text-white sm:px-10 md:px-12">
       <button
         onClick={goToPrevEvent}
         disabled={currentEventIndex === 0}
-        className={`absolute left-5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border transition-all duration-150 ${
+        className={`absolute left-5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border transition-all duration-150 ${
           currentEventIndex === 0
             ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/20'
             : 'border-white/20 bg-white/10 text-white hover:border-[var(--ufc-red)]/60 hover:bg-[var(--ufc-red)]/20'
@@ -46,7 +46,7 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
       <button
         onClick={goToNextEvent}
         disabled={currentEventIndex === events.length - 1}
-        className={`absolute right-5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border transition-all duration-150 ${
+        className={`absolute right-5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border transition-all duration-150 ${
           currentEventIndex === events.length - 1
             ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/20'
             : 'border-white/20 bg-white/10 text-white hover:border-[var(--ufc-red)]/60 hover:bg-[var(--ufc-red)]/20'
@@ -86,10 +86,10 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
             <button
               key={index}
               onClick={() => onEventChange(index)}
-              className={`h-1.5 rounded-full transition-all duration-200 ${
+              className={`h-3 rounded-full transition-all duration-200 ${
                 index === currentEventIndex
                   ? 'w-8 bg-[var(--ufc-red)]'
-                  : 'w-2.5 bg-white/20 hover:bg-white/40'
+                  : 'w-3 bg-white/20 hover:bg-white/40'
               }`}
               aria-label={`Go to event ${index + 1}`}
             />

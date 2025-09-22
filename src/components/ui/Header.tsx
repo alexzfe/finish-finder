@@ -7,7 +7,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-black/30 bg-gradient-to-b from-black/95 via-black/90 to-black/80 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 text-white">
+      <div className="mx-auto flex max-w-sm items-center justify-between px-4 py-4 text-white sm:max-w-md sm:px-6 md:max-w-4xl lg:max-w-6xl xl:max-w-7xl">
         <a
           href={`${basePath}/`}
           className="flex items-center gap-4 transition-transform duration-150 hover:-translate-y-0.5"

@@ -136,7 +136,7 @@ export default function Home() {
     <div className="min-h-screen bg-[var(--ufc-black-alt)]">
       <Header />
 
-      <main className="mx-auto max-w-7xl px-6 pb-16">
+      <main className="mx-auto max-w-sm px-4 pb-16 sm:max-w-md sm:px-6 md:max-w-4xl lg:max-w-6xl xl:max-w-7xl">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 text-center text-white">
             <div className="mb-6 text-6xl">⏳</div>
@@ -166,20 +166,20 @@ export default function Home() {
               </div>
             </section>
 
-            <section id="cards" className="flex flex-col gap-6 md:flex-row md:items-start">
-              <div className="ufc-section rounded-2xl px-4 py-5 md:flex-[2] md:px-5">
+            <section id="cards" className="flex flex-col gap-6 lg:flex-row lg:items-start">
+              <div className="ufc-section rounded-2xl px-4 py-5 lg:flex-[2] lg:px-5">
                 <FightList
                   event={currentEvent}
                   onFightClick={handleFightClick}
                 />
               </div>
 
-              <aside className="self-start rounded-2xl border border-white/5 bg-black/70 p-5 text-white shadow-2xl md:sticky md:top-20 md:flex-[1] md:max-h-[calc(100vh-160px)] md:overflow-y-auto lg:top-24">
+              <aside className="order-first lg:order-last lg:self-start rounded-2xl border border-white/5 bg-black/70 p-4 sm:p-5 text-white shadow-2xl lg:sticky lg:top-20 lg:flex-[1] lg:max-h-[calc(100vh-160px)] lg:overflow-y-auto xl:top-24">
                 {selectedFight ? (
                   <div className="space-y-5">
                     <div className="border-l-4 border-[var(--ufc-red)] pl-4">
                       <p className="ufc-condensed text-xs text-white/60">Featured Bout</p>
-                      <h3 className="ufc-condensed mt-1 text-2xl text-white">
+                      <h3 className="ufc-condensed mt-1 text-lg text-white sm:text-xl lg:text-2xl">
                         {selectedFight.fighter1?.name || 'TBD'} vs {selectedFight.fighter2?.name || 'TBD'}
                       </h3>
                       <p className="text-xs uppercase tracking-[0.4em] text-white/50">

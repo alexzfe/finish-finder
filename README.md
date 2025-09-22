@@ -20,7 +20,7 @@ Finish Finder helps UFC fans pick the most electric fights. The system:
 - Scrapes upcoming UFC cards and fighter data from a **multi-source system** (Wikipedia primary → Tapology enrichment → Sherdog optional).
 - Persists the data in PostgreSQL (SQLite for local play).
 - Calls OpenAI to score finish probability, fun factor, and risk.
-- Delivers a responsive, UFC-styled interface with sticky fight insights.
+- Delivers a mobile-first, responsive UFC-styled interface with optimized touch targets and sticky fight insights.
 - Exports static JSON bundles for GitHub Pages while supporting a dynamic API on Vercel/Supabase.
 
 > ✅ **Automated Scraping Status**: **Operational (Wikipedia-first + Tapology records)**. Scraper extracts complete fight cards from upcoming UFC events via Wikipedia and enriches fighter win/loss records via Tapology. Sherdog is currently disabled in CI due to IP blocking.
@@ -34,7 +34,7 @@ Core repo pillars:
 ## Architecture Snapshot
 | Slice | Entrypoints | Notes |
 | --- | --- | --- |
-| UI | `src/app/page.tsx`, `src/components/**` | Fetches `/api/db-events` first, falls back to `public/data/events.json`. Sticky sidebar highlights selected fight. |
+| UI | `src/app/page.tsx`, `src/components/**` | Mobile-first responsive design. Fetches `/api/db-events` first, falls back to `public/data/events.json`. Adaptive sidebar: prominent on mobile, sticky on desktop. |
 | API | `src/app/api/db-events/route.ts`, `src/app/api/fighter-image/route.ts`, `src/app/api/health/route.ts`, `src/app/api/performance/route.ts` | Prisma event feed with JSON safety guards; fighter-image route currently disabled to reduce third-party scraping noise. Health and performance monitoring endpoints for observability. |
 | Data Layer | `prisma/schema.prisma`, `prisma/migrations/**` | Runs on SQLite locally and Supabase/Postgres remotely. Includes prediction usage telemetry tables. |
 | Scraper & AI | `scripts/automated-scraper.js`, `src/lib/ai/hybridUFCService.ts`, `src/lib/scrapers/*`, `scripts/generate-*.js` | Handles scrape → diff → persist → prediction replays. Wikipedia supplies fight cards; Tapology enriches fighter records (W-L-D). Writes audit logs under `logs/`. |

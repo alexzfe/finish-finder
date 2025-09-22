@@ -177,7 +177,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
                 size="md"
               />
               <div className="min-w-0 flex-1">
-                <div className="ufc-condensed truncate text-sm text-white md:text-base" style={getFunScoreStyle(funScore)}>
+                <div className="ufc-condensed truncate text-base text-white md:text-lg" style={getFunScoreStyle(funScore)}>
                   {fight.fighter1?.name || 'TBD'}
                 </div>
                 <div className="text-[0.65rem] uppercase tracking-[0.22em] text-white/70">
@@ -194,7 +194,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
             {/* Fighter 2 */}
             <div className="flex flex-1 items-center justify-end space-x-3">
               <div className="min-w-0 flex-1 text-right">
-                <div className="ufc-condensed truncate text-sm text-white md:text-base" style={getFunScoreStyle(funScore)}>
+                <div className="ufc-condensed truncate text-base text-white md:text-lg" style={getFunScoreStyle(funScore)}>
                   {fight.fighter2?.name || 'TBD'}
                 </div>
                 <div className="text-[0.65rem] uppercase tracking-[0.22em] text-white/70">
