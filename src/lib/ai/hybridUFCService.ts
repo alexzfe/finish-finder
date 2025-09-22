@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import axios from 'axios'
 import * as cheerio from 'cheerio'
-import { buildPredictionPrompt } from './predictionPrompt'
+import { buildPredictionPrompt } from './predictionPrompt.js'
 
 interface RealUFCEvent {
   name: string

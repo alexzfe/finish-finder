@@ -17,13 +17,13 @@ AI-assisted UFC fight discovery built with Next.js 15, Prisma, and an automated 
 
 ## Overview
 Finish Finder helps UFC fans pick the most electric fights. The system:
-- Scrapes upcoming UFC cards and fighter data from Sherdog (currently manual only).
+- Scrapes upcoming UFC cards and fighter data from Sherdog via **Mullvad VPN integration**.
 - Persists the data in PostgreSQL (SQLite for local play).
 - Calls OpenAI to score finish probability, fun factor, and risk.
 - Delivers a responsive, UFC-styled interface with sticky fight insights.
 - Exports static JSON bundles for GitHub Pages while supporting a dynamic API on Vercel/Supabase.
 
-> ⚠️ **Automated Scraping Status**: Currently disabled due to Sherdog blocking GitHub Actions IPs. See [SCRAPING_DISABLED.md](SCRAPING_DISABLED.md) for manual scraping instructions.
+> ✅ **Automated Scraping Status**: **Re-enabled with VPN support!** Scraper now uses Mullvad VPN to bypass IP blocking. Configure `MULLVAD_ACCOUNT_TOKEN` in GitHub secrets to activate.
 
 Core repo pillars:
 - **Frontend** – Next.js App Router with client components in `src/app` and modular UI widgets under `src/components`.
@@ -78,26 +78,45 @@ npm run db:reset          # Reset schema and reseed (destructive)
 SQLite lives at `prisma/dev.db`. For Postgres deployments, set `DATABASE_URL` in `.env.local` or the host environment before running these commands.
 
 ### Automation Commands
-**⚠️ Note**: Automated scraping is disabled. Use these commands manually:
+**✅ Automated scraping is now enabled with VPN support!**
 
 ```bash
-npm run scraper:check     # Manual scraping (run locally to avoid IP blocking)
+npm run scraper:check     # Run scraper locally (uses VPN if configured)
 npm run scraper:status    # Summarise strike counters and pending predictions
 npm run scraper:schedule  # Prepare scheduled execution metadata
 npm run predict:event     # Generate AI predictions for the newest event(s)
 npm run predict:all       # Regenerate predictions for every tracked fight
 npm run pages:build       # Refresh GitHub Pages bundle under docs/
 ```
+
+#### VPN Configuration
+To enable VPN scraping, set these environment variables:
+```bash
+export MULLVAD_ACCOUNT_TOKEN="your_token_here"     # Required for VPN
+export MULLVAD_RELAY_LOCATION="us-nyc-wg-301"      # Optional, defaults to NYC
+export MULLVAD_VPN_ENABLED="true"                  # Optional, defaults to true
+export MULLVAD_FALLBACK_NO_VPN="true"              # Optional, continue without VPN if setup fails
+```
+
 Scraper and prediction commands require `DATABASE_URL` and `OPENAI_API_KEY`. They also honour `SCRAPER_CANCEL_THRESHOLD` and `SCRAPER_FIGHT_CANCEL_THRESHOLD` for strike-ledger logic. Logs are written to `logs/scraper.log`, `logs/missing-events.json`, and `logs/missing-fights.json`.
 
-For detailed manual scraping instructions, see [SCRAPING_DISABLED.md](SCRAPING_DISABLED.md).
+For VPN setup details, see [docker/mullvad/README.md](docker/mullvad/README.md).
 
 ## Deployment
 Recommended production topology:
 1. **Vercel + Supabase** – Deploy the Next.js app to Vercel (`npm run build`) and point Prisma at Supabase Postgres.
 2. **Secrets** – Configure `DATABASE_URL`, `OPENAI_API_KEY`, `SENTRY_*`, `NEXT_PUBLIC_SENTRY_*`, and scraper thresholds in Vercel env settings and GitHub Actions secrets.
-3. **Automated Scraper** – ⚠️ Currently disabled due to IP blocking. Manual scraping required until alternative solution is implemented.
+3. **VPN-Enabled Scraper** – ✅ **Now active!** Set `MULLVAD_ACCOUNT_TOKEN` in GitHub secrets to enable automated scraping with VPN support.
 4. **Static Mirror (Optional)** – After successful scrapes, run `npm run pages:build` and publish `docs/` to GitHub Pages for a static fallback.
+
+### GitHub Actions VPN Setup
+```bash
+# Configure Mullvad VPN for automated scraping
+gh secret set MULLVAD_ACCOUNT_TOKEN --body "your_account_token"
+
+# Optional: customize VPN relay location
+gh variable set MULLVAD_RELAY_LOCATION --body "us-nyc-wg-301"
+```
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`OPERATIONS.md`](OPERATIONS.md) for deeper diagrams, runbooks, and deployment checklists.
 

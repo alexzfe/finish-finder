@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
-// Register ts-node to handle TypeScript imports
-require('ts-node/register')
+// Register ts-node to handle TypeScript imports with Node.js config
+require('ts-node').register({
+  project: './tsconfig.node.json'
+})
 
 // Import from TypeScript source
 const { HybridUFCService } = require('../src/lib/ai/hybridUFCService.ts')

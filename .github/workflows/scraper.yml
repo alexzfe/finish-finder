@@ -1,39 +1,74 @@
-name: Automated Scraper (DISABLED)
+name: Automated Scraper with VPN
 
-# Temporarily disabled due to Sherdog 403 blocking
-# To re-enable: uncomment the schedule section below
 on:
-  # schedule:
-  #   - cron: '0 */4 * * *'
-  workflow_dispatch: # Keep manual trigger available
+  schedule:
+    - cron: '0 */4 * * *'  # Run every 4 hours
+  workflow_dispatch:        # Allow manual trigger
+    inputs:
+      use_vpn:
+        description: 'Enable Mullvad VPN'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      relay_location:
+        description: 'Mullvad relay location (e.g., us-nyc-wg-301)'
+        required: false
+        default: 'us-nyc-wg-301'
 
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30  # Increased timeout for VPN setup
     permissions:
       contents: read
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Build scraper container
-        run: docker build -t finish-finder-scraper .
+      - name: Build VPN-enabled scraper container
+        run: docker build -f docker/mullvad/Dockerfile -t finish-finder-scraper-vpn .
 
-      - name: Run automated scraper
+      - name: Run automated scraper with VPN
         env:
+          # Existing environment variables
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SCRAPER_CANCEL_THRESHOLD: ${{ vars.SCRAPER_CANCEL_THRESHOLD }}
           SCRAPER_FIGHT_CANCEL_THRESHOLD: ${{ vars.SCRAPER_FIGHT_CANCEL_THRESHOLD }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+
+          # Mullvad VPN configuration
+          MULLVAD_VPN_ENABLED: ${{ github.event.inputs.use_vpn || 'true' }}
+          MULLVAD_ACCOUNT_TOKEN: ${{ secrets.MULLVAD_ACCOUNT_TOKEN }}
+          MULLVAD_RELAY_LOCATION: ${{ github.event.inputs.relay_location || 'us-nyc-wg-301' }}
+          MULLVAD_FALLBACK_NO_VPN: 'true'  # Allow fallback if VPN fails
+          MULLVAD_MONITOR_INTERVAL: '120'   # Check VPN every 2 minutes
+          MULLVAD_MAX_FAILURES: '2'        # Reconnect after 2 failures
         run: |
           docker run --rm \
+            --privileged \
+            --cap-add=NET_ADMIN \
+            --cap-add=SYS_MODULE \
             -e OPENAI_API_KEY \
             -e DATABASE_URL \
             -e SCRAPER_CANCEL_THRESHOLD \
             -e SCRAPER_FIGHT_CANCEL_THRESHOLD \
             -e SENTRY_DSN \
             -e NEXT_PUBLIC_SENTRY_DSN \
-            finish-finder-scraper
+            -e MULLVAD_VPN_ENABLED \
+            -e MULLVAD_ACCOUNT_TOKEN \
+            -e MULLVAD_RELAY_LOCATION \
+            -e MULLVAD_FALLBACK_NO_VPN \
+            -e MULLVAD_MONITOR_INTERVAL \
+            -e MULLVAD_MAX_FAILURES \
+            finish-finder-scraper-vpn
+
+      - name: Check scraper health (if container failed)
+        if: failure()
+        run: |
+          echo "Scraper container failed. Checking if VPN was the issue..."
+          echo "Consider running without VPN or checking Mullvad account status."
