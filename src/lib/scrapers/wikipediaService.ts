@@ -49,36 +49,51 @@ export class WikipediaUFCService {
       const $ = cheerio.load(response.data)
       const events: WikipediaUFCEvent[] = []
 
-      // Find the "Scheduled events" section
-      const scheduledSection = $('span#Scheduled_events').parent()
+      // Look for tables with sticky-header class that contain scheduled events
+      const tables = $('table.sticky-header')
 
-      if (!scheduledSection.length) {
-        console.warn('⚠️ Could not find Scheduled events section on Wikipedia')
+      if (!tables.length) {
+        console.warn('⚠️ Could not find sticky-header tables on Wikipedia')
         return []
       }
 
-      // Look for the table after the Scheduled events heading
-      const table = scheduledSection.nextAll('table').first()
+      // Find the table that contains future events by looking for dates in 2024/2025
+      let targetTable: cheerio.Cheerio<any> | undefined
 
-      if (!table.length) {
-        console.warn('⚠️ Could not find events table in Scheduled events section')
+      for (let i = 0; i < tables.length; i++) {
+        const table = tables.eq(i)
+        const tableText = table.text()
+
+        if (tableText.includes('2024') || tableText.includes('2025') || tableText.includes('2026')) {
+          // Check if this table has event data (should have 4+ columns)
+          const headerCells = table.find('tr').first().find('th, td')
+          if (headerCells.length >= 4) {
+            targetTable = table
+            break
+          }
+        }
+      }
+
+      if (!targetTable) {
+        console.warn('⚠️ Could not find scheduled events table with future dates')
         return []
       }
 
       // Parse table rows (skip header row)
-      const rows = table.find('tr').slice(1)
+      const rows = targetTable.find('tr').slice(1)
 
-      rows.each((index, element) => {
+      rows.each((index: number, element: any) => {
         if (events.length >= limit) return false
 
         const $row = $(element)
         const cells = $row.find('td')
 
         if (cells.length >= 4) {
-          const eventCell = $(cells[0])
-          const dateCell = $(cells[1])
-          const venueCell = $(cells[2])
-          const locationCell = $(cells[3])
+          // Use nth-child selectors as specified in the analysis
+          const eventCell = $(cells[0]) // Event name
+          const dateCell = $(cells[1])  // Date
+          const venueCell = $(cells[2]) // Venue
+          const locationCell = $(cells[3]) // Location
 
           // Extract event name and Wikipedia link
           const eventLink = eventCell.find('a').first()
@@ -86,16 +101,17 @@ export class WikipediaUFCService {
           const wikipediaUrl = eventLink.attr('href') ?
             `https://en.wikipedia.org${eventLink.attr('href')}` : undefined
 
-          // Extract date
-          const dateText = dateCell.text().trim()
+          // Extract date - clean up any extra whitespace or formatting
+          const dateText = dateCell.text().trim().replace(/\s+/g, ' ')
 
-          // Extract venue
-          const venue = venueCell.text().trim()
+          // Extract venue - remove any citations or extra formatting
+          const venue = venueCell.text().trim().replace(/\[\d+\]/g, '').trim()
 
-          // Extract location
-          const location = locationCell.text().trim()
+          // Extract location - remove any citations or extra formatting
+          const location = locationCell.text().trim().replace(/\[\d+\]/g, '').trim()
 
-          if (eventName && dateText && venue && location) {
+          // Only process if we have the essential data and it's a future event
+          if (eventName && dateText && this.isFutureDate(dateText)) {
             // Generate ID from event name
             const id = eventName.toLowerCase()
               .replace(/[^a-z0-9]/g, '-')
@@ -109,13 +125,13 @@ export class WikipediaUFCService {
               id,
               name: eventName,
               date: parsedDate,
-              venue,
-              location,
+              venue: venue || 'TBA',
+              location: location || 'TBA',
               wikipediaUrl,
               source: 'wikipedia'
             })
 
-            console.log(`📅 Found: ${eventName} - ${parsedDate} at ${venue}, ${location}`)
+            console.log(`📅 Found: ${eventName} - ${parsedDate} at ${venue || 'TBA'}, ${location || 'TBA'}`)
           }
         }
       })
@@ -137,24 +153,81 @@ export class WikipediaUFCService {
     }
   }
 
+  private isFutureDate(dateText: string): boolean {
+    try {
+      // Quick check for obvious future indicators
+      if (dateText.toLowerCase().includes('tba') || dateText.toLowerCase().includes('announced')) {
+        return true
+      }
+
+      // Check if the date string contains a year that's current or future
+      const currentYear = new Date().getFullYear()
+      const yearMatch = dateText.match(/\b(20\d{2})\b/)
+
+      if (yearMatch) {
+        const eventYear = parseInt(yearMatch[1])
+        return eventYear >= currentYear
+      }
+
+      // Try to parse the date and check if it's in the future
+      const parsed = new Date(dateText)
+      if (!isNaN(parsed.getTime())) {
+        return parsed > new Date()
+      }
+
+      // If we can't determine, assume it might be future (be permissive)
+      return true
+
+    } catch (error) {
+      // If parsing fails, assume it might be future
+      return true
+    }
+  }
+
   private parseWikipediaDate(dateText: string): string {
     try {
-      // Wikipedia dates are typically in format like "January 25, 2025"
-      // or "TBA" for to be announced
+      // Wikipedia dates can be in various formats:
+      // "January 25, 2025", "Sep 13, 2025", "TBA", etc.
 
       if (dateText.toLowerCase().includes('tba') || dateText.toLowerCase().includes('announced')) {
         return new Date().toISOString().split('T')[0] // Use today as placeholder
       }
 
-      // Try to parse the date
-      const parsed = new Date(dateText)
+      // Clean up the date text - remove extra whitespace and formatting
+      let cleanDate = dateText.trim().replace(/\s+/g, ' ')
 
-      if (isNaN(parsed.getTime())) {
-        console.warn(`⚠️ Could not parse date: ${dateText}`)
-        return new Date().toISOString().split('T')[0] // Use today as fallback
+      // Try to parse various Wikipedia date formats
+      let parsed: Date | null = null
+
+      // Try direct parsing first
+      parsed = new Date(cleanDate)
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString().split('T')[0]
       }
 
-      return parsed.toISOString().split('T')[0] // Return YYYY-MM-DD format
+      // Try parsing formats like "Sep 13, 2025"
+      const shortFormatMatch = cleanDate.match(/(\w{3})\s+(\d{1,2}),?\s+(\d{4})/)
+      if (shortFormatMatch) {
+        const [, month, day, year] = shortFormatMatch
+        parsed = new Date(`${month} ${day}, ${year}`)
+        if (!isNaN(parsed.getTime())) {
+          return parsed.toISOString().split('T')[0]
+        }
+      }
+
+      // Try parsing formats like "13 Sep 2025"
+      const altFormatMatch = cleanDate.match(/(\d{1,2})\s+(\w{3})\s+(\d{4})/)
+      if (altFormatMatch) {
+        const [, day, month, year] = altFormatMatch
+        parsed = new Date(`${month} ${day}, ${year}`)
+        if (!isNaN(parsed.getTime())) {
+          return parsed.toISOString().split('T')[0]
+        }
+      }
+
+      // If all parsing attempts fail
+      console.warn(`⚠️ Could not parse Wikipedia date: ${dateText}`)
+      return new Date().toISOString().split('T')[0] // Use today as fallback
 
     } catch (error) {
       console.warn(`⚠️ Date parsing error for "${dateText}":`, (error as any)?.message || error)
