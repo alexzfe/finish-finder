@@ -1,37 +1,38 @@
-name: Automated Scraper with VPN
+name: Automated Scraper
 
 on:
   schedule:
     - cron: '0 */4 * * *'  # Run every 4 hours
   workflow_dispatch:        # Allow manual trigger
     inputs:
-      use_vpn:
-        description: 'Enable Mullvad VPN'
+      events_limit:
+        description: 'Number of events to process (default: 50)'
         required: false
-        default: 'true'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
-      relay_location:
-        description: 'Mullvad relay location (e.g., us-nyc-wg-301)'
-        required: false
-        default: 'us-nyc-wg-301'
+        default: '50'
 
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Increased timeout for VPN setup
+    timeout-minutes: 15  # Standard timeout for scraping
     permissions:
       contents: read
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Build VPN-enabled scraper container
-        run: docker build -f docker/mullvad/Dockerfile -t finish-finder-scraper-vpn .
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Run automated scraper with VPN
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run automated scraper
         env:
           # Existing environment variables
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -44,37 +45,13 @@ jobs:
           # Disable Sherdog in CI to avoid GH IP blocks
           SHERDOG_ENABLED: 'false'
 
-          # Enable Tapology win/loss record enrichment (latency acceptable for daily runs)
+          # Enable Tapology win/loss record enrichment
           TAPOLOGY_ENRICH_RECORDS: 'true'
-
-          # Mullvad VPN configuration
-          MULLVAD_VPN_ENABLED: ${{ github.event.inputs.use_vpn || 'true' }}
-          MULLVAD_ACCOUNT_TOKEN: ${{ secrets.MULLVAD_ACCOUNT_TOKEN }}
-          MULLVAD_RELAY_LOCATION: ${{ github.event.inputs.relay_location || 'us-nyc-wg-301' }}
-          MULLVAD_FALLBACK_NO_VPN: 'true'  # Allow fallback if VPN fails
-          MULLVAD_MONITOR_INTERVAL: '120'   # Check VPN every 2 minutes
-          MULLVAD_MAX_FAILURES: '2'        # Reconnect after 2 failures
         run: |
-          docker run --rm \
-            --privileged \
-            --cap-add=NET_ADMIN \
-            --cap-add=SYS_MODULE \
-            -e OPENAI_API_KEY \
-            -e DATABASE_URL \
-            -e SCRAPER_CANCEL_THRESHOLD \
-            -e SCRAPER_FIGHT_CANCEL_THRESHOLD \
-            -e SENTRY_DSN \
-            -e NEXT_PUBLIC_SENTRY_DSN \
-            -e MULLVAD_VPN_ENABLED \
-            -e MULLVAD_ACCOUNT_TOKEN \
-            -e MULLVAD_RELAY_LOCATION \
-            -e MULLVAD_FALLBACK_NO_VPN \
-            -e MULLVAD_MONITOR_INTERVAL \
-            -e MULLVAD_MAX_FAILURES \
-            finish-finder-scraper-vpn
+          node scripts/automated-scraper.js check
 
-      - name: Check scraper health (if container failed)
+      - name: Check scraper health (if scraper failed)
         if: failure()
         run: |
-          echo "Scraper container failed. Checking if VPN was the issue..."
-          echo "Consider running without VPN or checking Mullvad account status."
+          echo "Scraper failed. Check logs above for details."
+          echo "Common issues: Database connection, API rate limits, or source website changes."
