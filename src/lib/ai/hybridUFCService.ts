@@ -94,6 +94,30 @@ export class HybridUFCService {
     }
   }
 
+  // Get realistic browser headers to avoid bot detection
+  private getBrowserHeaders(): Record<string, string> {
+    return {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Cache-Control': 'max-age=0'
+    }
+  }
+
+  // Add realistic delay between requests to mimic human behavior
+  private async humanLikeDelay(): Promise<void> {
+    const delay = 1000 + Math.random() * 2000 // 1-3 seconds
+    return new Promise(resolve => setTimeout(resolve, delay))
+  }
+
   // Get current date for accurate searches
   private getCurrentDate(): string {
     const now = new Date()
@@ -214,9 +238,10 @@ export class HybridUFCService {
 
   private async fetchSherdogEvents(limit: number): Promise<RealUFCEvent[]> {
     const url = 'https://www.sherdog.com/organizations/Ultimate-Fighting-Championship-UFC-2'
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (compatible; FunFightPredictorBot/1.0; +https://example.com)'
-    }
+    const headers = this.getBrowserHeaders()
+
+    // Add human-like delay before request
+    await this.humanLikeDelay()
 
     const response = await axios.get(url, { headers })
     const $ = cheerio.load(response.data)
@@ -323,9 +348,10 @@ export class HybridUFCService {
       return { fights: [], fighters: [] }
     }
 
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (compatible; FunFightPredictorBot/1.0; +https://example.com)'
-    }
+    const headers = this.getBrowserHeaders()
+
+    // Add human-like delay before request
+    await this.humanLikeDelay()
 
     const response = await axios.get(realEvent.detailUrl, { headers })
     const $ = cheerio.load(response.data)
