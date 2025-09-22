@@ -144,7 +144,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
       >
         <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white/5 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
 
-        <div className="border-b border-white/10 bg-black/60 px-4 py-2.5">
+        <div className="border-b border-white/10 bg-black/60 px-3 py-2.5 sm:px-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <span className="ufc-condensed text-xs text-white/70">
@@ -167,17 +167,17 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
           </div>
         </div>
 
-        <div className="bg-black/50 p-3.5">
-          {/* Fighters Side by Side */}
-          <div className="flex items-center justify-between">
+        <div className="bg-black/50 p-2.5 sm:p-3.5">
+          {/* Mobile: Stacked Layout, Desktop: Side by Side */}
+          <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             {/* Fighter 1 */}
-            <div className="flex flex-1 items-center space-x-3">
+            <div className="flex flex-1 items-center space-x-2 sm:space-x-3">
               <FighterAvatar
                 fighterName={fight.fighter1?.name}
                 size="md"
               />
               <div className="min-w-0 flex-1">
-                <div className="ufc-condensed truncate text-base text-white md:text-lg" style={getFunScoreStyle(funScore)}>
+                <div className="ufc-condensed truncate text-sm text-white sm:text-base md:text-lg" style={getFunScoreStyle(funScore)}>
                   {fight.fighter1?.name || 'TBD'}
                 </div>
                 <div className="text-[0.65rem] uppercase tracking-[0.22em] text-white/70">
@@ -187,14 +187,14 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
             </div>
 
             {/* VS Divider */}
-            <div className="px-4">
+            <div className="flex justify-center px-2 sm:px-4">
               <span className="ufc-condensed text-xs tracking-[0.4em] text-white/60">VS</span>
             </div>
 
             {/* Fighter 2 */}
-            <div className="flex flex-1 items-center justify-end space-x-3">
+            <div className="flex flex-1 items-center justify-end space-x-2 sm:space-x-3">
               <div className="min-w-0 flex-1 text-right">
-                <div className="ufc-condensed truncate text-base text-white md:text-lg" style={getFunScoreStyle(funScore)}>
+                <div className="ufc-condensed truncate text-sm text-white sm:text-base md:text-lg" style={getFunScoreStyle(funScore)}>
                   {fight.fighter2?.name || 'TBD'}
                 </div>
                 <div className="text-[0.65rem] uppercase tracking-[0.22em] text-white/70">
@@ -210,11 +210,11 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
 
           {/* Fight Details */}
           <div className="mt-3 border-t border-white/10 pt-2.5">
-            <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-[0.24em] text-white/75">
-              <span>{fight.weightClass}</span>
-              <span>{fight.scheduledRounds || 3} Rounds</span>
+            <div className="flex flex-wrap items-center justify-between gap-1 text-[0.65rem] uppercase tracking-[0.24em] text-white/75 sm:flex-nowrap sm:gap-0">
+              <span className="truncate">{fight.weightClass}</span>
+              <span className="whitespace-nowrap">{fight.scheduledRounds || 3} Rounds</span>
               {fight.finishProbability ? (
-                <span className="text-white">Finish {fight.finishProbability}%</span>
+                <span className="whitespace-nowrap text-white">Finish {fight.finishProbability}%</span>
               ) : null}
             </div>
           </div>
@@ -247,12 +247,12 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
     <div className="space-y-4">
       {sectionsToRender.map(section => (
         <div key={section.title} className="rounded-2xl border border-white/5 bg-black/40 shadow-[0_18px_50px_rgba(0,0,0,0.45)]">
-          <div className="flex items-center justify-between border-b border-white/5 px-5 py-3">
+          <div className="flex items-center justify-between border-b border-white/5 px-3 py-3 sm:px-5">
             <h2 className="ufc-condensed text-lg text-white md:text-xl">{section.title}</h2>
             <span className="text-[0.6rem] uppercase tracking-[0.3em] text-white/40">{section.fights.length} Fights</span>
           </div>
 
-          <div className="p-5">
+          <div className="p-3 sm:p-5">
             <div className="grid gap-3.5">
               {section.fights.map(renderFightRow)}
             </div>
