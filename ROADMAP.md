@@ -12,6 +12,7 @@
 | ✅ **TypeScript strict mode infrastructure** | **Enable comprehensive type safety enforcement** | **TypeScript compilation passes; ESLint strict mode active** | **M** | **Low risk, quality gate working** | **Frontend Engineer** | **Build infrastructure** |
 | Secret hygiene remediation | Keys leaked in history | Rotated Sentry/OpenAI/Google tokens; secret scanning job added | M | Rotation requires coordination → stage rollouts by environment | Security Champ | Access to secret managers |
 | ✅ **JSON parsing & error handling tests** | **Lock in recent fixes** | **Vitest suite with 60 tests achieving 99.06% coverage on JSON utilities, weight-class validation, and database validation functions** | **M** | **✅ Complete - Vitest config bootstrapped, comprehensive test patterns established** | **Backend Engineer** | **✅ Lint/type blockers working** |
+| Lint/type cleanup (scrapers + Next config) | Restore strict build gates on Vercel | Remove remaining `any` and `require()` usage; no ESLint errors in scrapers; revert `ignoreBuildErrors`/`ignoreDuringBuilds` to false | M | Touches multiple files → do in small PRs; use CI to enforce | Frontend/Data Engineer | Existing scraper implementation |
 
 ## Horizon: Next (2–6 weeks)
 | Item | Why | Measurable Outcome | Effort | Risks/Mitigations | Owner | Dependencies |

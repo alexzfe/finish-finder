@@ -148,5 +148,9 @@ npm run build         # Full build with quality gates enabled
 - **ESLint**: Comprehensive rules; CI should block on violations
 - **Build Gates**: Vercel deploys do not block on lint/type errors; use CI to enforce
 
+Planned: Lint/Type Cleanup
+- Remove remaining `any`/`require()` usage in scrapers and migrate to idiomatic ESM imports.
+- Address ESLint violations to re‑enable blocking builds on Vercel (flip `ignoreBuildErrors` and `ignoreDuringBuilds` back to false).
+
 ---
 Licensed under the MIT License.

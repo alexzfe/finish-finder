@@ -65,7 +65,9 @@ node scripts/automated-scraper.js check
 ```
 
 ### Build Configuration on Vercel
-To avoid blocking deployments on lint/type errors while refactors are in progress, production builds on Vercel ignore ESLint and TypeScript errors (`next.config.ts`). It is recommended to enforce `npm run lint` and `npx tsc --noEmit` in CI prior to deploys.
+To avoid blocking deployments on lint/type errors while refactors are in progress, production builds on Vercel ignore ESLint and TypeScript errors (`next.config.ts`). Enforce `npm run lint` and `npx tsc --noEmit` in CI prior to deploys.
+
+Future step: once lint/type cleanup is finished, revert `eslint.ignoreDuringBuilds` and `typescript.ignoreBuildErrors` to `false` to restore strict build gates on Vercel.
 
 ## ✅ Deployment Status
 
