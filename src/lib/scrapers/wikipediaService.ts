@@ -406,30 +406,64 @@ export class WikipediaUFCService {
   private findFightCardSections($: cheerio.CheerioAPI): Array<{ heading: string, content: cheerio.Cheerio<any> }> {
     const sections: Array<{ heading: string, content: cheerio.Cheerio<any> }> = []
 
-    // Find all tables that contain fight-like data
-    const allTables = $('table')
+    // First, try to find structured fight card sections by headings (individual event pages)
+    const fightCardHeadings = ['main card', 'preliminary card', 'early preliminary card']
 
-    allTables.each((i, table) => {
-      const $table = $(table)
-      const tableText = $table.text().toLowerCase()
+    fightCardHeadings.forEach(headingText => {
+      $('h2, h3, h4').each((_, element) => {
+        const $heading = $(element)
+        const headingContent = $heading.text().trim().toLowerCase()
 
-      // Look for tables that contain fight-related keywords
-      const hasFightKeywords = tableText.includes('vs') ||
-                              tableText.includes('method') ||
-                              tableText.includes('round') ||
-                              tableText.includes('decision') ||
-                              tableText.includes('submission') ||
-                              tableText.includes('ko/tko') ||
-                              tableText.includes('weight')
+        if (headingContent.includes(headingText)) {
+          // Find content after this heading until the next major heading
+          let content = $heading.nextUntil('h2, h3, h4')
 
-      if (hasFightKeywords) {
-        // Create a section for this table
-        sections.push({
-          heading: 'Fight Results',
-          content: $table
-        })
-      }
+          // If no content found, try to get the next sibling
+          if (!content.length) {
+            content = $heading.next()
+          }
+
+          if (content.length) {
+            // Check if this content has fight information
+            const contentText = content.text().toLowerCase()
+            if (contentText.includes(' vs ') || contentText.includes(' v. ')) {
+              sections.push({
+                heading: $heading.text().trim(),
+                content
+              })
+            }
+          }
+        }
+      })
     })
+
+    // If no heading-based sections found, fall back to table scanning (main events list page)
+    if (sections.length === 0) {
+      const allTables = $('table')
+
+      allTables.each((i, table) => {
+        const $table = $(table)
+        const tableText = $table.text().toLowerCase()
+
+        // Look for tables that contain fight-related keywords
+        const hasFightKeywords = tableText.includes('vs') ||
+                                tableText.includes('method') ||
+                                tableText.includes('round') ||
+                                tableText.includes('decision') ||
+                                tableText.includes('submission') ||
+                                tableText.includes('ko/tko') ||
+                                tableText.includes('weight')
+
+        if (hasFightKeywords) {
+          // Create a section for this table
+          sections.push({
+            heading: 'Fight Results',
+            content: $table
+          })
+        }
+      })
+    }
+
     return sections
   }
 
@@ -493,14 +527,49 @@ export class WikipediaUFCService {
   private parseListFights($: cheerio.CheerioAPI, $content: cheerio.Cheerio<any>, cardPosition: string): WikipediaFight[] {
     const fights: WikipediaFight[] = []
 
-    // Look for list items or paragraphs containing fight information
-    $content.find('li, p').each((_, element) => {
+    // Look for list items, paragraphs, or any element containing fight information
+    $content.find('li, p, div, span').each((_, element) => {
       const $element = $(element)
       const text = $element.text().trim()
 
-      // Look for "vs" or "v." patterns
+      // Look for fight patterns like "Weight Class: Fighter A vs Fighter B"
       if (text.includes(' vs ') || text.includes(' v. ')) {
-        const fight = this.parseFighterText($, $element, 'Unknown', cardPosition)
+        // Extract weight class if present (format: "Weight Class: Fighter vs Fighter")
+        let weightClass = 'Unknown'
+        let fightersText = text
+
+        const colonMatch = text.match(/^([^:]+):\s*(.+)/)
+        if (colonMatch) {
+          weightClass = colonMatch[1].trim()
+          fightersText = colonMatch[2].trim()
+        }
+
+        const fight = this.parseFighterText($, $element, weightClass, cardPosition)
+        if (fight) {
+          fights.push(fight)
+        }
+      }
+    })
+
+    // Also try direct text content parsing for cases where structure is different
+    const allText = $content.text()
+    const lines = allText.split('\n').map(line => line.trim()).filter(line => line.length > 0)
+
+    lines.forEach(line => {
+      if ((line.includes(' vs ') || line.includes(' v. ')) && !fights.some(f => line.includes(f.fighter1Name) && line.includes(f.fighter2Name))) {
+        // Create a temporary element to parse this line
+        const $tempElement = $('<div>').text(line)
+
+        let weightClass = 'Unknown'
+        let fightersText = line
+
+        const colonMatch = line.match(/^([^:]+):\s*(.+)/)
+        if (colonMatch) {
+          weightClass = colonMatch[1].trim()
+          fightersText = colonMatch[2].trim()
+        }
+
+        const fight = this.parseFighterText($, $tempElement, weightClass, cardPosition)
         if (fight) {
           fights.push(fight)
         }

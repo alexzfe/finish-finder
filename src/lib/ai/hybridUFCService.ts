@@ -152,10 +152,10 @@ export class HybridUFCService {
   async searchRealUFCEvents(limit: number): Promise<RealUFCEvent[]> {
     this.sherdogBlocked = false
 
-    // Try multiple sources in order of preference: Sherdog -> Wikipedia -> Tapology
+    // Try multiple sources in order of preference: Wikipedia -> Sherdog -> Tapology
     const sources = [
-      { name: 'Sherdog', fn: () => this.fetchSherdogEvents(limit) },
       { name: 'Wikipedia', fn: () => this.fetchWikipediaEvents(limit) },
+      { name: 'Sherdog', fn: () => this.fetchSherdogEvents(limit) },
       { name: 'Tapology', fn: () => this.fetchTapologyEvents(limit) }
     ]
 
@@ -562,17 +562,17 @@ export class HybridUFCService {
 
   // Multi-source fight details fetching with fallback
   private async fetchFightDetails(realEvent: RealUFCEvent): Promise<{ fights: Fight[], fighters: Fighter[] }> {
-    // Try sources based on event source and availability
+    // Try sources with Wikipedia prioritized
     const sources = []
 
-    // If event came from Sherdog (has detailUrl), try Sherdog first
-    if (realEvent.detailUrl && realEvent.source === 'sherdog') {
-      sources.push({ name: 'Sherdog', fn: () => this.fetchSherdogFightDetails(realEvent) })
-    }
-
-    // Add Wikipedia if we have a Wikipedia URL
+    // Prioritize Wikipedia if we have a Wikipedia URL
     if (realEvent.source === 'wikipedia' && realEvent.wikipediaUrl) {
       sources.push({ name: 'Wikipedia', fn: () => this.fetchWikipediaFightDetails(realEvent.wikipediaUrl!) })
+    }
+
+    // Add Sherdog if event came from Sherdog (has detailUrl)
+    if (realEvent.detailUrl && realEvent.source === 'sherdog') {
+      sources.push({ name: 'Sherdog', fn: () => this.fetchSherdogFightDetails(realEvent) })
     }
 
     // Try Tapology as fallback
