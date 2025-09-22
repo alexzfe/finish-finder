@@ -17,7 +17,15 @@ let Sentry = null
 
 class AutomatedScraper {
   constructor() {
-    this.prisma = new PrismaClient()
+    // Configure Prisma with optimized connection settings for CI
+    this.prisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: process.env.DATABASE_URL
+        }
+      },
+      log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['warn', 'error']
+    })
     this.ufcService = new HybridUFCService()
     this.logFile = path.join(__dirname, '../logs/scraper.log')
     this.missingEventsFile = path.join(__dirname, '../logs/missing-events.json')
@@ -232,8 +240,12 @@ class AutomatedScraper {
       await this.saveMissingEvents(missingEventsState)
       await this.saveMissingFights(missingFightsState)
 
-      for (const [eventId, eventName] of eventsNeedingPredictions.entries()) {
-        await this.generateEventPredictions(eventId, eventName)
+      // AI predictions are now handled by separate workflow
+      if (eventsNeedingPredictions.size > 0) {
+        await this.log(`ℹ️ ${eventsNeedingPredictions.size} events will need AI predictions (handled by separate daily workflow)`)
+        eventsNeedingPredictions.forEach((eventName, eventId) => {
+          this.log(`  - ${eventName} (${eventId})`)
+        })
       }
 
     } catch (error) {
@@ -293,9 +305,12 @@ class AutomatedScraper {
   async handleNewEvent(event, fighters) {
     await this.log(`Adding new event: ${event.name}`)
 
-    try {
-      // Use transaction to ensure atomicity
-      await this.prisma.$transaction(async (tx) => {
+    // Retry logic for database operations
+    const maxRetries = 3
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Use transaction to ensure atomicity with timeout
+        await this.prisma.$transaction(async (tx) => {
         // Validate and prepare fighter data for bulk operations
         const validatedFighters = []
         for (const fighter of fighters) {
@@ -333,8 +348,16 @@ class AutomatedScraper {
           })
         )
 
-        // Execute all fighter operations in parallel within transaction
-        await Promise.all(fighterUpserts)
+        // Execute fighter operations in batches to avoid connection pool exhaustion
+        const batchSize = 5
+        for (let i = 0; i < fighterUpserts.length; i += batchSize) {
+          const batch = fighterUpserts.slice(i, i + batchSize)
+          await Promise.all(batch)
+          // Small delay between batches to prevent overwhelming the connection pool
+          if (i + batchSize < fighterUpserts.length) {
+            await new Promise(resolve => setTimeout(resolve, 100))
+          }
+        }
 
         // Create the event
         const createdEvent = await tx.event.create({
@@ -386,11 +409,28 @@ class AutomatedScraper {
         }
 
         await this.log(`✅ Successfully created event ${event.name} with ${validatedFighters.length}/${fighters.length} fighters and ${validatedFights.length}/${event.fightCard.length} fights in transaction`)
-      })
+        }, {
+          timeout: 30000, // 30 second timeout for transaction
+          maxWait: 5000,  // Max time to wait for connection
+        })
 
-    } catch (error) {
-      await this.log(`❌ Transaction failed for event ${event.name}: ${error.message}`, 'error')
-      throw error
+        // Success - break out of retry loop
+        return
+
+      } catch (error) {
+        const isRetryableError = error.message.includes('connection pool') ||
+                                error.message.includes('timed out') ||
+                                error.message.includes('ECONNRESET')
+
+        if (attempt === maxRetries || !isRetryableError) {
+          await this.log(`❌ Transaction failed for event ${event.name} after ${attempt} attempts: ${error.message}`, 'error')
+          throw error
+        }
+
+        await this.log(`⚠️ Retrying transaction for event ${event.name} (attempt ${attempt}/${maxRetries}): ${error.message}`, 'warn')
+        // Exponential backoff delay
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
+      }
     }
   }
 

@@ -39,11 +39,15 @@ Store sensitive values in platform secret managers (Vercel, GitHub Actions, 1Pas
 The GitHub Actions workflow runs on schedule with Sherdog disabled to avoid CI IP blocks. Wikipedia provides events/fights; Tapology enriches fighter W‑L‑D records.
 
 **Current Setup:**
-1. Scheduler triggers `.github/workflows/scraper.yml` per cron.
-2. Env flags in CI:
-   - `SHERDOG_ENABLED=false`
-   - `TAPOLOGY_ENRICH_RECORDS=true`
-3. The workflow runs `scripts/automated-scraper.js check` with secrets injected.
+1. **Data Scraping**: `.github/workflows/scraper.yml` runs every 4 hours
+   - Runs `scripts/automated-scraper.js check`
+   - Env flags: `SHERDOG_ENABLED=false`, `TAPOLOGY_ENRICH_RECORDS=true`
+   - Creates events and fights without AI predictions
+
+2. **AI Predictions**: `.github/workflows/ai-predictions.yml` runs daily at 1:30 AM UTC
+   - Runs `scripts/ai-predictions-runner.js`
+   - Finds events with missing predictions and generates them
+   - Processes events with proper batching and rate limiting
 
 **Status:**
 - **✅ Operational**: Multi-source system running in GitHub Actions
@@ -109,6 +113,32 @@ node test-deduplication.js
 - The automated scraper now prevents duplicate creation during regular runs
 - Use `fresh-duplicate-check.js` to analyze potential duplicates in production
 - Check scraper logs for deduplication actions during automated runs
+
+### AI Predictions Management
+**✅ SEPARATED WORKFLOW SYSTEM**
+
+AI predictions are now handled by a dedicated daily workflow separate from data scraping for improved reliability.
+
+**Manual AI Predictions:**
+```bash
+# Generate predictions for all events missing them
+OPENAI_API_KEY="your_key" DATABASE_URL="your_url" \
+node scripts/ai-predictions-runner.js
+
+# Force regenerate all predictions (including existing ones)
+OPENAI_API_KEY="your_key" DATABASE_URL="your_url" \
+FORCE_REGENERATE_PREDICTIONS=true node scripts/ai-predictions-runner.js
+
+# Generate for specific event only
+OPENAI_API_KEY="your_key" DATABASE_URL="your_url" \
+node scripts/generate-event-predictions.js --name "UFC Event Name"
+```
+
+**AI Workflow Monitoring:**
+- Check `.github/workflows/ai-predictions.yml` runs for daily execution status
+- Review `logs/ai-predictions.log` for detailed prediction generation logs
+- Manual trigger available via GitHub Actions workflow_dispatch
+- Configurable batch size and force regeneration options
 
 ### Static Export Refresh
 ```bash

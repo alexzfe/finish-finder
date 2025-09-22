@@ -1,0 +1,64 @@
+name: AI Predictions Generator
+
+on:
+  schedule:
+    - cron: '30 1 * * *'  # Run daily at 1:30 AM UTC (different from scraper)
+  workflow_dispatch:        # Allow manual trigger
+    inputs:
+      batch_size:
+        description: 'OpenAI batch size (default: 6)'
+        required: false
+        default: '6'
+      force_regenerate:
+        description: 'Force regenerate existing predictions'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  generate-predictions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45  # Longer timeout for AI processing
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run AI predictions generator
+        env:
+          # AI-specific environment variables
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENAI_PREDICTION_CHUNK_SIZE: ${{ github.event.inputs.batch_size || '6' }}
+
+          # Monitoring and logging
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+
+          # Force regeneration flag
+          FORCE_REGENERATE_PREDICTIONS: ${{ github.event.inputs.force_regenerate || 'false' }}
+        run: |
+          node scripts/ai-predictions-runner.js
+
+      - name: Check AI predictions health (if failed)
+        if: failure()
+        run: |
+          echo "AI predictions failed. Check logs above for details."
+          echo "Common issues: OpenAI API rate limits, database connection, or invalid fight data."
+          echo "Rerun manually with smaller batch size if needed."
