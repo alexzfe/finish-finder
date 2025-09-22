@@ -22,7 +22,18 @@ interface TapologyFight {
   titleFight: boolean
 }
 
+export interface TapologyFighterInfo {
+  name: string
+  record?: string
+  wins?: number
+  losses?: number
+  draws?: number
+  url?: string
+}
+
 export class TapologyUFCService {
+  private eventsCache: { data: TapologyUFCEvent[]; ts: number } | null = null
+  private fighterRecordCache: Map<string, { record?: string; wins?: number; losses?: number; draws?: number }> = new Map()
   private getBrowserHeaders(): Record<string, string> {
     return {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -43,6 +54,90 @@ export class TapologyUFCService {
   private async humanLikeDelay(): Promise<void> {
     const delay = 1200 + Math.random() * 1800 // 1.2-3 seconds
     return new Promise(resolve => setTimeout(resolve, delay))
+  }
+
+  private normalize(str: string): string {
+    return (str || '')
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  }
+
+  private extractUfcNumber(name: string): string | null {
+    const m = name.match(/ufc\s*(\d+)/i)
+    return m ? m[1] : null
+  }
+
+  async findMatchingEventByNameDate(name: string, date: string, limit: number = 30): Promise<TapologyUFCEvent | null> {
+    try {
+      const now = Date.now()
+      const cacheValid = this.eventsCache && (now - this.eventsCache.ts) < 10 * 60 * 1000
+      const listings = cacheValid ? this.eventsCache!.data : await this.getUpcomingEvents(limit)
+      if (!cacheValid) {
+        this.eventsCache = { data: listings, ts: now }
+      }
+      const targetNum = this.extractUfcNumber(name)
+      const normName = this.normalize(name)
+
+      // 1) Exact date + UFC number match
+      if (targetNum) {
+        const cand = listings.find(e => e.date === date && this.extractUfcNumber(e.name) === targetNum)
+        if (cand) return cand
+      }
+
+      // 2) Exact date + fuzzy name match
+      const dateMatches = listings.filter(e => e.date === date)
+      if (dateMatches.length) {
+        const byName = dateMatches.find(e => this.normalize(e.name) === normName || this.normalize(e.name).includes(targetNum || ''))
+        if (byName) return byName
+        return dateMatches[0]
+      }
+
+      // 3) Fallback: UFC number only
+      if (targetNum) {
+        const byNum = listings.find(e => this.extractUfcNumber(e.name) === targetNum)
+        if (byNum) return byNum
+      }
+
+      return null
+    } catch {
+      return null
+    }
+  }
+
+  async getFighterRecordByName(name: string): Promise<{ record?: string; wins?: number; losses?: number; draws?: number } | null> {
+    try {
+      const key = this.normalize(name)
+      const cached = this.fighterRecordCache.get(key)
+      if (cached) return cached
+      await this.humanLikeDelay()
+      const searchUrl = `https://www.tapology.com/search?term=${encodeURIComponent(name)}`
+      const searchRes = await axios.get(searchUrl, { headers: this.getBrowserHeaders(), timeout: 15000 })
+      const $ = cheerio.load(searchRes.data)
+
+      const fighterLink = $('a[href*="/fighters/"]').first().attr('href')
+      if (!fighterLink) return null
+
+      const fighterUrl = `https://www.tapology.com${fighterLink}`
+      await this.humanLikeDelay()
+      const fighterRes = await axios.get(fighterUrl, { headers: this.getBrowserHeaders(), timeout: 15000 })
+      const $$ = cheerio.load(fighterRes.data)
+
+      const text = $$.text()
+      const recordPattern = /\b(\d+)-(\d+)(?:-(\d+))?\b/
+      // Prefer patterns like "Pro MMA Record: 22-3-0"
+      let match = text.match(/Pro\s+MMA\s+Record[^\d]*(\d+)-(\d+)(?:-(\d+))?/i)
+      if (!match) match = text.match(recordPattern)
+      if (!match) return null
+
+      const record = `${match[1]}-${match[2]}-${match[3] ?? '0'}`
+      const info = { record, wins: Number(match[1]), losses: Number(match[2]), draws: Number(match[3] ?? 0) }
+      this.fighterRecordCache.set(key, info)
+      return info
+    } catch {
+      return null
+    }
   }
 
   async getUpcomingEvents(limit: number = 10): Promise<TapologyUFCEvent[]> {
@@ -237,7 +332,7 @@ export class TapologyUFCService {
     }
   }
 
-  async getEventFights(tapologyUrl: string): Promise<{ fights: TapologyFight[], fighters: any[] }> {
+  async getEventFights(tapologyUrl: string): Promise<{ fights: TapologyFight[], fighters: TapologyFighterInfo[] }> {
     console.log(`🔍 Fetching fight card from: ${tapologyUrl}`)
 
     try {
@@ -250,6 +345,7 @@ export class TapologyUFCService {
 
       const $ = cheerio.load(response.data)
       const fights: TapologyFight[] = []
+      const fighterInfos: Map<string, TapologyFighterInfo> = new Map()
 
       // Look for fight listings on the event page
       const fightElements = $('.fight_card_bout, .bout, .fight_listing')
@@ -257,8 +353,9 @@ export class TapologyUFCService {
       fightElements.each((index, element) => {
         const $fight = $(element)
 
-        // Extract fighter names
-        const fighters = $fight.find('.fighter_name, .bout_fighter').map((_, el) => $(el).text().trim()).get()
+        // Extract fighter names and attempt to capture record/URL nearby
+        const fighterNodes = $fight.find('.fighter_name, .bout_fighter, a[href*="/fighters/"]')
+        const fighters = fighterNodes.map((_, el) => $(el).text().trim()).get().filter(Boolean)
 
         if (fighters.length >= 2) {
           const weightClass = $fight.find('.weight_class, .bout_weight').text().trim() || 'Unknown'
@@ -276,6 +373,53 @@ export class TapologyUFCService {
             cardPosition: index === 0 ? 'main' : 'preliminary',
             titleFight
           })
+
+          // Collect records for the two fighters if present
+          const anchors = $fight.find('a[href*="/fighters/"]')
+          const texts: string[] = []
+          $fight.find('.fighter_name, .bout_fighter, .record, .fighter_record, .result').each((_, el) => {
+            texts.push($(el).text().trim())
+          })
+
+          const recordPattern = /\b(\d+)-(\d+)(?:-(\d+))?\b/
+
+          // Build a helper to register fighter info
+          function setInfo(name: string, url?: string, recordText?: string) {
+            const info = fighterInfos.get(name) || { name }
+            if (url) info.url = url
+            const match = recordText?.match(recordPattern)
+            if (match) {
+              info.record = `${match[1]}-${match[2]}-${match[3] ?? '0'}`
+              info.wins = Number(match[1])
+              info.losses = Number(match[2])
+              info.draws = Number(match[3] ?? 0)
+            }
+            fighterInfos.set(name, info)
+          }
+
+          // Map anchors (usually contain fighter URLs) to names
+          anchors.each((i, a) => {
+            const name = $(a).text().trim()
+            const url = $(a).attr('href') ? `https://www.tapology.com${$(a).attr('href')}` : undefined
+            if (name) setInfo(name, url)
+          })
+
+          // Try find records by scanning nearby texts for each fighter name
+          for (const name of [fighters[0], fighters[1]]) {
+            let foundRecord: string | undefined
+            for (const t of texts) {
+              if (t.includes(name)) {
+                const m = t.match(recordPattern)
+                if (m) { foundRecord = m[0]; break }
+              }
+            }
+            // Fallback: search any record pattern in the fight block
+            if (!foundRecord) {
+              const any = $fight.text().match(recordPattern)
+              if (any) foundRecord = any[0]
+            }
+            setInfo(name, undefined, foundRecord)
+          }
         }
       })
 
@@ -283,7 +427,7 @@ export class TapologyUFCService {
 
       return {
         fights,
-        fighters: [] // TODO: Extract detailed fighter information
+        fighters: Array.from(fighterInfos.values())
       }
 
     } catch (error) {

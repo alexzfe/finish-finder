@@ -41,6 +41,12 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
 
+          # Disable Sherdog in CI to avoid GH IP blocks
+          SHERDOG_ENABLED: 'false'
+
+          # Enable Tapology win/loss record enrichment (latency acceptable for daily runs)
+          TAPOLOGY_ENRICH_RECORDS: 'true'
+
           # Mullvad VPN configuration
           MULLVAD_VPN_ENABLED: ${{ github.event.inputs.use_vpn || 'true' }}
           MULLVAD_ACCOUNT_TOKEN: ${{ secrets.MULLVAD_ACCOUNT_TOKEN }}

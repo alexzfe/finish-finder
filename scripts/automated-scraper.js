@@ -79,6 +79,44 @@ class AutomatedScraper {
       const scrapedData = await this.ufcService.getUpcomingUFCEvents(15)
       result.eventsProcessed = scrapedData.events.length
 
+      // Upsert fighters first (ensures records/wins/losses are kept current even for existing events)
+      if (scrapedData.fighters?.length) {
+        const validatedFighters = []
+        for (const fighter of scrapedData.fighters) {
+          const validation = validateFighterData(fighter)
+          if (!validation.valid) {
+            await this.log(`⚠️ Skipping invalid fighter data: ${validation.errors.join(', ')}`, 'warn')
+            continue
+          }
+          validatedFighters.push(fighter)
+        }
+
+        const ops = validatedFighters.map(f => this.prisma.fighter.upsert({
+          where: { id: f.id },
+          update: {
+            name: f.name,
+            nickname: f.nickname,
+            wins: f.wins,
+            losses: f.losses,
+            draws: f.draws,
+            weightClass: f.weightClass,
+            record: f.record,
+            updatedAt: new Date()
+          },
+          create: {
+            id: f.id,
+            name: f.name,
+            nickname: f.nickname,
+            wins: f.wins,
+            losses: f.losses,
+            draws: f.draws,
+            weightClass: f.weightClass,
+            record: f.record
+          }
+        }))
+        await Promise.all(ops)
+      }
+
       // Debug: Log all scraped events
       await this.log(`📋 Scraped ${scrapedData.events.length} events:`)
       for (const event of scrapedData.events) {

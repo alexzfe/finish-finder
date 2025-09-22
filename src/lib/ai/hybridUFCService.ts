@@ -103,37 +103,25 @@ export class HybridUFCService {
     this.tapologyService = new TapologyUFCService()
   }
 
-  // Get realistic browser headers to avoid bot detection
+  // Get realistic browser headers to avoid bot detection (rotated)
   private getBrowserHeaders(referer?: string): Record<string, string> {
-    const headers: Record<string, string> = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'DNT': '1',
-      'Connection': 'keep-alive',
-      'Upgrade-Insecure-Requests': '1',
-      'Sec-Fetch-Dest': 'document',
-      'Sec-Fetch-Mode': 'navigate',
-      'Sec-Fetch-Site': referer ? 'same-origin' : 'none',
-      'Sec-Fetch-User': '?1',
-      'Cache-Control': 'max-age=0',
-      'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-      'Sec-Ch-Ua-Mobile': '?0',
-      'Sec-Ch-Ua-Platform': '"Windows"'
-    }
-
-    if (referer) {
-      headers['Referer'] = referer
-    }
-
-    return headers
+    // Import lazily to avoid ESM/TS interop issues at module load
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getRotatedHeaders } = require('../scrapers/requestPolicy')
+    return getRotatedHeaders(referer)
   }
 
   // Add realistic delay between requests to mimic human behavior
   private async humanLikeDelay(): Promise<void> {
-    const delay = 1000 + Math.random() * 2000 // 1-3 seconds
-    return new Promise(resolve => setTimeout(resolve, delay))
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { humanDelay } = require('../scrapers/requestPolicy')
+    const maxRps = Number(process.env.SHERDOG_MAX_RPS || 0)
+    if (maxRps > 0) {
+      const base = Math.max(1000 / maxRps, 1200)
+      await humanDelay(base * 0.7, base * 1.3)
+      return
+    }
+    await humanDelay(1000, 3000)
   }
 
   // Get current date for accurate searches
@@ -153,11 +141,19 @@ export class HybridUFCService {
     this.sherdogBlocked = false
 
     // Try multiple sources in order of preference: Wikipedia -> Sherdog -> Tapology
-    const sources = [
-      { name: 'Wikipedia', fn: () => this.fetchWikipediaEvents(limit) },
-      { name: 'Sherdog', fn: () => this.fetchSherdogEvents(limit) },
-      { name: 'Tapology', fn: () => this.fetchTapologyEvents(limit) }
-    ]
+    const sherdogEnabled = process.env.SHERDOG_ENABLED !== 'false'
+    const sources: Array<{ name: 'Wikipedia' | 'Sherdog' | 'Tapology'; fn: () => Promise<RealUFCEvent[]> }> = []
+
+    // Always try Wikipedia first
+    sources.push({ name: 'Wikipedia', fn: () => this.fetchWikipediaEvents(limit) })
+
+    // Optionally include Sherdog based on env flag
+    if (sherdogEnabled) {
+      sources.push({ name: 'Sherdog', fn: () => this.fetchSherdogEvents(limit) })
+    }
+
+    // Always include Tapology fallback
+    sources.push({ name: 'Tapology', fn: () => this.fetchTapologyEvents(limit) })
 
     for (const source of sources) {
       try {
@@ -1031,7 +1027,22 @@ export class HybridUFCService {
     console.log(`🧩 Building fight card for ${realEvent.name} (${realEvent.date})`)
 
     // Try to get fight details from multiple sources
-    const fightDetails = await this.fetchFightDetails(realEvent)
+    let fightDetails = await this.fetchFightDetails(realEvent)
+
+    // Enrich fighter records from Tapology if missing/unknown (opt-in to avoid long runs)
+    if (process.env.TAPOLOGY_ENRICH_RECORDS === 'true') {
+      try {
+        const missingRecords = fightDetails.fighters.filter(f => !f.record || /^0-0-0$/.test(f.record)).length
+        if (missingRecords > 0) {
+          const enriched = await this.enrichFighterRecordsFromTapology(realEvent, fightDetails.fighters)
+          if (enriched && enriched.length) {
+            fightDetails = { ...fightDetails, fighters: enriched }
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ Tapology enrichment failed:', (e as Error)?.message || e)
+      }
+    }
 
     const eventId = this.slugify(realEvent.name)
     const fightCard = fightDetails.fights
@@ -1051,6 +1062,67 @@ export class HybridUFCService {
     return {
       event,
       fighters: fightDetails.fighters
+    }
+  }
+
+  private normalizeName(value: string): string {
+    return (value || '')
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  }
+
+  private async enrichFighterRecordsFromTapology(realEvent: RealUFCEvent, fighters: Fighter[]): Promise<Fighter[] | null> {
+    try {
+      // Find corresponding Tapology event using existing service
+      const match = await this.tapologyService.findMatchingEventByNameDate(realEvent.name, realEvent.date)
+      const map = new Map<string, { record?: string; wins?: number; losses?: number; draws?: number }>()
+
+      if (match?.tapologyUrl) {
+        const details = await this.tapologyService.getEventFights(match.tapologyUrl)
+        if (details?.fighters && details.fighters.length > 0) {
+          for (const f of details.fighters) {
+            map.set(this.normalizeName(f.name), {
+              record: f.record,
+              wins: f.wins,
+              losses: f.losses,
+              draws: f.draws
+            })
+          }
+        }
+      }
+
+      // Fallback: direct fighter searches for missing records
+      const needLookup = fighters.filter(f => (!f.record || /^0-0-0$/.test(f.record)) && !map.has(this.normalizeName(f.name)))
+      for (const f of needLookup) {
+        const info = await this.tapologyService.getFighterRecordByName(f.name)
+        if (info?.record) {
+          map.set(this.normalizeName(f.name), info)
+        }
+      }
+
+      let updated = false
+      const out = fighters.map((f: Fighter) => {
+        const key = this.normalizeName(f.name)
+        const info = map.get(key)
+        if (info && info.record && (!f.record || /^0-0-0$/.test(f.record))) {
+          updated = true
+          const parsed = this.parseRecord(info.record)
+          return {
+            ...f,
+            record: info.record,
+            wins: parsed.wins,
+            losses: parsed.losses,
+            draws: parsed.draws
+          }
+        }
+        return f
+      })
+
+      return updated ? out : null
+    } catch (e) {
+      return null
     }
   }
 

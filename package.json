@@ -19,6 +19,7 @@
     "scraper:check": "node scripts/automated-scraper.js check",
     "scraper:status": "node scripts/automated-scraper.js status",
     "scraper:schedule": "node scripts/automated-scraper.js schedule",
+    "sherdog:test:local": "node scripts/test-sherdog-local.js",
     "db:migrate": "npx prisma migrate dev",
     "db:push": "npx prisma db push",
     "db:reset": "npx prisma migrate reset",
