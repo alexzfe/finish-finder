@@ -93,7 +93,7 @@ Scraper and prediction commands require `DATABASE_URL` and `OPENAI_API_KEY`. The
 
 #### Scraper flags
 - `SHERDOG_ENABLED`: `true|false` (default `true` locally; CI sets `false`).
-- `TAPOLOGY_ENRICH_RECORDS`: `true|false` (default `false` locally; CI sets `true`).
+- `TAPOLOGY_ENRICH_RECORDS`: `true|false` (default `true` locally and CI; set to `false` to disable).
 - `SHERDOG_MAX_RPS`: optional throttle for Sherdog when enabled.
 
 Helper scripts:

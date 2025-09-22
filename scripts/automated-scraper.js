@@ -126,7 +126,8 @@ class AutomatedScraper {
       // Compare and detect changes
       for (const scrapedEvent of scrapedData.events) {
         const existingEvent = currentEvents.find(e =>
-          this.normalizeEventName(e.name) === this.normalizeEventName(scrapedEvent.name)
+          this.normalizeEventName(e.name) === this.normalizeEventName(scrapedEvent.name) ||
+          this.eventsAreSame(e, scrapedEvent)
         )
 
         if (!existingEvent) {
@@ -166,6 +167,11 @@ class AutomatedScraper {
           await this.log(`✅ Event restored after temporary absence: ${existingEvent.name}`)
         }
 
+        // Debug: Log event matching
+        if (existingEvent) {
+          await this.log(`🔗 Matched existing event: "${existingEvent.name}" with scraped: "${scrapedEvent.name}"`)
+        }
+
         const eventIdToCheck = existingEvent ? existingEvent.id : scrapedEvent.id
         const eventNameToCheck = existingEvent ? existingEvent.name : scrapedEvent.name
         if (!eventsNeedingPredictions.has(eventIdToCheck)) {
@@ -179,7 +185,8 @@ class AutomatedScraper {
       // Check for cancelled/removed events
       for (const currentEvent of currentEvents) {
         const stillExists = scrapedData.events.find(e =>
-          this.normalizeEventName(e.name) === this.normalizeEventName(currentEvent.name)
+          this.normalizeEventName(e.name) === this.normalizeEventName(currentEvent.name) ||
+          this.eventsAreSame(currentEvent, e)
         )
 
         if (!stillExists && !currentEvent.completed) {
@@ -212,6 +219,16 @@ class AutomatedScraper {
       }
 
       await this.log(`Scraping completed: ${result.eventsProcessed} events, ${result.fightsProcessed} fights, ${result.changesDetected.length} changes`)
+      await this.log(`📊 Current database state: ${currentEvents.length} existing events`)
+      await this.log(`📥 Scraped from sources: ${scrapedData.events.length} events`)
+
+      // Debug: Log all scraped event names for troubleshooting
+      if (scrapedData.events.length > 0) {
+        await this.log(`📋 Scraped event details:`)
+        for (const event of scrapedData.events) {
+          await this.log(`   • "${event.name}" (${event.date}) - ${event.venue || 'TBA'}, ${event.location || 'TBA'}`)
+        }
+      }
       await this.saveMissingEvents(missingEventsState)
       await this.saveMissingFights(missingFightsState)
 
@@ -576,6 +593,57 @@ class AutomatedScraper {
       .replace(/ufc\s*/i, '')
       .replace(/[^a-z0-9]/g, '')
       .trim()
+  }
+
+  eventsAreSame(event1, event2) {
+    // Extract UFC number from event names
+    const extractUfcNumber = (name) => {
+      const match = name.match(/ufc\s*(\d+)/i)
+      return match ? match[1] : null
+    }
+
+    // Extract main fighters from event names
+    const extractFighters = (name) => {
+      // Look for "vs", "vs.", or "v." patterns
+      const match = name.match(/([^:]+):\s*(.+?\s+(?:vs?\.?|v\.)\s+.+?)(?:\s|$)/i)
+      return match ? match[2].toLowerCase().replace(/[^a-z\s]/g, '').trim() : ''
+    }
+
+    // Check if same date
+    const date1 = typeof event1.date === 'string' ? event1.date : event1.date.toISOString().split('T')[0]
+    const date2 = typeof event2.date === 'string' ? event2.date : event2.date.toISOString().split('T')[0]
+
+    if (date1 === date2) {
+      // Same date - check if same UFC number or similar names
+      const ufc1 = extractUfcNumber(event1.name)
+      const ufc2 = extractUfcNumber(event2.name)
+
+      if (ufc1 && ufc2 && ufc1 === ufc2) {
+        return true // Same UFC number on same date
+      }
+
+      // Check name similarity (normalized comparison)
+      const norm1 = this.normalizeEventName(event1.name)
+      const norm2 = this.normalizeEventName(event2.name)
+
+      if (norm1 === norm2) {
+        return true // Same normalized name on same date
+      }
+
+      // Check if one name contains the other (for Fight Night vs UFC variations)
+      if (norm1.includes(norm2) || norm2.includes(norm1)) {
+        return true
+      }
+
+      // Check if same main event fighters (for Fight Night variations)
+      const fighters1 = extractFighters(event1.name)
+      const fighters2 = extractFighters(event2.name)
+      if (fighters1 && fighters2 && fighters1 === fighters2) {
+        return true // Same main event on same date
+      }
+    }
+
+    return false
   }
 
   async scheduleNextRun() {

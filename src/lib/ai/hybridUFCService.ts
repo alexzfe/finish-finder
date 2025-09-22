@@ -1075,9 +1075,13 @@ export class HybridUFCService {
 
   private async enrichFighterRecordsFromTapology(realEvent: RealUFCEvent, fighters: Fighter[]): Promise<Fighter[] | null> {
     try {
+      console.log(`🌍 Enriching fighter records from Tapology for ${realEvent.name}...`)
+
       // Find corresponding Tapology event using existing service
       const match = await this.tapologyService.findMatchingEventByNameDate(realEvent.name, realEvent.date)
       const map = new Map<string, { record?: string; wins?: number; losses?: number; draws?: number }>()
+
+      console.log(`🔎 Event match result: ${match ? `Found "${match.name}"` : 'No match found'}`)
 
       if (match?.tapologyUrl) {
         const details = await this.tapologyService.getEventFights(match.tapologyUrl)
@@ -1095,10 +1099,16 @@ export class HybridUFCService {
 
       // Fallback: direct fighter searches for missing records
       const needLookup = fighters.filter(f => (!f.record || /^0-0-0$/.test(f.record)) && !map.has(this.normalizeName(f.name)))
+      console.log(`🔍 Need direct lookup for ${needLookup.length} fighters: ${needLookup.map(f => f.name).join(', ')}`)
+
       for (const f of needLookup) {
+        console.log(`🔎 Looking up fighter: ${f.name}`)
         const info = await this.tapologyService.getFighterRecordByName(f.name)
         if (info?.record) {
+          console.log(`✅ Found record for ${f.name}: ${info.record}`)
           map.set(this.normalizeName(f.name), info)
+        } else {
+          console.log(`⚠️ No record found for ${f.name}`)
         }
       }
 
