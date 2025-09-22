@@ -590,8 +590,11 @@ class AutomatedScraper {
   normalizeEventName(name) {
     return name
       .toLowerCase()
-      .replace(/ufc\s*/i, '')
-      .replace(/[^a-z0-9]/g, '')
+      .replace(/ufc\s*/i, '')                    // Remove "UFC"
+      .replace(/fight\s*night\s*\d*/i, 'fn')     // Normalize "Fight Night ###" to "fn"
+      .replace(/[:\-\.\,]/g, ' ')                // Convert punctuation to spaces
+      .replace(/\s+/g, ' ')                      // Collapse multiple spaces
+      .replace(/[^a-z0-9\s]/g, '')               // Remove remaining special chars
       .trim()
   }
 
@@ -604,9 +607,28 @@ class AutomatedScraper {
 
     // Extract main fighters from event names
     const extractFighters = (name) => {
-      // Look for "vs", "vs.", or "v." patterns
-      const match = name.match(/([^:]+):\s*(.+?\s+(?:vs?\.?|v\.)\s+.+?)(?:\s|$)/i)
-      return match ? match[2].toLowerCase().replace(/[^a-z\s]/g, '').trim() : ''
+      // Look for "vs", "vs.", or "v." patterns in various formats
+      let fighters = ''
+
+      // Pattern 1: "UFC xxx: Fighter vs Fighter" or "UFC Fight Night: Fighter vs Fighter"
+      let match = name.match(/(?:ufc|fight night)[^:]*:\s*(.+?\s+(?:vs?\.?|v\.)\s+.+?)(?:\s|$)/i)
+      if (match) {
+        fighters = match[1]
+      } else {
+        // Pattern 2: "UFC Fight Night ### - Fighter vs Fighter"
+        match = name.match(/fight\s*night\s*\d*\s*[-–]\s*(.+?\s+(?:vs?\.?|v\.)\s+.+?)(?:\s|$)/i)
+        if (match) {
+          fighters = match[1]
+        } else {
+          // Pattern 3: Direct "Fighter vs Fighter" (fallback)
+          match = name.match(/(.+?\s+(?:vs?\.?|v\.)\s+.+?)(?:\s|$)/i)
+          if (match) {
+            fighters = match[1]
+          }
+        }
+      }
+
+      return fighters.toLowerCase().replace(/[^a-z\s]/g, '').trim()
     }
 
     // Check if same date
@@ -638,12 +660,72 @@ class AutomatedScraper {
       // Check if same main event fighters (for Fight Night variations)
       const fighters1 = extractFighters(event1.name)
       const fighters2 = extractFighters(event2.name)
-      if (fighters1 && fighters2 && fighters1 === fighters2) {
+      if (fighters1 && fighters2 && fighters1.length > 3 && fighters1 === fighters2) {
         return true // Same main event on same date
+      }
+
+      // Additional check for Fight Night events with different naming conventions
+      const isFightNight1 = /fight\s*night/i.test(event1.name)
+      const isFightNight2 = /fight\s*night/i.test(event2.name)
+
+      if (isFightNight1 && isFightNight2 && fighters1 && fighters2) {
+        // For Fight Night events, also check if fighters are similar (allow for typos)
+        const similarity = this.calculateStringSimilarity(fighters1, fighters2)
+        if (similarity > 0.8) {
+          return true
+        }
+      }
+
+      // Check for string similarity in normalized names (catch typos/variations)
+      const nameSimilarity = this.calculateStringSimilarity(norm1, norm2)
+      if (nameSimilarity > 0.9) {
+        return true
       }
     }
 
     return false
+  }
+
+  // Helper function to calculate string similarity using Levenshtein distance
+  calculateStringSimilarity(str1, str2) {
+    if (!str1 || !str2) return 0
+    if (str1 === str2) return 1
+
+    const longer = str1.length > str2.length ? str1 : str2
+    const shorter = str1.length > str2.length ? str2 : str1
+
+    if (longer.length === 0) return 1
+
+    const editDistance = this.levenshteinDistance(longer, shorter)
+    return (longer.length - editDistance) / longer.length
+  }
+
+  levenshteinDistance(str1, str2) {
+    const matrix = []
+
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i]
+    }
+
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j
+    }
+
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1]
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          )
+        }
+      }
+    }
+
+    return matrix[str2.length][str1.length]
   }
 
   async scheduleNextRun() {

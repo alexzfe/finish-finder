@@ -74,6 +74,42 @@ node scripts/generate-predictions-only.js all         # full backfill
 - For clean-room reruns, execute `node scripts/clear-predictions.js` followed by `node scripts/verify-predictions-cleared.js` before regenerating.
 - If you get 403 errors locally (e.g., Sherdog), wait 30-60 minutes or test from a different network.
 
+### Duplicate Event Management
+**✅ ENHANCED DEDUPLICATION SYSTEM**
+
+The system now includes comprehensive duplicate detection and cleanup capabilities to handle multi-source data conflicts.
+
+**Database Cleanup (One-time):**
+```bash
+# Check for existing duplicates
+DATABASE_URL="your_connection_string" node check-database-duplicates.js
+
+# Clean up identified duplicates
+DATABASE_URL="your_connection_string" npx prisma db execute --file cleanup-duplicates.sql
+
+# Verify cleanup success
+DATABASE_URL="your_connection_string" npx prisma db execute --file verify-cleanup.sql
+```
+
+**Enhanced Deduplication Algorithm:**
+The scraper now includes improved duplicate detection that handles:
+- UFC Fight Night naming variations (`UFC Fight Night: Fighter vs Fighter` ↔ `UFC Fight Night ### - Fighter vs Fighter`)
+- Cross-source name differences between Wikipedia and Tapology
+- String similarity matching (90%+ threshold for normalized names)
+- Fighter name extraction and matching for same-date events
+- Levenshtein distance calculation for typo detection
+
+**Test Deduplication Logic:**
+```bash
+# Test the deduplication algorithm
+node test-deduplication.js
+```
+
+**Monitoring for Duplicates:**
+- The automated scraper now prevents duplicate creation during regular runs
+- Use `fresh-duplicate-check.js` to analyze potential duplicates in production
+- Check scraper logs for deduplication actions during automated runs
+
 ### Static Export Refresh
 ```bash
 npm run pages:build
@@ -117,6 +153,8 @@ This writes:
 | **Sherdog 403 blocks scraper** | Scraper logs warning with code `SHERDOG_BLOCKED`. GH Actions IPs are commonly blocked. | In CI, Sherdog is disabled (`SHERDOG_ENABLED=false`). Use local scraping to test Sherdog or keep relying on Wikipedia + Tapology. |
 | **OpenAI failures** | Look for rate-limit or auth errors in scraper log. | Back off for a few minutes. Verify key validity. Switch to smaller batch size by setting `OPENAI_PREDICTION_CHUNK_SIZE=3`. |
 | **Fighter images missing** | `fighter-image` route currently returns placeholder. | No action required. Feature gated until rate-limiting strategy is in place. |
+| **Duplicate events in UI** | Multiple events with same fighters/date visible on frontend. Check database for actual duplicates. | Run `fresh-duplicate-check.js` to identify duplicates, then use `cleanup-duplicates.sql` to remove. Enhanced deduplication should prevent new ones. |
+| **Deduplication not working** | New duplicates appearing despite algorithm improvements. | Test deduplication logic with `test-deduplication.js`. Check scraper logs for algorithm execution. May need to adjust similarity thresholds. |
 
 ## Backups & Data Retention
 - **Database** – Rely on managed Postgres backups (Supabase PITR or provider snapshots). Schedule nightly exports at minimum.

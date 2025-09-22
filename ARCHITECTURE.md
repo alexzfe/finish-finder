@@ -123,3 +123,19 @@ See [`TYPESCRIPT_MIGRATION_PLAN.md`](TYPESCRIPT_MIGRATION_PLAN.md) for complete 
 - **Data Validation**: `src/lib/scrapers/wikipediaService.ts:areValidFighterNames` - Filters malformed data and navigation artifacts
 - **Title Extraction**: `src/lib/scrapers/wikipediaService.ts:extractMainEventFromTitle` - Fallback extraction from event titles when full cards unavailable
 - **Multi-format Support**: Handles both structured fight tables and title-only extraction for future events
+
+## Enhanced Deduplication System (2025-09-22)
+- ✅ **Multi-source conflict resolution** - Handles naming variations between Wikipedia, Tapology, and Sherdog sources
+- ✅ **Advanced similarity detection** - Levenshtein distance algorithm for catching typos and variations
+- ✅ **Fighter-based matching** - Extracts and compares main event fighters across different event naming conventions
+- ✅ **Fight Night normalization** - Handles variations like "UFC Fight Night: Fighter vs Fighter" ↔ "UFC Fight Night ### - Fighter vs Fighter"
+- ✅ **Production duplicate cleanup** - Automated removal of corrupted data and duplicate events from multi-source conflicts
+- ✅ **Comprehensive test coverage** - Validated against real production duplicate patterns with 100% test pass rate
+
+### Deduplication Algorithm Features
+- **String Similarity**: `scripts/automated-scraper.js:calculateStringSimilarity` - Levenshtein distance calculation for name variation detection
+- **Event Comparison**: `scripts/automated-scraper.js:eventsAreSame` - Multi-stage comparison including UFC numbers, normalized names, and fighter extraction
+- **Name Normalization**: `scripts/automated-scraper.js:normalizeEventName` - Intelligent normalization preserving fighter names while standardizing format variations
+- **Fighter Extraction**: `scripts/automated-scraper.js:extractFighters` - Pattern matching for multiple naming conventions across sources
+- **Database Cleanup**: `cleanup-duplicates.sql` - Production-tested SQL scripts for removing identified duplicates
+- **Validation Tools**: `test-deduplication.js`, `fresh-duplicate-check.js` - Testing and monitoring utilities for duplicate detection

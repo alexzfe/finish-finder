@@ -197,3 +197,22 @@ error: Error validating datasource `db`: the URL must start with the protocol `p
 
 Validation Error Count: 1
 [2025-09-22T22:17:34.096Z] INFO: AutomatedScraper cleanup completed
+[2025-09-22T23:09:11.697Z] INFO: AutomatedScraper initialized
+[2025-09-22T23:09:11.702Z] INFO: Starting automated event update check...
+[2025-09-22T23:09:11.777Z] ERROR: Scraping failed: 
+Invalid `this.prisma.event.findMany()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:59:53
+
+  56 const eventsNeedingPredictions = new Map()
+  57 
+  58 // Get current events from database
+→ 59 const currentEvents = await this.prisma.event.findMany(
+error: Environment variable not found: DATABASE_URL.
+  -->  schema.prisma:7
+   | 
+ 6 |   provider = "postgresql"
+ 7 |   url      = env("DATABASE_URL")
+   | 
+
+Validation Error Count: 1
+[2025-09-22T23:09:11.778Z] INFO: AutomatedScraper cleanup completed

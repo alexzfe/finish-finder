@@ -77,6 +77,15 @@ npm run db:reset          # Reset schema and reseed (destructive)
 ```
 SQLite lives at `prisma/dev.db`. For Postgres deployments, set `DATABASE_URL` in `.env.local` or the host environment before running these commands.
 
+### Duplicate Event Management
+The system includes enhanced deduplication to handle multi-source data conflicts:
+```bash
+node check-database-duplicates.js    # Analyze database for duplicates
+node test-deduplication.js           # Test deduplication algorithm
+node fresh-duplicate-check.js        # Quick duplicate analysis
+```
+For cleanup operations, see `OPERATIONS.md` for detailed instructions.
+
 ### Automation Commands
 **✅ Automated scraping runs daily (Wikipedia-first).**
 
