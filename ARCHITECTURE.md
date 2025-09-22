@@ -11,7 +11,7 @@
 ## System Context
 Finish Finder sits between public fight data sources and UFC fans:
 - **Users** interact with the Next.js frontend to browse upcoming events and dig into fight analytics.
-- **Sherdog** supplies official event and fighter metadata scraped by the automation layer.
+- **Multi-source scraping system** with intelligent fallback (Sherdog → Wikipedia → Tapology) supplies event and fighter metadata.
 - **OpenAI** generates entertainment scores, finish probabilities, and narrative summaries.
 - **Supabase/Postgres** (or SQLite locally) persists events, fights, and prediction telemetry.
 - **Sentry** captures client, server, and scraper exceptions.
@@ -25,7 +25,9 @@ Users → Next.js App (Vercel/GitHub Pages)
             ↑
    Automated Scraper + AI predictions
             ↑
-     Sherdog + OpenAI APIs
+   Multi-source: Sherdog → Wikipedia → Tapology
+            ↑
+        OpenAI APIs
 ```
 
 ## Runtime Components
@@ -38,7 +40,7 @@ Users → Next.js App (Vercel/GitHub Pages)
 | **Monitoring** | Wires Sentry for client/server/edge and exposes loggers with structured output for scraper ops. Provides database performance monitoring, health checks, and admin dashboard. | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts`, `src/app/admin/`, `src/components/admin/`
 
 ## Data & Control Flow
-1. **Scrape** – `scripts/automated-scraper.js` runs (GitHub Action, cron, or manual). It calls `HybridUFCService` to fetch events/fights from Sherdog and stores results in the database, keeping strike counts in `logs/missing-*.json` to delay cancellations.
+1. **Scrape** – `scripts/automated-scraper.js` runs (GitHub Action, cron, or manual). It calls `HybridUFCService` to fetch events/fights using multi-source fallback (Sherdog → Wikipedia → Tapology) and stores results in the database, keeping strike counts in `logs/missing-*.json` to delay cancellations.
 2. **Predict** – The scraper (or `scripts/generate-*.js`) identifies fights lacking AI fields and batches them through OpenAI using `buildPredictionPrompt`. Results update `fights` plus `predictionUsage` metrics.
 3. **Serve** – The UI requests `/api/db-events`. When Postgres is reachable it returns Prisma-backed events; otherwise the frontend falls back to `public/data/events.json` (exported via `scripts/export-static-data.js`).
 4. **Static Mirror** – `scripts/prepare-github-pages.js` copies the production `out/` bundle into `docs/` so GitHub Pages can host a static mirror with client-side data fetching disabled.
@@ -46,8 +48,9 @@ Users → Next.js App (Vercel/GitHub Pages)
 6. **Performance Tracking** – All database queries are monitored in real-time, with slow/critical query detection and health scoring. Admins can access performance data via `/api/health`, `/api/performance`, or the dashboard at `/admin`.
 
 ## External Integrations
-- **Sherdog** – Primary scrape target for event schedules, fight cards, and fighter identifiers.
-- **Tapology / UFC.com / Sherdog imagery** – Implemented in `fighter-image` route but currently disabled (returns placeholder) to avoid aggressive scraping until rate-limiting is solved.
+- **Multi-source scraping** – Primary: Sherdog for event schedules and fight cards. Fallback: Wikipedia for comprehensive event and fighter data extraction. Tertiary: Tapology for basic event information.
+- **VPN capability** – Mullvad VPN integration available via Docker for bypassing IP blocks (currently disabled, relying on fallback sources).
+- **Fighter imagery** – Implemented in `fighter-image` route but currently disabled (returns placeholder) to avoid aggressive scraping until rate-limiting is solved.
 - **OpenAI (gpt-4o)** – Generates fight entertainment analysis; chunk size configurable via `OPENAI_PREDICTION_CHUNK_SIZE`.
 - **Sentry** – Error and performance monitoring for UI, API, edge functions, and scraper tasks.
 - **GitHub Actions** – Schedules scraper runs with Docker and publishes static exports to Pages.

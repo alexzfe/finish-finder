@@ -3,6 +3,7 @@
 ## Horizon: Now (0–2 weeks)
 | Item | Why | Measurable Outcome | Effort | Risks/Mitigations | Owner | Dependencies |
 | --- | --- | --- | --- | --- | --- | --- |
+| **Scraper date filtering fix** | **Currently collecting historical events instead of upcoming** | **Date filtering logic updated to focus on future events** | **S** | **Low risk, configuration adjustment** | **Data Engineer** | **Multi-source scraper system** |
 | ✅ **Database performance optimization** | **Critical performance and safety improvements** | **Indexes added, connection pooling optimized, transactions implemented** | **M** | **Low risk, backward compatible** | **Database Engineer** | **None** |
 | ✅ **TypeScript strict mode migration** | **Eliminate `any` types causing runtime errors** | **Strict mode enabled, all `any` types documented with ESLint disable comments, Vercel deployment successful** | **M** | **Low risk, compile-time safety** | **Frontend Engineer** | **None** |
 | ✅ **Local development environment** | **Enable developers to run project locally** | **Docker Compose, .env.local template, development documentation** | **S** | **Low risk, dev-only changes** | **DevOps Engineer** | **None** |
@@ -16,7 +17,7 @@
 | Item | Why | Measurable Outcome | Effort | Risks/Mitigations | Owner | Dependencies |
 | --- | --- | --- | --- | --- | --- | --- |
 | ✅ **Database query monitoring** | **Visibility into performance as data scales** | **Advanced monitoring with N+1 detection, structured logging, intelligent alerts, and optimization recommendations** | **M** | **✅ Complete - Comprehensive monitoring system deployed** | **Database Engineer** | **✅ Database optimization complete** |
-| ✅ **Scraper VPN integration** | **Bypass Sherdog IP blocking with Mullvad VPN** | **Docker-based VPN solution with auto-reconnection, health monitoring, and fallback support** | **M** | **✅ Complete - VPN-enabled scraper ready for deployment** | **Data Engineer** | **✅ JSON parsing tests complete** |
+| ✅ **Multi-source scraper system** | **Bypass Sherdog IP blocking with fallback sources** | **Wikipedia + Tapology scrapers with comprehensive fighter data extraction, Docker-based VPN solution available but not required** | **M** | **✅ Complete - Multi-source scraper operational in GitHub Actions** | **Data Engineer** | **✅ JSON parsing tests complete** |
 | Add automated test suites | Increase confidence | CI running Vitest (≥60% stmt coverage on `src/lib/**`) + Playwright smoke for UI | H | Flaky UI tests → start with headless-only smoke path | QA Lead | ✅ Vitest bootstrap complete |
 | Observability enhancements | Improve triage | Standard log fields + scrape duration metrics + Sentry breadcrumb tagging | M | Requires schema for metrics storage → start with structured logs shipped to log store | Platform Engineer | Scraper hardening |
 | Contributor onboarding refinements | Shorten ramp | Update handbook references, add `pnpm`/`docker` instructions, record walkthrough video | M | Docs drift quickly → assign owner for monthly review | DX Lead | Docs overhaul complete |

@@ -42,8 +42,13 @@ The scheduled scraper has been disabled due to Sherdog returning 403 (blocked) r
 1. Scheduler triggered `.github/workflows/scraper.yml` every 4 hours.
 2. Workflow built Dockerfile and ran `scripts/automated-scraper.js check` with environment secrets.
 
-**Current Status:**
-- Scheduled runs: **DISABLED** (commented out in workflow)
+**Current Status (September 2025):**
+- **✅ Operational**: Multi-source scraper system running successfully in GitHub Actions
+- **✅ Wikipedia Primary**: Automatically falls back to Wikipedia when Sherdog is blocked (403)
+- **✅ Comprehensive Data**: 15+ upcoming events extracted with full venue/location details
+- **⚠️ Date Filtering Issue**: Currently collecting historical events due to date filtering logic
+- **🔧 VPN Available**: Mullvad VPN integration built but not currently needed
+- Scheduled runs: **AVAILABLE** (workflow enabled)
 - Manual trigger: **AVAILABLE** via workflow_dispatch
 - Local scraping: **FUNCTIONAL** (see Manual Scrape section below)
 
