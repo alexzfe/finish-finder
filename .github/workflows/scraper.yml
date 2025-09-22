@@ -2,7 +2,7 @@ name: Automated Scraper
 
 on:
   schedule:
-    - cron: '0 */4 * * *'  # Run every 4 hours
+    - cron: '0 2 * * *'  # Run daily at 2:00 AM UTC (after AI predictions at 1:30 AM)
   workflow_dispatch:        # Allow manual trigger
     inputs:
       events_limit:

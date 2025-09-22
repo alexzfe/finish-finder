@@ -39,15 +39,15 @@ Store sensitive values in platform secret managers (Vercel, GitHub Actions, 1Pas
 The GitHub Actions workflow runs on schedule with Sherdog disabled to avoid CI IP blocks. Wikipedia provides events/fights; Tapology enriches fighter W‑L‑D records.
 
 **Current Setup:**
-1. **Data Scraping**: `.github/workflows/scraper.yml` runs every 4 hours
-   - Runs `scripts/automated-scraper.js check`
-   - Env flags: `SHERDOG_ENABLED=false`, `TAPOLOGY_ENRICH_RECORDS=true`
-   - Creates events and fights without AI predictions
-
-2. **AI Predictions**: `.github/workflows/ai-predictions.yml` runs daily at 1:30 AM UTC
+1. **AI Predictions**: `.github/workflows/ai-predictions.yml` runs daily at 1:30 AM UTC
    - Runs `scripts/ai-predictions-runner.js`
    - Finds events with missing predictions and generates them
    - Processes events with proper batching and rate limiting
+
+2. **Data Scraping**: `.github/workflows/scraper.yml` runs daily at 2:00 AM UTC
+   - Runs `scripts/automated-scraper.js check`
+   - Env flags: `SHERDOG_ENABLED=false`, `TAPOLOGY_ENRICH_RECORDS=true`
+   - Creates events and fights without AI predictions
 
 **Status:**
 - **✅ Operational**: Multi-source system running in GitHub Actions
