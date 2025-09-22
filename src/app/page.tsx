@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { EventNavigation } from '@/components/ui/EventNavigation'
 import { FightList } from '@/components/fight/FightList'
+import { FightDetailsModal } from '@/components/fight/FightDetailsModal'
 import { Header } from '@/components/ui/Header'
 import { UFCEvent, Fight } from '@/types'
 
@@ -23,6 +24,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedFight, setSelectedFight] = useState<Fight | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Fetch collected events from the database when available, otherwise fallback to static JSON
   useEffect(() => {
@@ -114,6 +116,14 @@ export default function Home() {
 
   const handleFightClick = (fight: Fight) => {
     setSelectedFight(fight)
+    // Open modal on mobile/tablet, use sidebar on desktop
+    if (window.innerWidth < 1024) {
+      setIsModalOpen(true)
+    }
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
   }
 
   const currentEvent = events[currentEventIndex]
@@ -174,7 +184,7 @@ export default function Home() {
                 />
               </div>
 
-              <aside className="order-first lg:order-last lg:self-start rounded-2xl border border-white/5 bg-black/70 p-4 sm:p-5 text-white shadow-2xl lg:sticky lg:top-20 lg:flex-[1] lg:max-h-[calc(100vh-160px)] lg:overflow-y-auto xl:top-24">
+              <aside className="hidden lg:block lg:self-start rounded-2xl border border-white/5 bg-black/70 p-4 sm:p-5 text-white shadow-2xl lg:sticky lg:top-20 lg:flex-[1] lg:max-h-[calc(100vh-160px)] lg:overflow-y-auto xl:top-24">
                 {selectedFight ? (
                   <div className="space-y-5">
                     <div className="border-l-4 border-[var(--ufc-red)] pl-4">
@@ -255,6 +265,13 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Fight Details Modal for Mobile/Tablet */}
+      <FightDetailsModal
+        fight={selectedFight}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   )
 }
