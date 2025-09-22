@@ -42,8 +42,12 @@ if [ "${MULLVAD_VPN_ENABLED:-true}" = "true" ]; then
     else
         log "VPN connection established successfully"
 
-        # Verify external IP changed
-        /opt/mullvad/verify-connection.sh
+        # Verify external IP changed (non-fatal)
+        if /opt/mullvad/verify-connection.sh; then
+            log "VPN verification successful"
+        else
+            log "WARN: VPN verification failed, but continuing with established connection"
+        fi
 
         # Set up connection monitoring
         /opt/mullvad/monitor-connection.sh &

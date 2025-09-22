@@ -12,7 +12,7 @@ CURRENT_IP=$(curl -s --max-time 10 https://ipinfo.io/ip || echo "unknown")
 
 if [ "$CURRENT_IP" = "unknown" ]; then
     log "WARN: Could not determine external IP address"
-    return 1
+    exit 1
 fi
 
 log "Current external IP: $CURRENT_IP"
@@ -33,7 +33,7 @@ if [ "$IS_MULLVAD" = "true" ]; then
     echo "$CURRENT_IP" > /tmp/mullvad_ip
     echo "$MULLVAD_CITY, $MULLVAD_COUNTRY" > /tmp/mullvad_location
 
-    return 0
+    exit 0
 else
     log "❌ NOT connected through Mullvad VPN"
     log "Current IP appears to be: $CURRENT_IP"
@@ -41,5 +41,5 @@ else
     # Additional debugging information
     log "Full Mullvad check response: $MULLVAD_CHECK"
 
-    return 1
+    exit 1
 fi
