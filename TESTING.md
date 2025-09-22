@@ -23,6 +23,9 @@
 | **Test Coverage** | `npm run test:coverage` | **Coverage report with 60% thresholds on tested modules.** |
 | Scraper Dry Run | `npm run scraper:check` | Exercises data pipeline end-to-end; requires external services. |
 | Static Export | `npm run pages:build` | Validates export scripts and Prisma access. |
+| Tapology Enrichment (1 event) | `TAPOLOGY_ENRICH_RECORDS=true node scripts/test-enrich-records.js 1` | Verifies fighter record enrichment without DB writes. |
+| Sherdog Local Probe | `npm run sherdog:test:local` | Checks local Sherdog accessibility with rotated headers. |
+| Single Fighter Record | `node scripts/test-tapology-fighter-record.js "Name"` | Fetches a fighter's W-L-D from Tapology. |
 
 ## Testing Strategy
 1. **Unit Tests** (✅ **Vitest Implemented**)

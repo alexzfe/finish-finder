@@ -25,6 +25,8 @@
    - `NEXT_PUBLIC_SENTRY_DSN`: Frontend Sentry DSN
    - `SCRAPER_CANCEL_THRESHOLD`: (optional) Default: 3
    - `SCRAPER_FIGHT_CANCEL_THRESHOLD`: (optional) Default: 2
+   - `SHERDOG_ENABLED`: (optional) Set to `false` for CI/deploy contexts
+   - `TAPOLOGY_ENRICH_RECORDS`: (optional) Set to `true` for daily runs
    - `SLOW_QUERY_THRESHOLD_MS`: (optional) Default: 1000
    - `CRITICAL_QUERY_THRESHOLD_MS`: (optional) Default: 5000
    - `FREQUENT_QUERY_THRESHOLD`: (optional) Default: 100
@@ -57,10 +59,13 @@ DATABASE_URL="your_production_db_url" OPENAI_API_KEY="your_openai_key" node scri
 ```
 
 #### Automated Updates
-Set up GitHub Actions or another cron service to run the scraper every 4 hours:
+Set up GitHub Actions (workflow included) to run the scraper on a schedule. CI is configured to disable Sherdog and enable Tapology enrichment by default.
 ```bash
 node scripts/automated-scraper.js check
 ```
+
+### Build Configuration on Vercel
+To avoid blocking deployments on lint/type errors while refactors are in progress, production builds on Vercel ignore ESLint and TypeScript errors (`next.config.ts`). It is recommended to enforce `npm run lint` and `npx tsc --noEmit` in CI prior to deploys.
 
 ## ✅ Deployment Status
 
@@ -74,7 +79,7 @@ node scripts/automated-scraper.js check
 - **Admin Dashboard**: https://finish-finder.vercel.app/admin ✅
 - **Database**: 5 UFC events with 66 fights and AI predictions
 - **Architecture**: Vercel + Supabase PostgreSQL with connection pooling + monitoring
-- **Data Pipeline**: Sherdog scraping → PostgreSQL → API → Next.js frontend
+- **Data Pipeline**: Wikipedia scraping (+ Tapology record enrichment) → PostgreSQL → API → Next.js frontend
 - **Monitoring**: Real-time query performance tracking and admin dashboard
 
 ## GitHub Pages Deployment (Static)

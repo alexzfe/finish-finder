@@ -36,11 +36,11 @@ Users → Next.js App (Vercel/GitHub Pages)
 | **UI** | Renders events, fight cards, and sticky analysis. Handles optimistic selection state and base-path aware static fetch. | `src/app/page.tsx`, `src/components/**/*`
 | **API** | Serves structured fight data from the database and (optionally) resolves fighter imagery. Includes JSON safety nets to avoid poisoning the feed. Provides performance monitoring and health check endpoints. | `src/app/api/db-events/route.ts`, `src/app/api/fighter-image/route.ts`, `src/app/api/performance/route.ts`, `src/app/api/health/route.ts`
 | **Data & Domain** | Defines TypeScript and Prisma models, conversion helpers, logging utilities, JSON parsing utilities, weight-class validation, and database performance monitoring that keep scraper output consistent. | `prisma/schema.prisma`, `src/types/**/*`, `src/lib/**/*`, `src/lib/utils/json.ts`, `src/lib/utils/weight-class.ts`, `src/lib/database/validation.ts`, `src/lib/database/monitoring.ts`
-| **Automation** | Scrapes Sherdog, reconciles DB state, replays predictions, exports static bundles, and prepares GitHub Pages artifacts. Writes strike-ledger JSON for resilience. | `scripts/automated-scraper.js`, `scripts/generate-*.js`, `scripts/export-static-data.js`, `scripts/prepare-github-pages.js`
+| **Automation** | Scrapes Wikipedia (primary), enriches fighter records via Tapology, reconciles DB state, replays predictions, exports static bundles, and prepares GitHub Pages artifacts. Writes strike-ledger JSON for resilience. | `scripts/automated-scraper.js`, `scripts/generate-*.js`, `src/lib/scrapers/*`, `scripts/export-static-data.js`, `scripts/prepare-github-pages.js`
 | **Monitoring** | Wires Sentry for client/server/edge and exposes loggers with structured output for scraper ops. Provides database performance monitoring, health checks, and admin dashboard. | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts`, `src/app/admin/`, `src/components/admin/`
 
 ## Data & Control Flow
-1. **Scrape** – `scripts/automated-scraper.js` runs (GitHub Action, cron, or manual). It calls `HybridUFCService` to fetch events/fights using multi-source fallback (Sherdog → Wikipedia → Tapology) and stores results in the database, keeping strike counts in `logs/missing-*.json` to delay cancellations.
+1. **Scrape** – `scripts/automated-scraper.js` runs (GitHub Action, cron, or manual). It calls `HybridUFCService` to fetch events/fights with Wikipedia as the primary source. After fights are built, it optionally enriches fighter win/loss records from Tapology (`TAPOLOGY_ENRICH_RECORDS=true`). Sherdog remains available locally but is disabled in CI due to IP blocking.
 2. **Predict** – The scraper (or `scripts/generate-*.js`) identifies fights lacking AI fields and batches them through OpenAI using `buildPredictionPrompt`. Results update `fights` plus `predictionUsage` metrics.
 3. **Serve** – The UI requests `/api/db-events`. When Postgres is reachable it returns Prisma-backed events; otherwise the frontend falls back to `public/data/events.json` (exported via `scripts/export-static-data.js`).
 4. **Static Mirror** – `scripts/prepare-github-pages.js` copies the production `out/` bundle into `docs/` so GitHub Pages can host a static mirror with client-side data fetching disabled.
@@ -48,7 +48,7 @@ Users → Next.js App (Vercel/GitHub Pages)
 6. **Performance Tracking** – All database queries are monitored in real-time, with slow/critical query detection and health scoring. Admins can access performance data via `/api/health`, `/api/performance`, or the dashboard at `/admin`.
 
 ## External Integrations
-- **Multi-source scraping** – Primary: Sherdog for event schedules and fight cards. Fallback: Wikipedia for comprehensive event and fighter data extraction. Tertiary: Tapology for basic event information.
+- **Multi-source scraping** – Primary: Wikipedia for event schedules and fight cards. Tapology enriches fighter records (W‑L‑D). Sherdog optional for local runs; disabled in CI.
 - **VPN capability** – Mullvad VPN integration available via Docker for bypassing IP blocks (currently disabled, relying on fallback sources).
 - **Fighter imagery** – Implemented in `fighter-image` route but currently disabled (returns placeholder) to avoid aggressive scraping until rate-limiting is solved.
 - **OpenAI (gpt-4o)** – Generates fight entertainment analysis; chunk size configurable via `OPENAI_PREDICTION_CHUNK_SIZE`.

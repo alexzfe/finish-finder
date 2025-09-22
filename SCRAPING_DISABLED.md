@@ -1,25 +1,24 @@
-# Automated Scraping Status - DISABLED
+# Automated Scraping Status
 
-## Current Status: ⛔ AUTOMATED SCRAPING DISABLED
+## Current Status: ✅ AUTOMATED SCRAPING ENABLED (Wikipedia-first)
 
-**Effective Date:** 2025-09-20
-**Reason:** Sherdog blocking GitHub Actions IP addresses with 403 responses
+**Updated:** 2025-09-22
+**Notes:** Sherdog remains disabled in CI due to 403 blocks; Tapology enriches fighter records.
 
 ## What Was Disabled
 
 ### GitHub Actions Workflow
 - **File:** `.github/workflows/scraper.yml`
-- **Previous Schedule:** Every 4 hours (`cron: '0 */4 * * *'`)
-- **Status:** Schedule commented out, manual trigger still available
+- **Schedule:** Enabled
+- **Env flags:** `SHERDOG_ENABLED=false`, `TAPOLOGY_ENRICH_RECORDS=true`
 
 ### Impact
-- No automatic data updates from Sherdog
-- Events and fights data will become stale without manual intervention
-- AI predictions will not be generated for new events automatically
+- Daily updates run without Sherdog in CI
+- Events/fights sourced from Wikipedia; fighter records enriched from Tapology
 
 ## Alternative Data Collection Methods
 
-### 1. **Local Manual Scraping** ✅ RECOMMENDED
+### 1. **Local Manual Scraping** ✅
 Run scraping from your local machine to avoid IP blocking:
 
 ```bash
@@ -39,8 +38,8 @@ node scripts/generate-event-predictions.js
 - Can use residential IP addresses
 - Full control over timing and retry logic
 
-### 2. **Manual GitHub Actions Trigger** ⚠️ LIMITED
-The workflow can still be triggered manually, but may face the same 403 issues:
+### 2. **Manual GitHub Actions Trigger**
+The workflow can be triggered manually; CI is configured to avoid Sherdog.
 
 1. Go to GitHub repository
 2. Navigate to Actions → Automated Scraper (DISABLED)
@@ -72,18 +71,10 @@ curl -I "https://www.sherdog.com/organizations/Ultimate-Fighting-Championship-UF
 node scripts/automated-scraper.js status
 ```
 
-## Re-enabling Automation
-
-### When Sherdog Access Is Restored
-1. Edit `.github/workflows/scraper.yml`
-2. Uncomment the schedule section:
-   ```yaml
-   on:
-     schedule:
-       - cron: '0 */4 * * *'  # Uncomment this line
-     workflow_dispatch:
-   ```
-3. Update the workflow name back to "Automated Scraper"
+## Sherdog Re-Enablement (Optional)
+When CI IP blocks lift or a provider is added, Sherdog can be re-enabled:
+1. Set `SHERDOG_ENABLED=true` in workflow env
+2. Optionally throttle via `SHERDOG_MAX_RPS`
 
 ### Alternative Solutions (Future)
 Consider implementing these to avoid future blocking:
@@ -98,7 +89,7 @@ Consider implementing these to avoid future blocking:
 
 ### 403 Errors During Local Scraping
 ```bash
-# Wait between attempts (Sherdog rate limiting)
+# Wait between attempts (rate limiting)
 sleep 3600  # Wait 1 hour
 
 # Try with different user agent
@@ -139,5 +130,5 @@ If you need to re-enable automation or implement alternative solutions:
 
 ---
 
-**Last Updated:** 2025-09-20
-**Next Review:** Weekly (until automation is restored)
+**Last Updated:** 2025-09-22
+**Next Review:** Weekly

@@ -33,22 +33,23 @@ Store sensitive values in platform secret managers (Vercel, GitHub Actions, 1Pas
 
 ## Runbooks
 
-### Daily Scraper Job (CURRENTLY DISABLED)
-**⚠️ AUTOMATED SCRAPING TEMPORARILY DISABLED**
+### Daily Scraper Job
+**✅ AUTOMATED SCRAPING ENABLED (Wikipedia-first + Tapology enrichment)**
 
-The scheduled scraper has been disabled due to Sherdog returning 403 (blocked) responses to GitHub Actions runners.
+The GitHub Actions workflow runs on schedule with Sherdog disabled to avoid CI IP blocks. Wikipedia provides events/fights; Tapology enriches fighter W‑L‑D records.
 
-**Previous Setup (now disabled):**
-1. Scheduler triggered `.github/workflows/scraper.yml` every 4 hours.
-2. Workflow built Dockerfile and ran `scripts/automated-scraper.js check` with environment secrets.
+**Current Setup:**
+1. Scheduler triggers `.github/workflows/scraper.yml` per cron.
+2. Env flags in CI:
+   - `SHERDOG_ENABLED=false`
+   - `TAPOLOGY_ENRICH_RECORDS=true`
+3. The workflow runs `scripts/automated-scraper.js check` with secrets injected.
 
-**Current Status (September 2025):**
-- **✅ Operational**: Multi-source scraper system running successfully in GitHub Actions
-- **✅ Wikipedia Primary**: Automatically falls back to Wikipedia when Sherdog is blocked (403)
-- **✅ Comprehensive Data**: 15+ upcoming events extracted with full venue/location details
-- **⚠️ Date Filtering Issue**: Currently collecting historical events due to date filtering logic
-- **🔧 VPN Available**: Mullvad VPN integration built but not currently needed
-- Scheduled runs: **AVAILABLE** (workflow enabled)
+**Status:**
+- **✅ Operational**: Multi-source system running in GitHub Actions
+- **✅ Wikipedia Primary**: Stable, comprehensive fight cards
+- **✅ Records Enrichment**: Tapology provides fighter records in daily runs
+- **🚫 Sherdog in CI**: Disabled due to IP blocking; can be used locally
 - Manual trigger: **AVAILABLE** via workflow_dispatch
 - Local scraping: **FUNCTIONAL** (see Manual Scrape section below)
 
@@ -71,7 +72,7 @@ node scripts/generate-predictions-only.js all         # full backfill
 **Troubleshooting:**
 - Use `node scripts/automated-scraper.js status` to inspect strike counts.
 - For clean-room reruns, execute `node scripts/clear-predictions.js` followed by `node scripts/verify-predictions-cleared.js` before regenerating.
-- If you get 403 errors locally, wait 30-60 minutes before retrying (Sherdog rate limiting).
+- If you get 403 errors locally (e.g., Sherdog), wait 30-60 minutes or test from a different network.
 
 ### Static Export Refresh
 ```bash
@@ -113,7 +114,7 @@ This writes:
 | --- | --- | --- |
 | **No events in UI** | `/api/db-events` returns 500 or empty. Check Postgres availability and scrape logs. | Run manual scrape. If API parsing fails, inspect `Sentry` breadcrumb and `logs/scraper.log`. Static fallback available at `public/data/events.json`. |
 | **Event removed unexpectedly** | Strike ledger counts may have crossed threshold. | Lower thresholds or reset counters by deleting entry in `logs/missing-events.json`. Confirm Sherdog still lists event before reinstating manually. |
-| **Sherdog 403 blocks scraper** | Scraper logs warning with code `SHERDOG_BLOCKED`. GitHub Actions IPs are commonly blocked. | **Use local scraping instead of GitHub Actions.** Wait 30-60 minutes between retries. GitHub Actions automation is currently disabled for this reason. |
+| **Sherdog 403 blocks scraper** | Scraper logs warning with code `SHERDOG_BLOCKED`. GH Actions IPs are commonly blocked. | In CI, Sherdog is disabled (`SHERDOG_ENABLED=false`). Use local scraping to test Sherdog or keep relying on Wikipedia + Tapology. |
 | **OpenAI failures** | Look for rate-limit or auth errors in scraper log. | Back off for a few minutes. Verify key validity. Switch to smaller batch size by setting `OPENAI_PREDICTION_CHUNK_SIZE=3`. |
 | **Fighter images missing** | `fighter-image` route currently returns placeholder. | No action required. Feature gated until rate-limiting strategy is in place. |
 

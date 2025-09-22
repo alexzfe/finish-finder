@@ -1,6 +1,6 @@
 # Finish Finder
 
-AI-assisted UFC fight discovery built with Next.js 15, Prisma, and an automated scraping + prediction pipeline. Finish Finder ranks upcoming bouts by entertainment value using live data from Sherdog and OpenAI-generated analysis, then serves the experience via a themed UFC UI.
+AI-assisted UFC fight discovery built with Next.js 15, Prisma, and an automated scraping + prediction pipeline. Finish Finder ranks upcoming bouts by entertainment value using live data from a multi-source scraper and OpenAI-generated analysis, then serves the experience via a themed UFC UI.
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -17,13 +17,13 @@ AI-assisted UFC fight discovery built with Next.js 15, Prisma, and an automated 
 
 ## Overview
 Finish Finder helps UFC fans pick the most electric fights. The system:
-- Scrapes upcoming UFC cards and fighter data from **comprehensive multi-source system** (Wikipedia → Sherdog → Tapology).
+- Scrapes upcoming UFC cards and fighter data from a **multi-source system** (Wikipedia primary → Tapology enrichment → Sherdog optional).
 - Persists the data in PostgreSQL (SQLite for local play).
 - Calls OpenAI to score finish probability, fun factor, and risk.
 - Delivers a responsive, UFC-styled interface with sticky fight insights.
 - Exports static JSON bundles for GitHub Pages while supporting a dynamic API on Vercel/Supabase.
 
-> ✅ **Automated Scraping Status**: **Fully Operational!** Comprehensive UFC scraper successfully extracts complete fight cards from all upcoming UFC events. **68 fights** and **134 fighters** currently collected across **12 upcoming events**. Wikipedia-first approach ensures reliable data extraction with proper fight card parsing, weight class detection, and main/preliminary card categorization.
+> ✅ **Automated Scraping Status**: **Operational (Wikipedia-first + Tapology records)**. Scraper extracts complete fight cards from upcoming UFC events via Wikipedia and enriches fighter win/loss records via Tapology. Sherdog is currently disabled in CI due to IP blocking.
 
 Core repo pillars:
 - **Frontend** – Next.js App Router with client components in `src/app` and modular UI widgets under `src/components`.
@@ -37,7 +37,7 @@ Core repo pillars:
 | UI | `src/app/page.tsx`, `src/components/**` | Fetches `/api/db-events` first, falls back to `public/data/events.json`. Sticky sidebar highlights selected fight. |
 | API | `src/app/api/db-events/route.ts`, `src/app/api/fighter-image/route.ts`, `src/app/api/health/route.ts`, `src/app/api/performance/route.ts` | Prisma event feed with JSON safety guards; fighter-image route currently disabled to reduce third-party scraping noise. Health and performance monitoring endpoints for observability. |
 | Data Layer | `prisma/schema.prisma`, `prisma/migrations/**` | Runs on SQLite locally and Supabase/Postgres remotely. Includes prediction usage telemetry tables. |
-| Scraper & AI | `scripts/automated-scraper.js`, `src/lib/ai/hybridUFCService.ts`, `scripts/generate-*.js` | Handles scrape → diff → persist → prediction replays. Writes audit logs under `logs/`. |
+| Scraper & AI | `scripts/automated-scraper.js`, `src/lib/ai/hybridUFCService.ts`, `src/lib/scrapers/*`, `scripts/generate-*.js` | Handles scrape → diff → persist → prediction replays. Wikipedia supplies fight cards; Tapology enriches fighter records (W-L-D). Writes audit logs under `logs/`. |
 | Static Export | `scripts/export-static-data.js`, `scripts/prepare-github-pages.js`, `docs/` | Produces GitHub Pages snapshot with `_next` assets and pre-rendered data. |
 | Monitoring | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts`, `src/app/admin/`, `src/lib/database/monitoring.ts` | Sentry is wired for client, server, and edge; logger utilities keep console output structured. Database performance monitoring with admin dashboard at `/admin`. |
 
@@ -78,10 +78,10 @@ npm run db:reset          # Reset schema and reseed (destructive)
 SQLite lives at `prisma/dev.db`. For Postgres deployments, set `DATABASE_URL` in `.env.local` or the host environment before running these commands.
 
 ### Automation Commands
-**✅ Automated scraping is now enabled with VPN support!**
+**✅ Automated scraping runs daily (Wikipedia-first).**
 
 ```bash
-npm run scraper:check     # Run scraper locally (uses VPN if configured)
+npm run scraper:check     # Run scraper locally
 npm run scraper:status    # Summarise strike counters and pending predictions
 npm run scraper:schedule  # Prepare scheduled execution metadata
 npm run predict:event     # Generate AI predictions for the newest event(s)
@@ -89,16 +89,17 @@ npm run predict:all       # Regenerate predictions for every tracked fight
 npm run pages:build       # Refresh GitHub Pages bundle under docs/
 ```
 
-#### VPN Configuration
-To enable VPN scraping, set these environment variables:
-```bash
-export MULLVAD_ACCOUNT_TOKEN="your_token_here"     # Required for VPN
-export MULLVAD_RELAY_LOCATION="us-nyc-wg-301"      # Optional, defaults to NYC
-export MULLVAD_VPN_ENABLED="true"                  # Optional, defaults to true
-export MULLVAD_FALLBACK_NO_VPN="true"              # Optional, continue without VPN if setup fails
-```
-
 Scraper and prediction commands require `DATABASE_URL` and `OPENAI_API_KEY`. They also honour `SCRAPER_CANCEL_THRESHOLD` and `SCRAPER_FIGHT_CANCEL_THRESHOLD` for strike-ledger logic. Logs are written to `logs/scraper.log`, `logs/missing-events.json`, and `logs/missing-fights.json`.
+
+#### Scraper flags
+- `SHERDOG_ENABLED`: `true|false` (default `true` locally; CI sets `false`).
+- `TAPOLOGY_ENRICH_RECORDS`: `true|false` (default `false` locally; CI sets `true`).
+- `SHERDOG_MAX_RPS`: optional throttle for Sherdog when enabled.
+
+Helper scripts:
+- `npm run sherdog:test:local` – probe Sherdog org+event pages with rotated headers.
+- `node scripts/test-enrich-records.js 1` – run 1 event with Tapology record enrichment.
+- `node scripts/test-tapology-fighter-record.js "Fighter Name"` – fetch a single fighter record from Tapology.
 
 For VPN setup details, see [docker/mullvad/README.md](docker/mullvad/README.md).
 
@@ -106,7 +107,7 @@ For VPN setup details, see [docker/mullvad/README.md](docker/mullvad/README.md).
 Recommended production topology:
 1. **Vercel + Supabase** – Deploy the Next.js app to Vercel (`npm run build`) and point Prisma at Supabase Postgres.
 2. **Secrets** – Configure `DATABASE_URL`, `OPENAI_API_KEY`, `SENTRY_*`, `NEXT_PUBLIC_SENTRY_*`, and scraper thresholds in Vercel env settings and GitHub Actions secrets.
-3. **VPN-Enabled Scraper** – ✅ **Now active!** Set `MULLVAD_ACCOUNT_TOKEN` in GitHub secrets to enable automated scraping with VPN support.
+3. **Automated Scraper** – Runs in GitHub Actions. CI disables Sherdog (`SHERDOG_ENABLED=false`) and enables Tapology record enrichment (`TAPOLOGY_ENRICH_RECORDS=true`).
 4. **Static Mirror (Optional)** – After successful scrapes, run `npm run pages:build` and publish `docs/` to GitHub Pages for a static fallback.
 
 ### GitHub Actions VPN Setup
@@ -131,8 +132,8 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`OPERATIONS.md`](OPERATIONS.md) fo
 
 ## Project Status
 - Active prototype with production aspirations; database migrations for Supabase live under `prisma/migrations/`.
-- ✅ **TypeScript strict mode enabled** - Full type safety enforcement at build time prevents runtime errors.
-- ✅ **ESLint quality gates active** - Code quality standards enforced; builds fail on violations.
+- ✅ **TypeScript + ESLint in CI** – Use `npx tsc --noEmit` and `npm run lint` in CI for quality gates.
+- ⚠️ **Production build on Vercel ignores lint/type errors** – To ensure deployment continuity, `next.config.ts` opts out of blocking on lint/type errors. CI should enforce quality before deploys.
 - Automated testing is not yet implemented—quality assured through TypeScript compilation and linting. ROADMAP highlights next steps for test coverage.
 - `docs/_next/` and `out/` store large static exports checked into git; consider pruning or generating on-demand for lighter clones.
 - Secrets must never be committed. Regenerate any keys that were previously stored in version control and rely on `.env.local` going forward.
@@ -143,9 +144,9 @@ npm run lint          # ESLint checks - must pass for builds
 npx tsc --noEmit      # TypeScript compilation - must pass for builds
 npm run build         # Full build with quality gates enabled
 ```
-- **TypeScript**: Strict mode enabled with zero `any` types in production code
-- **ESLint**: Comprehensive rules enforced at build time with strategic exceptions documented
-- **Build Gates**: Both TypeScript and ESLint violations block builds (`ignoreBuildErrors: false`)
+- **TypeScript**: Strict mode; treat CI as the source of truth for blocking
+- **ESLint**: Comprehensive rules; CI should block on violations
+- **Build Gates**: Vercel deploys do not block on lint/type errors; use CI to enforce
 
 ---
 Licensed under the MIT License.
