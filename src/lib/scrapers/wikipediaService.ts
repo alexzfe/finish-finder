@@ -223,11 +223,19 @@ export class WikipediaUFCService {
           const location = locationCell.text().trim().replace(/\[\d+\]/g, '').trim()
 
           // Only process if we have the essential data and it's a future event
-          // Add additional filters to avoid random/irrelevant rows
-          const isUfcEventName = /^(ufc\s*\d+|ufc\s+fight\s+night|ufc\s+on\s+\w+)/i.test(eventName)
-          const isUfcLink = typeof href === 'string' && /\/wiki\/(UFC_|UFC_Fight_Night|UFC_on_)/.test(href)
+          // Add stricter filters to avoid placeholder/irrelevant rows
+          const lowerName = eventName.toLowerCase()
+          const isNumberedUfc = /^ufc\s*\d+/.test(lowerName)
+          const isFightNightWithColon = /^ufc\s+fight\s+night\s*:/.test(lowerName) // require ":" to avoid numeric-only placeholders
+          const isFightNightNumericOnly = /^ufc\s+fight\s+night\s*\d+\b/.test(lowerName)
+          const isUfcOn = /^ufc\s+on\s+/.test(lowerName)
+          const isNumberedLink = typeof href === 'string' && /\/wiki\/UFC_\d+/.test(href)
+          const isFightNightColonLink = typeof href === 'string' && /\/wiki\/UFC_Fight_Night:_/.test(href)
+          const isUfcOnLink = typeof href === 'string' && /\/wiki\/UFC_on_/.test(href) && /:/.test(href)
 
-          if (eventName && dateText && this.isFutureDate(dateText) && (isUfcEventName || isUfcLink)) {
+          const isLikelyUfc = (isNumberedUfc || isNumberedLink || isFightNightWithColon || isFightNightColonLink || isUfcOn || isUfcOnLink) && !isFightNightNumericOnly
+
+          if (eventName && dateText && this.isFutureDate(dateText) && isLikelyUfc) {
             // Generate ID from event name
             const id = eventName.toLowerCase()
               .replace(/[^a-z0-9]/g, '-')

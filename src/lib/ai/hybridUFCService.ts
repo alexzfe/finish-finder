@@ -564,7 +564,7 @@ export class HybridUFCService {
     // Prioritize Wikipedia if we have a Wikipedia URL
     if (realEvent.source === 'wikipedia' && realEvent.wikipediaUrl) {
       const eventSlug = this.slugify(realEvent.name)
-      sources.push({ name: 'Wikipedia', fn: () => this.fetchWikipediaFightDetails(realEvent.wikipediaUrl!, eventSlug) })
+      sources.push({ name: 'Wikipedia', fn: () => this.fetchWikipediaFightDetails(realEvent.wikipediaUrl!, eventSlug, realEvent.name) })
     }
 
     // Add Sherdog if event came from Sherdog (has detailUrl)
@@ -597,7 +597,7 @@ export class HybridUFCService {
   }
 
   // Fetch fight details from Wikipedia
-  private async fetchWikipediaFightDetails(wikipediaUrl: string, eventSlug?: string): Promise<{ fights: Fight[], fighters: Fighter[] }> {
+  private async fetchWikipediaFightDetails(wikipediaUrl: string, eventSlug?: string, eventNameForHeadliner?: string): Promise<{ fights: Fight[], fighters: Fighter[] }> {
     const result = await this.wikipediaService.getEventDetails(wikipediaUrl)
 
     // Convert Wikipedia fights to internal Fight format
@@ -614,7 +614,7 @@ export class HybridUFCService {
       titleFight: wikiF.titleFight
     }))
 
-    const fights = this.orderAndNumberFights(fightsRaw)
+    const fights = this.orderAndNumberFights(fightsRaw, eventNameForHeadliner)
 
     // Convert Wikipedia fighters to internal Fighter format
     const fighters: Fighter[] = result.fighters.map(wikiF => ({
@@ -643,7 +643,7 @@ export class HybridUFCService {
     return 'preliminary'
   }
 
-  private orderAndNumberFights(fights: Fight[]): Fight[] {
+  private orderAndNumberFights(fights: Fight[], eventNameForHeadliner?: string): Fight[] {
     const positionRank: Record<string, number> = {
       'main': 0,
       'preliminary': 1,
@@ -656,6 +656,38 @@ export class HybridUFCService {
       // Keep original relative order within same group
       return 0
     })
+
+    // If possible, ensure the headliner is first in the main card and mark it mainEvent
+    const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim()
+    let mainStart = sorted.findIndex(f => f.cardPosition === 'main')
+    if (mainStart !== -1) {
+      let mainEnd = sorted.length
+      for (let i = mainStart; i < sorted.length; i++) {
+        if (sorted[i].cardPosition !== 'main') { mainEnd = i; break }
+      }
+
+      if (eventNameForHeadliner) {
+        const head = norm(eventNameForHeadliner)
+        let headIdx = -1
+        for (let i = mainStart; i < mainEnd; i++) {
+          const f = sorted[i]
+          const pair1 = `${norm(f.fighter1Name)} vs ${norm(f.fighter2Name)}`
+          const pair2 = `${norm(f.fighter2Name)} vs ${norm(f.fighter1Name)}`
+          if (head.includes(norm(f.fighter1Name)) && head.includes(norm(f.fighter2Name)) || head.includes(pair1) || head.includes(pair2)) {
+            headIdx = i
+            break
+          }
+        }
+        if (headIdx !== -1 && headIdx !== mainStart) {
+          const [headFight] = sorted.splice(headIdx, 1)
+          sorted.splice(mainStart, 0, headFight)
+        }
+      }
+
+      // Mark first main as mainEvent
+      for (let i = mainStart; i < mainEnd; i++) sorted[i].mainEvent = false
+      sorted[mainStart].mainEvent = true
+    }
 
     return sorted.map((f, idx) => ({ ...f, fightNumber: idx + 1 }))
   }
