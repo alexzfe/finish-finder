@@ -99,30 +99,46 @@ class AutomatedScraper {
           validatedFighters.push(fighter)
         }
 
-        const ops = validatedFighters.map(f => this.prisma.fighter.upsert({
-          where: { id: f.id },
-          update: {
-            name: f.name,
-            nickname: f.nickname,
-            wins: f.wins,
-            losses: f.losses,
-            draws: f.draws,
-            weightClass: f.weightClass,
-            record: f.record,
-            updatedAt: new Date()
-          },
-          create: {
-            id: f.id,
-            name: f.name,
-            nickname: f.nickname,
-            wins: f.wins,
-            losses: f.losses,
-            draws: f.draws,
-            weightClass: f.weightClass,
-            record: f.record
+        // Execute fighter upserts in batches to avoid connection pool exhaustion
+        const batchSize = 5
+        let processedFighters = 0
+
+        for (let i = 0; i < validatedFighters.length; i += batchSize) {
+          const batch = validatedFighters.slice(i, i + batchSize)
+          const batchOps = batch.map(f => this.prisma.fighter.upsert({
+            where: { id: f.id },
+            update: {
+              name: f.name,
+              nickname: f.nickname,
+              wins: f.wins,
+              losses: f.losses,
+              draws: f.draws,
+              weightClass: f.weightClass,
+              record: f.record,
+              updatedAt: new Date()
+            },
+            create: {
+              id: f.id,
+              name: f.name,
+              nickname: f.nickname,
+              wins: f.wins,
+              losses: f.losses,
+              draws: f.draws,
+              weightClass: f.weightClass,
+              record: f.record
+            }
+          }))
+
+          await Promise.all(batchOps)
+          processedFighters += batch.length
+
+          // Small delay between batches to prevent overwhelming the connection pool
+          if (i + batchSize < validatedFighters.length) {
+            await new Promise(resolve => setTimeout(resolve, 100))
           }
-        }))
-        await Promise.all(ops)
+        }
+
+        await this.log(`✅ Processed ${processedFighters} fighters in batches`)
       }
 
       // Debug: Log all scraped events
