@@ -242,20 +242,70 @@ export class TapologyUFCService {
       const eventElements = $('.fightcenter_event_listing, .event_listing, .promotion_event')
 
       if (!eventElements.length) {
-        // Try alternative selectors
-        const alternativeElements = $('div').filter((_, el) => {
-          const text = $(el).text()
-          return text.includes('UFC') && (text.includes('2025') || text.includes('2024'))
-        })
+        console.log('⚠️ Standard selectors found no events, trying alternatives...')
 
-        if (alternativeElements.length > 0) {
+        // Try multiple alternative strategies
+        const strategies = [
+          // Strategy 1: Look for any element containing UFC and year
+          () => $('div, section, article, li, tr').filter((_, el) => {
+            const text = $(el).text()
+            return text.includes('UFC') && (text.includes('2025') || text.includes('2024'))
+          }),
+
+          // Strategy 2: Look for elements with links
+          () => $('div, section, article, li, tr').filter((_, el) => {
+            const $el = $(el)
+            const hasLinks = $el.find('a').length > 0
+            const text = $el.text()
+            return hasLinks && text.includes('UFC')
+          }),
+
+          // Strategy 3: Look for table rows or list items with UFC content
+          () => $('tr, li, .row, .item').filter((_, el) => {
+            const text = $(el).text()
+            return text.includes('UFC')
+          }),
+
+          // Strategy 4: Very broad search - any element with UFC
+          () => $('*').filter((_, el) => {
+            const text = $(el).text()
+            const hasUfc = text.includes('UFC')
+            const hasLink = $(el).find('a').length > 0
+            const isReasonableSize = text.length > 10 && text.length < 500
+            return hasUfc && hasLink && isReasonableSize
+          })
+        ]
+
+        let alternativeElements: cheerio.Cheerio<any> | null = null
+
+        for (let i = 0; i < strategies.length; i++) {
+          const elements = strategies[i]()
+          console.log(`🔍 Strategy ${i + 1}: Found ${elements.length} elements`)
+
+          if (elements.length > 0 && elements.length < 50) { // Reasonable number
+            alternativeElements = elements
+            console.log(`✅ Using strategy ${i + 1} with ${elements.length} elements`)
+            break
+          } else if (elements.length >= 50) {
+            console.log(`⚠️ Strategy ${i + 1} returned too many elements (${elements.length}), trying next...`)
+          }
+        }
+
+        if (alternativeElements && alternativeElements.length > 0) {
           console.log('⚠️ Using alternative selector for Tapology events')
           this.parseAlternativeEvents($, alternativeElements, events, limit)
         } else {
-          console.warn('⚠️ Could not find event elements on Tapology page')
+          console.warn('⚠️ Could not find event elements on Tapology page with any strategy')
+
+          // Last resort: dump some page structure for debugging
+          console.log('📄 Page title:', $('title').text())
+          console.log('📄 Page has UFC mentions:', $('*:contains("UFC")').length)
+          console.log('📄 Total links on page:', $('a').length)
+
           return []
         }
       } else {
+        console.log(`✅ Standard selectors found ${eventElements.length} events`)
         this.parseStandardEvents($, eventElements, events, limit)
       }
 
@@ -351,20 +401,46 @@ export class TapologyUFCService {
 
   private parseAlternativeEvents($: cheerio.CheerioAPI, elements: cheerio.Cheerio<any>, events: TapologyUFCEvent[], limit: number) {
     // Implementation for alternative parsing when standard selectors don't work
+    console.log(`🔍 Alternative parsing: Found ${elements.length} elements to parse`)
+
     elements.each((index, element) => {
       if (events.length >= limit) return false
 
       const $element = $(element)
       const text = $element.text()
 
-      // Look for any links that might be event pages
-      const eventLinks = $element.find('a').filter((_, el) => {
+      // Debug: log the HTML structure we're working with
+      if (index < 3) { // Only log first 3 elements to avoid spam
+        console.log(`📝 Element ${index} HTML:`, $element.html()?.substring(0, 200))
+        console.log(`📝 Element ${index} text:`, text.substring(0, 100))
+      }
+
+      // Look for any links that might be event pages - be more aggressive
+      const allLinks = $element.find('a')
+      console.log(`🔗 Element ${index}: Found ${allLinks.length} total links`)
+
+      const eventLinks = allLinks.filter((_, el) => {
         const href = $(el).attr('href') || ''
         const linkText = $(el).text().toLowerCase()
-        return href.includes('/fightcenter/events/') ||
-               href.includes('/events/') ||
-               linkText.includes('ufc')
+
+        // More aggressive filtering
+        const hasEventHref = href.includes('/fightcenter/events/') ||
+                            href.includes('/events/') ||
+                            href.includes('/fightcenter/') ||
+                            href.match(/\/\d+\-/); // Pattern like /12345-event-name
+
+        const hasUfcText = linkText.includes('ufc') ||
+                          linkText.includes('fight night') ||
+                          text.toLowerCase().includes('ufc');
+
+        if (hasEventHref || hasUfcText) {
+          console.log(`🎯 Potential event link: href="${href}" text="${linkText.substring(0, 50)}"`)
+        }
+
+        return hasEventHref || hasUfcText
       })
+
+      console.log(`🎯 Element ${index}: Found ${eventLinks.length} potential event links`)
 
       eventLinks.each((_, linkEl) => {
         if (events.length >= limit) return false
@@ -373,8 +449,10 @@ export class TapologyUFCService {
         const href = $link.attr('href')
         const linkText = $link.text().trim()
 
+        console.log(`🔗 Processing link: href="${href}" text="${linkText}"`)
+
         // Basic parsing for UFC events mentioned in text
-        const ufcMatch = (linkText || text).match(/UFC\s+(\d+|Fight Night|on ESPN)/i)
+        const ufcMatch = (linkText || text).match(/UFC\s*(\d+|Fight Night|on ESPN|Fight Night\s*\d*)/i)
         if (ufcMatch && href) {
           const eventName = ufcMatch[0]
           const id = eventName.toLowerCase().replace(/\s+/g, '-')
@@ -385,6 +463,8 @@ export class TapologyUFCService {
           // Try to extract date from surrounding text
           const dateMatch = text.match(/\b\w+\s+\d{1,2},?\s+\d{4}\b/)
           const parsedDate = dateMatch ? this.parseTapologyDate(dateMatch[0]) : new Date().toISOString().split('T')[0]
+
+          console.log(`✅ Creating event: "${eventName}" with URL: ${tapologyUrl}`)
 
           // Only include future events
           if (new Date(parsedDate) > new Date()) {
@@ -397,15 +477,20 @@ export class TapologyUFCService {
               source: 'tapology',
               tapologyUrl
             })
+          } else {
+            console.log(`⏰ Skipping past event: "${eventName}" (${parsedDate})`)
           }
+        } else if (ufcMatch) {
+          console.log(`⚠️ Found UFC event "${ufcMatch[0]}" but no valid href: "${href}"`)
         }
       })
 
       // Fallback: if no links found, try text-based parsing but skip (since we need URLs)
       if (eventLinks.length === 0) {
-        const ufcMatch = text.match(/UFC\s+(\d+|Fight Night|on ESPN)/i)
+        const ufcMatch = text.match(/UFC\s*(\d+|Fight Night|on ESPN)/i)
         if (ufcMatch) {
           console.log(`⚠️ Found UFC event "${ufcMatch[0]}" but no link - skipping`)
+          console.log(`📝 Element HTML sample:`, $element.html()?.substring(0, 150))
         }
       }
     })
