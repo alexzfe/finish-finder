@@ -23,9 +23,10 @@ export default function DatabaseManagement() {
     setWipeResult(null)
 
     try {
-      // Use admin123 as default, but allow override via environment in production
-      const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123'
+      // Use hardcoded password for testing - in production this should be properly secured
+      const adminPassword = 'admin123'
 
+      console.log('🗑️ Starting database wipe request...')
       const response = await fetch('/api/admin/wipe-database', {
         method: 'POST',
         headers: {
@@ -38,6 +39,7 @@ export default function DatabaseManagement() {
       })
 
       const data = await response.json()
+      console.log('📝 Response received:', { status: response.status, data })
 
       if (!response.ok) {
         // Handle specific production safety error
@@ -51,6 +53,7 @@ export default function DatabaseManagement() {
       setShowConfirmDialog(false)
 
     } catch (err) {
+      console.error('❌ Database wipe error:', err)
       setError(err instanceof Error ? err.message : 'Unknown error occurred')
     } finally {
       setIsWiping(false)
