@@ -15,6 +15,7 @@ interface RealUFCEvent {
   mainFights?: string[]
   source: string
   wikipediaUrl?: string
+  tapologyUrl?: string
 }
 
 interface UFCEvent {
@@ -140,24 +141,17 @@ export class HybridUFCService {
     return currentDate
   }
 
-  // Search for real current UFC events using Sherdog listings
+  // Search for real current UFC events
   async searchRealUFCEvents(limit: number): Promise<RealUFCEvent[]> {
     this.sherdogBlocked = false
 
-    // Try multiple sources in order of preference: Wikipedia -> Sherdog -> Tapology
+    // Try multiple sources in order of preference: Tapology -> Wikipedia -> Sherdog
     const sherdogEnabled = process.env.SHERDOG_ENABLED !== 'false'
     const sources: Array<{ name: 'Wikipedia' | 'Sherdog' | 'Tapology'; fn: () => Promise<RealUFCEvent[]> }> = []
 
-    // Always try Wikipedia first
-    sources.push({ name: 'Wikipedia', fn: () => this.fetchWikipediaEvents(limit) })
-
-    // Optionally include Sherdog based on env flag
-    if (sherdogEnabled) {
-      sources.push({ name: 'Sherdog', fn: () => this.fetchSherdogEvents(limit) })
-    }
-
-    // Always include Tapology fallback
     sources.push({ name: 'Tapology', fn: () => this.fetchTapologyEvents(limit) })
+    sources.push({ name: 'Wikipedia', fn: () => this.fetchWikipediaEvents(limit) })
+    if (sherdogEnabled) sources.push({ name: 'Sherdog', fn: () => this.fetchSherdogEvents(limit) })
 
     for (const source of sources) {
       try {
@@ -233,7 +227,8 @@ export class HybridUFCService {
       venue: event.venue,
       location: event.location,
       status: 'upcoming' as const,
-      source: 'tapology'
+      source: 'tapology',
+      tapologyUrl: event.tapologyUrl
     }))
   }
 
@@ -562,22 +557,21 @@ export class HybridUFCService {
 
   // Multi-source fight details fetching with fallback
   private async fetchFightDetails(realEvent: RealUFCEvent): Promise<{ fights: Fight[], fighters: Fighter[] }> {
-    // Try sources with Wikipedia prioritized
-    const sources = []
+    const sources: Array<{ name: string; fn: () => Promise<{ fights: Fight[], fighters: Fighter[] }> }> = []
 
-    // Prioritize Wikipedia if we have a Wikipedia URL
-    if (realEvent.source === 'wikipedia' && realEvent.wikipediaUrl) {
+    // Prefer Tapology
+    sources.push({ name: 'Tapology', fn: () => this.fetchTapologyFightDetails(realEvent) })
+
+    // Wikipedia next if available
+    if (realEvent.wikipediaUrl) {
       const eventSlug = this.slugify(realEvent.name)
       sources.push({ name: 'Wikipedia', fn: () => this.fetchWikipediaFightDetails(realEvent.wikipediaUrl!, eventSlug, realEvent.name) })
     }
 
-    // Add Sherdog if event came from Sherdog (has detailUrl)
-    if (realEvent.detailUrl && realEvent.source === 'sherdog') {
+    // Sherdog if we have a detail URL
+    if (realEvent.detailUrl) {
       sources.push({ name: 'Sherdog', fn: () => this.fetchSherdogFightDetails(realEvent) })
     }
-
-    // Try Tapology as fallback
-    sources.push({ name: 'Tapology', fn: () => this.fetchTapologyFightDetails(realEvent) })
 
     for (const source of sources) {
       try {
@@ -696,10 +690,70 @@ export class HybridUFCService {
     return sorted.map((f, idx) => ({ ...f, fightNumber: idx + 1 }))
   }
 
-  // Placeholder for Tapology fight details (could be implemented later)
+  // Fetch fight details from Tapology (preferred)
   private async fetchTapologyFightDetails(realEvent: RealUFCEvent): Promise<{ fights: Fight[], fighters: Fighter[] }> {
-    // For now, return empty as Tapology fight details are more complex to parse
-    return { fights: [], fighters: [] }
+    try {
+      // Use provided Tapology URL if present; otherwise, try to find a matching event
+      let tapologyUrl = realEvent.tapologyUrl
+      if (!tapologyUrl) {
+        const match = await this.tapologyService.findMatchingEventByNameDate(realEvent.name, realEvent.date)
+        tapologyUrl = match?.tapologyUrl
+      }
+
+      if (!tapologyUrl) {
+        return { fights: [], fighters: [] }
+      }
+
+      const details = await this.tapologyService.getEventFights(tapologyUrl)
+      if (!details?.fights?.length) {
+        return { fights: [], fighters: [] }
+      }
+
+      // Convert Tapology fights to internal Fight format
+      const eventSlug = this.slugify(realEvent.name)
+      const fightsRaw: Fight[] = details.fights.map((tf, index) => ({
+        id: `${eventSlug}-match-${index + 1}`,
+        fighter1Id: this.generateFighterId(tf.fighter1Name),
+        fighter2Id: this.generateFighterId(tf.fighter2Name),
+        fighter1Name: tf.fighter1Name,
+        fighter2Name: tf.fighter2Name,
+        weightClass: tf.weightClass || 'Unknown',
+        cardPosition: this.normalizeCardPosition(tf.cardPosition),
+        scheduledRounds: tf.titleFight ? 5 : 3,
+        status: 'scheduled',
+        titleFight: tf.titleFight || false
+      }))
+
+      const fights = this.orderAndNumberFights(fightsRaw, realEvent.name)
+
+      // Convert Tapology fighters to internal Fighter format (records if available)
+      const fighters: Fighter[] = (details.fighters || []).map(fi => {
+        const rec = (fi.record || '').match(/(\d+)-(\d+)(?:-(\d+))?/) || []
+        const wins = Number(rec[1] || 0)
+        const losses = Number(rec[2] || 0)
+        const draws = Number(rec[3] || 0)
+        return {
+          id: this.generateFighterId(fi.name),
+          name: fi.name,
+          nickname: undefined,
+          record: fi.record || `${wins}-${losses}-${draws}`,
+          weightClass: 'Unknown',
+          age: 0,
+          height: 'Unknown',
+          reach: 'Unknown',
+          wins,
+          losses,
+          draws,
+          nationality: 'Unknown',
+          fightingStyle: 'unknown'
+        }
+      })
+
+      return { fights, fighters }
+    } catch (e) {
+      console.error('Tapology fight details failed:', (e as any)?.message || e)
+      return { fights: [], fighters: [] }
+    }
   }
 
   private generateFighterId(fighterName: string): string {
