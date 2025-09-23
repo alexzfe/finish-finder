@@ -6,9 +6,9 @@ on:
   workflow_dispatch:        # Allow manual trigger
     inputs:
       events_limit:
-        description: 'Number of events to process (default: 50)'
+        description: 'Number of events to process from Tapology (default: 10)'
         required: false
-        default: '50'
+        default: '10'
 
 jobs:
   run-scraper:
@@ -42,12 +42,16 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
 
+          # Tapology-first scraping configuration
+          SCRAPER_SOURCE: 'tapology'
+          SCRAPER_LIMIT: ${{ github.event.inputs.events_limit || '10' }}
+          TAPOLOGY_ENRICH_RECORDS: 'true'
+
           # Disable Sherdog in CI to avoid GH IP blocks
           SHERDOG_ENABLED: 'false'
-
-          # Enable Tapology win/loss record enrichment
-          TAPOLOGY_ENRICH_RECORDS: 'true'
         run: |
+          echo "🚀 Starting Tapology-first automated scraper..."
+          echo "📊 Processing up to ${{ github.event.inputs.events_limit || '10' }} events"
           node scripts/automated-scraper.js check
 
       - name: Check scraper health (if scraper failed)
