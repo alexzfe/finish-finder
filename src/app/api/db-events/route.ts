@@ -11,13 +11,13 @@ export async function GET() {
     if (!process.env.DATABASE_URL || !prisma) {
       throw new Error('DATABASE_URL not configured')
     }
-    // Get upcoming events with their fights and fighters
+    // Get events with their fights and fighters
     const events = await prisma.event.findMany({
       where: {
-        date: {
-          gte: new Date() // Only upcoming events
-        },
-        completed: false
+        // Show events that have fights (indicating they're not just placeholders)
+        fights: {
+          some: {}
+        }
       },
       include: {
         fights: {
