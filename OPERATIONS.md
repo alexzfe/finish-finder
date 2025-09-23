@@ -53,24 +53,24 @@ The GitHub Actions workflow runs on schedule with Sherdog disabled to avoid CI I
 - **✅ Operational**: Multi-source system running in GitHub Actions
 - **✅ Wikipedia Primary**: Stable, comprehensive fight cards
 - **✅ Records Enrichment**: Tapology provides fighter records in daily runs
+- **✅ AI Predictions**: Separate workflow generates predictions daily (78 fights updated in last run)
 - **🚫 Sherdog in CI**: Disabled due to IP blocking; can be used locally
-- Manual trigger: **AVAILABLE** via workflow_dispatch
+- Manual trigger: **AVAILABLE** via workflow_dispatch for both workflows
 - Local scraping: **FUNCTIONAL** (see Manual Scrape section below)
 
 ### Manual Scrape & Prediction Replay
-**✅ RECOMMENDED APPROACH WHILE AUTOMATION IS DISABLED**
+**✅ AVAILABLE FOR TESTING OR EMERGENCY USE**
 
 ```bash
 # Ensure DATABASE_URL + OPENAI_API_KEY are exported in your local environment
 export DATABASE_URL="your_postgres_connection_string"
 export OPENAI_API_KEY="your_openai_api_key"
 
-# Run scraper locally (avoids GitHub Actions IP blocking)
+# Run scraper locally (for testing or emergency use)
 node scripts/automated-scraper.js check
 
-# Generate predictions for events
-node scripts/generate-event-predictions.js            # newest event only
-node scripts/generate-predictions-only.js all         # full backfill
+# Generate predictions manually (normally handled by automated workflow)
+node scripts/ai-predictions-runner.js                 # all events missing predictions
 ```
 
 **Troubleshooting:**
