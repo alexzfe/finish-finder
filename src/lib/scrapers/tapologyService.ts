@@ -285,14 +285,28 @@ export class TapologyUFCService {
 
       const $event = $(element)
 
-      // Extract event link and name
-      const eventLink = $event.find('a[href*="/fightcenter/events/"]').first()
-      const eventName = eventLink.text().trim() || $event.find('.event_name, .promotion_event_name').text().trim()
+      // Extract event link and name - try multiple selectors
+      let eventLink = $event.find('a[href*="/fightcenter/events/"]').first()
+      if (!eventLink.length) {
+        eventLink = $event.find('a[href*="/events/"]').first()
+      }
+      if (!eventLink.length) {
+        eventLink = $event.find('a').filter((_, el) => {
+          const href = $(el).attr('href') || ''
+          const text = $(el).text().toLowerCase()
+          return text.includes('ufc') && (href.includes('/events/') || href.includes('/fightcenter/'))
+        }).first()
+      }
+
+      const eventName = eventLink.text().trim() ||
+                       $event.find('.event_name, .promotion_event_name').text().trim() ||
+                       $event.text().match(/UFC[^,\n]*/i)?.[0]?.trim()
 
       if (!eventName || !eventName.includes('UFC')) return
 
-      const tapologyUrl = eventLink.attr('href') ?
-        `https://www.tapology.com${eventLink.attr('href')}` : undefined
+      const href = eventLink.attr('href')
+      const tapologyUrl = href ?
+        (href.startsWith('http') ? href : `https://www.tapology.com${href}`) : undefined
 
       // Extract date
       const dateText = $event.find('.event_date, .promotion_event_date, .date').text().trim()
@@ -343,24 +357,56 @@ export class TapologyUFCService {
       const $element = $(element)
       const text = $element.text()
 
-      // Basic parsing for UFC events mentioned in text
-      const ufcMatch = text.match(/UFC\s+(\d+|Fight Night|on ESPN)/i)
-      if (ufcMatch) {
-        const eventName = ufcMatch[0]
-        const id = eventName.toLowerCase().replace(/\s+/g, '-')
+      // Look for any links that might be event pages
+      const eventLinks = $element.find('a').filter((_, el) => {
+        const href = $(el).attr('href') || ''
+        const linkText = $(el).text().toLowerCase()
+        return href.includes('/fightcenter/events/') ||
+               href.includes('/events/') ||
+               linkText.includes('ufc')
+      })
 
-        // Try to extract date from surrounding text
-        const dateMatch = text.match(/\b\w+\s+\d{1,2},?\s+\d{4}\b/)
-        const parsedDate = dateMatch ? this.parseTapologyDate(dateMatch[0]) : new Date().toISOString().split('T')[0]
+      eventLinks.each((_, linkEl) => {
+        if (events.length >= limit) return false
 
-        events.push({
-          id,
-          name: eventName,
-          date: parsedDate,
-          venue: 'TBA',
-          location: 'TBA',
-          source: 'tapology'
-        })
+        const $link = $(linkEl)
+        const href = $link.attr('href')
+        const linkText = $link.text().trim()
+
+        // Basic parsing for UFC events mentioned in text
+        const ufcMatch = (linkText || text).match(/UFC\s+(\d+|Fight Night|on ESPN)/i)
+        if (ufcMatch && href) {
+          const eventName = ufcMatch[0]
+          const id = eventName.toLowerCase().replace(/\s+/g, '-')
+
+          // Construct full Tapology URL
+          const tapologyUrl = href.startsWith('http') ? href : `https://www.tapology.com${href}`
+
+          // Try to extract date from surrounding text
+          const dateMatch = text.match(/\b\w+\s+\d{1,2},?\s+\d{4}\b/)
+          const parsedDate = dateMatch ? this.parseTapologyDate(dateMatch[0]) : new Date().toISOString().split('T')[0]
+
+          // Only include future events
+          if (new Date(parsedDate) > new Date()) {
+            events.push({
+              id,
+              name: eventName,
+              date: parsedDate,
+              venue: 'TBA',
+              location: 'TBA',
+              source: 'tapology',
+              tapologyUrl
+            })
+          }
+        }
+      })
+
+      // Fallback: if no links found, try text-based parsing but skip (since we need URLs)
+      if (eventLinks.length === 0) {
+        const ufcMatch = text.match(/UFC\s+(\d+|Fight Night|on ESPN)/i)
+        if (ufcMatch) {
+          console.log(`⚠️ Found UFC event "${ufcMatch[0]}" but no link - skipping`)
+        }
       }
     })
   }
