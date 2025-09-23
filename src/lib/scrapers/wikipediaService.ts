@@ -48,7 +48,13 @@ export class WikipediaUFCService {
   }
 
   private async humanLikeDelay(): Promise<void> {
-    const delay = 800 + Math.random() * 1200 // 0.8-2 seconds (shorter for Wikipedia)
+    // Fast mode for local tests/dev to reduce total scrape time
+    if (process.env.SCRAPER_FAST === 'true') {
+      const delayFast = 10 + Math.random() * 20 // 10–30ms
+      return new Promise(resolve => setTimeout(resolve, delayFast))
+    }
+
+    const delay = 800 + Math.random() * 1200 // 0.8-2 seconds (default)
     return new Promise(resolve => setTimeout(resolve, delay))
   }
 

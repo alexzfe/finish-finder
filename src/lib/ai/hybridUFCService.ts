@@ -115,6 +115,10 @@ export class HybridUFCService {
   private async humanLikeDelay(): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { humanDelay } = require('../scrapers/requestPolicy')
+    if (process.env.SCRAPER_FAST === 'true') {
+      await humanDelay(10, 30)
+      return
+    }
     const maxRps = Number(process.env.SHERDOG_MAX_RPS || 0)
     if (maxRps > 0) {
       const base = Math.max(1000 / maxRps, 1200)
@@ -1090,7 +1094,8 @@ export class HybridUFCService {
 
     // Enrich fighter records from Tapology if missing/unknown
     // Default to true locally, can be disabled by setting TAPOLOGY_ENRICH_RECORDS=false
-    const shouldEnrich = process.env.TAPOLOGY_ENRICH_RECORDS?.toLowerCase() !== 'false'
+    // Make enrichment opt-in to keep scrapes fast unless explicitly enabled
+    const shouldEnrich = process.env.TAPOLOGY_ENRICH_RECORDS?.toLowerCase() === 'true'
     if (shouldEnrich) {
       try {
         const missingRecords = fightDetails.fighters.filter(f => !f.record || /^0-0-0$/.test(f.record)).length
