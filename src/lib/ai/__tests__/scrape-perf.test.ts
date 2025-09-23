@@ -11,13 +11,11 @@ describe('Scraper perf smoke (Wikipedia-only, fast mode)', () => {
     process.env.TAPOLOGY_ENRICH_RECORDS = 'false'
     process.env.SHERDOG_ENABLED = 'false'
 
-    // Lazy import with ts-node interop
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require('ts-node').register({ project: './tsconfig.node.json' })
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { HybridUFCService } = require('../hybridUFCService.ts')
+    const mod = await import('../hybridUFCService.ts')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(mod as any).HybridUFCService.prototype.enrichFighterRecordsFromTapology = async () => null
 
-    const svc = new HybridUFCService(false)
+    const svc = new mod.HybridUFCService(false)
     const { events } = await svc.getUpcomingUFCEvents(1)
 
     const elapsed = Date.now() - start

@@ -1094,8 +1094,8 @@ export class HybridUFCService {
 
     // Enrich fighter records from Tapology if missing/unknown
     // Default to true locally, can be disabled by setting TAPOLOGY_ENRICH_RECORDS=false
-    // Make enrichment opt-in to keep scrapes fast unless explicitly enabled
-    const shouldEnrich = process.env.TAPOLOGY_ENRICH_RECORDS?.toLowerCase() === 'true'
+    // Always enrich fighter records from Tapology (product requirement)
+    const shouldEnrich = true
     if (shouldEnrich) {
       try {
         const missingRecords = fightDetails.fighters.filter(f => !f.record || /^0-0-0$/.test(f.record)).length
