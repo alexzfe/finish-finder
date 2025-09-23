@@ -77,6 +77,28 @@ npm run db:reset          # Reset schema and reseed (destructive)
 ```
 SQLite lives at `prisma/dev.db`. For Postgres deployments, set `DATABASE_URL` in `.env.local` or the host environment before running these commands.
 
+### Scraper E2E (Dev) – Wikipedia/Tapology → DB
+```bash
+# 1) Start Postgres (or point DATABASE_URL to an existing DB)
+docker compose -f docker-compose.dev.yml up -d postgres
+
+# 2) Apply schema
+npm run db:push
+
+# 3) Run scraper (idempotent; validates data before writes)
+npm run scraper:check
+
+# 4) Optional: generate AI predictions for upcoming events
+OPENAI_API_KEY=... node scripts/ai-predictions-runner.js
+
+# 5) Verify API contract remains stable
+curl -s http://localhost:3000/api/db-events | jq '.data.events[0]'
+```
+
+Troubleshooting:
+- If fights are not created, ensure the DB is reachable and migrations are applied. The scraper validates fights with `eventId` injected prior to persistence.
+- If you see duplicate fight ID conflicts from Wikipedia-only sources, update to latest code: Wikipedia fight IDs are event‑scoped to avoid collisions across events.
+
 ### Duplicate Event Management
 The system includes enhanced deduplication to handle multi-source data conflicts:
 ```bash

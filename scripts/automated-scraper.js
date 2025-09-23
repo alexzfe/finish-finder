@@ -387,11 +387,13 @@ class AutomatedScraper {
         })
 
         // Validate and prepare fight data for bulk creation
+        // Important: include eventId in validation to satisfy schema contracts
         const validatedFights = []
         for (const fight of event.fightCard) {
-          const validation = validateFightData(fight)
+          const fightWithEvent = { ...fight, eventId: createdEvent.id }
+          const validation = validateFightData(fightWithEvent)
           if (!validation.valid) {
-            await this.log(`⚠️ Skipping invalid fight data: ${validation.errors.join(', ')}`, 'warn')
+            await this.log(`⚠️ Skipping invalid fight data: ${validation.errors.join(', ')}`,'warn')
             continue
           }
           validatedFights.push(fight)
@@ -607,11 +609,11 @@ class AutomatedScraper {
               funFactor: fight.funFactor || undefined,
               finishProbability: fight.finishProbability || undefined,
               entertainmentReason: fight.entertainmentReason || undefined,
-              keyFactors: fight.keyFactors ? JSON.stringify(fight.keyFactors) : undefined,
+              keyFactors: fight.keyFactors !== undefined ? validateJsonField(fight.keyFactors, 'keyFactors') : undefined,
               fightPrediction: fight.fightPrediction || undefined,
               riskLevel: fight.riskLevel || undefined,
               predictedFunScore: fight.predictedFunScore || undefined,
-              funFactors: fight.funFactors ? JSON.stringify(fight.funFactors) : undefined,
+              funFactors: fight.funFactors !== undefined ? validateJsonField(fight.funFactors, 'funFactors') : undefined,
               aiDescription: fight.aiDescription || undefined,
               updatedAt: new Date()
             },
@@ -629,11 +631,11 @@ class AutomatedScraper {
               funFactor: fight.funFactor || 0,
               finishProbability: fight.finishProbability || 0,
               entertainmentReason: fight.entertainmentReason,
-              keyFactors: JSON.stringify(fight.keyFactors || []),
+              keyFactors: validateJsonField(fight.keyFactors || [], 'keyFactors'),
               fightPrediction: fight.fightPrediction,
               riskLevel: fight.riskLevel,
               predictedFunScore: fight.predictedFunScore || 0,
-              funFactors: JSON.stringify(fight.funFactors || []),
+              funFactors: validateJsonField(fight.funFactors || [], 'funFactors'),
               aiDescription: fight.aiDescription
             }
           }))

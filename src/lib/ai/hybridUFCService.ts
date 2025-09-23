@@ -563,7 +563,8 @@ export class HybridUFCService {
 
     // Prioritize Wikipedia if we have a Wikipedia URL
     if (realEvent.source === 'wikipedia' && realEvent.wikipediaUrl) {
-      sources.push({ name: 'Wikipedia', fn: () => this.fetchWikipediaFightDetails(realEvent.wikipediaUrl!) })
+      const eventSlug = this.slugify(realEvent.name)
+      sources.push({ name: 'Wikipedia', fn: () => this.fetchWikipediaFightDetails(realEvent.wikipediaUrl!, eventSlug) })
     }
 
     // Add Sherdog if event came from Sherdog (has detailUrl)
@@ -596,22 +597,24 @@ export class HybridUFCService {
   }
 
   // Fetch fight details from Wikipedia
-  private async fetchWikipediaFightDetails(wikipediaUrl: string): Promise<{ fights: Fight[], fighters: Fighter[] }> {
+  private async fetchWikipediaFightDetails(wikipediaUrl: string, eventSlug?: string): Promise<{ fights: Fight[], fighters: Fighter[] }> {
     const result = await this.wikipediaService.getEventDetails(wikipediaUrl)
 
     // Convert Wikipedia fights to internal Fight format
-    const fights: Fight[] = result.fights.map(wikiF => ({
-      id: wikiF.id,
+    const fightsRaw: Fight[] = result.fights.map(wikiF => ({
+      id: eventSlug ? `${eventSlug}-${wikiF.id}` : wikiF.id,
       fighter1Id: this.generateFighterId(wikiF.fighter1Name),
       fighter2Id: this.generateFighterId(wikiF.fighter2Name),
       fighter1Name: wikiF.fighter1Name,
       fighter2Name: wikiF.fighter2Name,
       weightClass: wikiF.weightClass,
-      cardPosition: wikiF.cardPosition as 'main' | 'preliminary' | 'early-preliminary',
+      cardPosition: this.normalizeCardPosition(wikiF.cardPosition),
       scheduledRounds: wikiF.titleFight ? 5 : 3, // Title fights are 5 rounds, regular fights are 3
       status: 'scheduled' as const,
       titleFight: wikiF.titleFight
     }))
+
+    const fights = this.orderAndNumberFights(fightsRaw)
 
     // Convert Wikipedia fighters to internal Fighter format
     const fighters: Fighter[] = result.fighters.map(wikiF => ({
@@ -631,6 +634,30 @@ export class HybridUFCService {
     }))
 
     return { fights, fighters }
+  }
+
+  private normalizeCardPosition(value: string): 'main' | 'preliminary' | 'early-preliminary' {
+    const v = (value || '').toLowerCase().replace(/\s+/g, ' ').trim()
+    if (v.includes('early') && v.includes('prelim')) return 'early-preliminary'
+    if (v.includes('main')) return 'main'
+    return 'preliminary'
+  }
+
+  private orderAndNumberFights(fights: Fight[]): Fight[] {
+    const positionRank: Record<string, number> = {
+      'main': 0,
+      'preliminary': 1,
+      'early-preliminary': 2
+    }
+    const sorted = [...fights].sort((a, b) => {
+      const ra = positionRank[a.cardPosition] ?? 99
+      const rb = positionRank[b.cardPosition] ?? 99
+      if (ra !== rb) return ra - rb
+      // Keep original relative order within same group
+      return 0
+    })
+
+    return sorted.map((f, idx) => ({ ...f, fightNumber: idx + 1 }))
   }
 
   // Placeholder for Tapology fight details (could be implemented later)

@@ -223,7 +223,11 @@ export class WikipediaUFCService {
           const location = locationCell.text().trim().replace(/\[\d+\]/g, '').trim()
 
           // Only process if we have the essential data and it's a future event
-          if (eventName && dateText && this.isFutureDate(dateText)) {
+          // Add additional filters to avoid random/irrelevant rows
+          const isUfcEventName = /^(ufc\s*\d+|ufc\s+fight\s+night|ufc\s+on\s+\w+)/i.test(eventName)
+          const isUfcLink = typeof href === 'string' && /\/wiki\/(UFC_|UFC_Fight_Night|UFC_on_)/.test(href)
+
+          if (eventName && dateText && this.isFutureDate(dateText) && (isUfcEventName || isUfcLink)) {
             // Generate ID from event name
             const id = eventName.toLowerCase()
               .replace(/[^a-z0-9]/g, '-')
