@@ -1,5 +1,6 @@
 import axios from 'axios'
 import * as cheerio from 'cheerio'
+import { toWeightClass } from '../utils/weight-class'
 
 interface TapologyUFCEvent {
   id: string
@@ -62,6 +63,88 @@ export class TapologyUFCService {
       .normalize('NFKD')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
+  }
+
+  private extractWeightClass($fight: cheerio.Cheerio<any>): string {
+    // Strategy 1: CSS selectors for weight class elements
+    const weightSelectors = [
+      '.weight_class', '.bout_weight', '.weight', '.division',
+      '.weight-class', '.bout-weight', '[class*="weight"]',
+      '.card-weight', '.fight-weight', '.bout-division'
+    ]
+
+    for (const selector of weightSelectors) {
+      const element = $fight.find(selector)
+      if (element.length > 0) {
+        const text = element.text().trim()
+        if (text && text.length > 2) {
+          return toWeightClass(text, 'unknown')
+        }
+      }
+    }
+
+    // Strategy 2: Look for ranking links that often contain weight class info
+    const rankingLinks = $fight.find('a[href*="/rankings/"]')
+    for (let i = 0; i < rankingLinks.length; i++) {
+      const link = rankingLinks.eq(i)
+      const href = link.attr('href') || ''
+      const linkText = link.text().trim()
+
+      // Extract from URL like "/rankings/ufc-heavyweight" or "/rankings/mma-bantamweight"
+      const hrefMatch = href.match(/rankings\/(?:ufc-|mma-)?(\w+)/)
+      if (hrefMatch && hrefMatch[1]) {
+        const candidate = hrefMatch[1]
+        const normalized = toWeightClass(candidate, 'unknown')
+        if (normalized !== 'unknown') return normalized
+      }
+
+      // Extract from link text
+      if (linkText.length > 2) {
+        const normalized = toWeightClass(linkText, 'unknown')
+        if (normalized !== 'unknown') return normalized
+      }
+    }
+
+    // Strategy 3: Text pattern matching for common weight class mentions
+    const fightText = $fight.text() || ''
+    const patterns = [
+      /(\w+weight)\s+(?:bout|fight|division|title)/i,
+      /(?:bout|fight|division)\s+(\w+weight)/i,
+      /(strawweight|flyweight|bantamweight|featherweight|lightweight|welterweight|middleweight|light\s*heavyweight|heavyweight)/i,
+      /(women'?s\s+(?:strawweight|flyweight|bantamweight|featherweight))/i,
+      /(\d+\s*lbs?\s+(?:bout|fight|division))/i
+    ]
+
+    for (const pattern of patterns) {
+      const match = fightText.match(pattern)
+      if (match && match[1]) {
+        const normalized = toWeightClass(match[1], 'unknown')
+        if (normalized !== 'unknown') return normalized
+      }
+    }
+
+    // Strategy 4: Pound-based mapping for catchweight/specific weight mentions
+    const poundMatches = fightText.match(/(\d+)\s*lbs?/gi)
+    if (poundMatches) {
+      for (const poundMatch of poundMatches) {
+        const weight = parseInt(poundMatch.match(/\d+/)?.[0] || '0')
+        if (weight > 0) {
+          // Map weight ranges to divisions (heavier classes take priority)
+          if (weight >= 206) return toWeightClass('heavyweight', 'unknown')
+          if (weight >= 186) return toWeightClass('light_heavyweight', 'unknown')
+          if (weight >= 171) return toWeightClass('middleweight', 'unknown')
+          if (weight >= 156) return toWeightClass('welterweight', 'unknown')
+          if (weight >= 146) return toWeightClass('lightweight', 'unknown')
+          if (weight >= 136) return toWeightClass('featherweight', 'unknown')
+          if (weight >= 126) return toWeightClass('bantamweight', 'unknown')
+          if (weight >= 116) return toWeightClass('flyweight', 'unknown')
+          if (weight >= 106) return toWeightClass('strawweight', 'unknown')
+        }
+      }
+    }
+
+    // Fallback to unknown
+    return toWeightClass('unknown', 'unknown')
   }
 
   private extractUfcNumber(name: string): string | null {
@@ -358,7 +441,7 @@ export class TapologyUFCService {
         const fighters = fighterNodes.map((_, el) => $(el).text().trim()).get().filter(Boolean)
 
         if (fighters.length >= 2) {
-          const weightClass = $fight.find('.weight_class, .bout_weight').text().trim() || 'Unknown'
+          const weightClass = this.extractWeightClass($fight)
           const titleFight = $fight.text().toLowerCase().includes('title') || $fight.find('.title').length > 0
 
           const fightId = `${fighters[0]}-vs-${fighters[1]}`.toLowerCase()

@@ -7,6 +7,7 @@ require('ts-node').register({
 
 // Import from TypeScript source
 const { HybridUFCService } = require('../src/lib/ai/hybridUFCService.ts')
+const { TapologyUFCService } = require('../src/lib/scrapers/tapologyService.ts')
 const { PrismaClient } = require('@prisma/client')
 const { validateJsonField, validateFightData, validateFighterData } = require('../src/lib/database/validation.ts')
 const fs = require('fs/promises')
@@ -1004,6 +1005,235 @@ class AutomatedScraper {
     }
   }
 
+  async ingestFromTapology(limit) {
+    const result = {
+      eventsProcessed: 0,
+      fightsProcessed: 0,
+      changesDetected: [],
+      errors: [],
+      executionTime: 0
+    }
+
+    try {
+      await this.log(`Tapology ingest start (limit=${limit})`)
+      const tapology = new TapologyUFCService()
+
+      // Fetch current upcoming events from DB for matching
+      const currentEvents = await this.prisma.event.findMany({
+        include: { fights: { include: { fighter1: true, fighter2: true } } },
+        where: { date: { gte: new Date() } },
+        orderBy: { date: 'asc' }
+      })
+
+      const listings = await tapology.getUpcomingEvents(limit)
+      await this.log(`Tapology returned ${listings.length} events`)
+
+      // Ensure events are sorted by date
+      listings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+      const slugify = (v) => (v || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^[-]+|[-]+$/g, '') || 'unknown'
+      const fid = (n) => (n || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^[-]+|[-]+$/g, '')
+
+      for (const listing of listings) {
+        // Require a Tapology event URL to proceed
+        if (!listing.tapologyUrl) {
+          await this.log(`Skipping listing without tapologyUrl: ${listing.name}`, 'warn')
+          continue
+        }
+        // Fetch fight details for listing
+        const details = await tapology.getEventFights(listing.tapologyUrl)
+
+        // Build scraped event object compatible with existing handlers
+        // Prefer event name from event page title when available
+        const effectiveName = (details.eventName && details.eventName.length > 5) ? details.eventName : listing.name
+        // Prefer ID derived from Tapology URL slug (e.g., 129311-ufc-320 -> ufc-320)
+        let eventId = slugify(effectiveName)
+        try {
+          const seg = (new URL(listing.tapologyUrl)).pathname.split('/').pop() || ''
+          const num = seg.match(/^(\d+)/)?.[1]
+          const namePart = seg.replace(/^\d+-/, '')
+          // Compose id with numeric tapology id for uniqueness (e.g., ufc-fight-night-132921)
+          if (namePart && num) eventId = `${slugify(namePart)}-${num}`
+          else if (num) eventId = `tap-${num}`
+          else if (listing.date) eventId = `${slugify(listing.name)}-${String(listing.date)}`
+        } catch {}
+        const fightCard = (details.fights || []).map((f, i) => ({
+          id: `${eventId}-match-${i + 1}`,
+          cardPosition: f.cardPosition || 'preliminary',
+          fighter1Name: f.fighter1Name,
+          fighter2Name: f.fighter2Name,
+          weightClass: f.weightClass || 'Unknown',
+          titleFight: f.titleFight || false,
+          mainEvent: i === 0,
+          scheduledRounds: f.scheduledRounds || 3,
+          fightNumber: i + 1
+        }))
+
+        const scraped = {
+          id: eventId,
+          name: effectiveName,
+          date: listing.date,
+          location: listing.location || '',
+          venue: listing.venue || '',
+          status: 'upcoming',
+          fightCard,
+          tapologyUrl: listing.tapologyUrl
+        }
+
+        // Find existing event by name similarity or tapologyUrl
+        const existing = currentEvents.find(e =>
+          e.tapologyUrl === listing.tapologyUrl ||
+          (e.name.toLowerCase().includes(effectiveName.toLowerCase().substring(0, 10)) &&
+           Math.abs(new Date(e.date) - new Date(listing.date)) < 7 * 24 * 60 * 60 * 1000)
+        )
+
+        if (existing) {
+          // Update existing event
+          await this.log(`Updating existing event: ${existing.name}`)
+
+          // Update event fields if changed
+          const updates = {}
+          if (existing.name !== effectiveName) updates.name = effectiveName
+          if (existing.location !== (listing.location || '')) updates.location = listing.location || ''
+          if (existing.venue !== (listing.venue || '')) updates.venue = listing.venue || ''
+          if (!existing.tapologyUrl && listing.tapologyUrl) updates.tapologyUrl = listing.tapologyUrl
+
+          if (Object.keys(updates).length > 0) {
+            await this.prisma.event.update({
+              where: { id: existing.id },
+              data: updates
+            })
+            result.changesDetected.push({
+              type: 'event_updated',
+              eventName: existing.name,
+              changes: Object.keys(updates)
+            })
+          }
+
+          // Process fights for existing event
+          for (const scrapedFight of fightCard) {
+            const existingFight = existing.fights.find(f =>
+              f.fighter1.name === scrapedFight.fighter1Name &&
+              f.fighter2.name === scrapedFight.fighter2Name
+            )
+
+            if (!existingFight) {
+              // Create new fight
+              await this.log(`Creating new fight: ${scrapedFight.fighter1Name} vs ${scrapedFight.fighter2Name}`)
+
+              // Create fighters if they don't exist
+              const fighter1 = await this.prisma.fighter.upsert({
+                where: { name: scrapedFight.fighter1Name },
+                update: {},
+                create: {
+                  name: scrapedFight.fighter1Name,
+                  weightClass: scrapedFight.weightClass
+                }
+              })
+
+              const fighter2 = await this.prisma.fighter.upsert({
+                where: { name: scrapedFight.fighter2Name },
+                update: {},
+                create: {
+                  name: scrapedFight.fighter2Name,
+                  weightClass: scrapedFight.weightClass
+                }
+              })
+
+              await this.prisma.fight.create({
+                data: {
+                  eventId: existing.id,
+                  fighter1Id: fighter1.id,
+                  fighter2Id: fighter2.id,
+                  weightClass: scrapedFight.weightClass,
+                  cardPosition: scrapedFight.cardPosition,
+                  titleFight: scrapedFight.titleFight,
+                  mainEvent: scrapedFight.mainEvent,
+                  scheduledRounds: scrapedFight.scheduledRounds,
+                  fightNumber: scrapedFight.fightNumber
+                }
+              })
+
+              result.fightsProcessed++
+              result.changesDetected.push({
+                type: 'fight_created',
+                eventName: existing.name,
+                fightName: `${scrapedFight.fighter1Name} vs ${scrapedFight.fighter2Name}`
+              })
+            }
+          }
+        } else {
+          // Create new event
+          await this.log(`Creating new event: ${effectiveName}`)
+
+          const newEvent = await this.prisma.event.create({
+            data: {
+              id: eventId,
+              name: effectiveName,
+              date: new Date(listing.date),
+              location: listing.location || '',
+              venue: listing.venue || '',
+              status: 'upcoming',
+              tapologyUrl: listing.tapologyUrl
+            }
+          })
+
+          // Create fights for new event
+          for (const scrapedFight of fightCard) {
+            // Create fighters if they don't exist
+            const fighter1 = await this.prisma.fighter.upsert({
+              where: { name: scrapedFight.fighter1Name },
+              update: {},
+              create: {
+                name: scrapedFight.fighter1Name,
+                weightClass: scrapedFight.weightClass
+              }
+            })
+
+            const fighter2 = await this.prisma.fighter.upsert({
+              where: { name: scrapedFight.fighter2Name },
+              update: {},
+              create: {
+                name: scrapedFight.fighter2Name,
+                weightClass: scrapedFight.weightClass
+              }
+            })
+
+            await this.prisma.fight.create({
+              data: {
+                eventId: newEvent.id,
+                fighter1Id: fighter1.id,
+                fighter2Id: fighter2.id,
+                weightClass: scrapedFight.weightClass,
+                cardPosition: scrapedFight.cardPosition,
+                titleFight: scrapedFight.titleFight,
+                mainEvent: scrapedFight.mainEvent,
+                scheduledRounds: scrapedFight.scheduledRounds,
+                fightNumber: scrapedFight.fightNumber
+              }
+            })
+
+            result.fightsProcessed++
+          }
+
+          result.eventsProcessed++
+          result.changesDetected.push({
+            type: 'event_created',
+            eventName: effectiveName
+          })
+        }
+      }
+
+      await this.log(`Tapology ingest completed: ${result.eventsProcessed} events, ${result.fightsProcessed} fights`)
+      return result
+
+    } catch (error) {
+      await this.log(`Tapology ingest failed: ${error.message}`, 'error')
+      result.errors.push(error.message)
+      return result
+    }
+  }
+
   async cleanup() {
     await this.prisma.$disconnect()
     await this.log('AutomatedScraper cleanup completed')
@@ -1022,23 +1252,47 @@ async function main() {
 
       switch (command) {
         case 'check':
-          const result = await scraper.checkForEventUpdates()
-          console.log('\nScraping Results:')
-          console.log(`Events processed: ${result.eventsProcessed}`)
-          console.log(`Fights processed: ${result.fightsProcessed}`)
-          console.log(`Changes detected: ${result.changesDetected.length}`)
-          console.log(`Execution time: ${result.executionTime}ms`)
+          if ((process.env.SCRAPER_SOURCE || 'tapology').toLowerCase() === 'tapology') {
+            const limitArg = Number(process.env.SCRAPER_LIMIT || 3)
+            const limit = Number.isFinite(limitArg) && limitArg > 0 ? Math.floor(limitArg) : 3
+            const result = await scraper.ingestFromTapology(limit)
+            console.log('\nTapology Ingest Results:')
+            console.log(`Events processed: ${result.eventsProcessed}`)
+            console.log(`Fights processed: ${result.fightsProcessed}`)
+            console.log(`Changes detected: ${result.changesDetected.length}`)
+            console.log(`Execution time: ${result.executionTime}ms`)
 
-          if (result.errors.length > 0) {
-            console.log('\nErrors:')
-            result.errors.forEach(error => console.log(`- ${error}`))
-          }
+            if (result.errors.length > 0) {
+              console.log('\nErrors:')
+              result.errors.forEach(error => console.log(`- ${error}`))
+            }
 
-          if (result.changesDetected.length > 0) {
-            console.log('\nChanges detected:')
-            result.changesDetected.forEach(change => {
-              console.log(`- ${change.type}: ${change.eventName}`)
-            })
+            if (result.changesDetected.length > 0) {
+              console.log('\nChanges detected:')
+              result.changesDetected.forEach(change => {
+                console.log(`- ${change.type}: ${change.eventName}`)
+                if (change.fightName) console.log(`  Fight: ${change.fightName}`)
+              })
+            }
+          } else {
+            const result = await scraper.checkForEventUpdates()
+            console.log('\nScraping Results:')
+            console.log(`Events processed: ${result.eventsProcessed}`)
+            console.log(`Fights processed: ${result.fightsProcessed}`)
+            console.log(`Changes detected: ${result.changesDetected.length}`)
+            console.log(`Execution time: ${result.executionTime}ms`)
+
+            if (result.errors.length > 0) {
+              console.log('\nErrors:')
+              result.errors.forEach(error => console.log(`- ${error}`))
+            }
+
+            if (result.changesDetected.length > 0) {
+              console.log('\nChanges detected:')
+              result.changesDetected.forEach(change => {
+                console.log(`- ${change.type}: ${change.eventName}`)
+              })
+            }
           }
           break
 
