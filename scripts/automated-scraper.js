@@ -586,15 +586,36 @@ class AutomatedScraper {
 
       // Handle fight card changes if needed
       if (changes.fightCard) {
-        // For now, we'll recreate all fights for simplicity
-        // In production, you might want more sophisticated merging
-        await this.prisma.fight.deleteMany({
-          where: { eventId: existing.id }
-        })
-
-        for (const fight of scraped.fightCard) {
-          await this.prisma.fight.create({
-            data: {
+        // Use upsert to handle both new and existing fights safely
+        // Process fights in batches to avoid connection pool exhaustion
+        const batchSize = 5
+        for (let i = 0; i < scraped.fightCard.length; i += batchSize) {
+          const fightBatch = scraped.fightCard.slice(i, i + batchSize)
+          const batchOps = fightBatch.map(fight => this.prisma.fight.upsert({
+            where: { id: fight.id },
+            update: {
+              eventId: existing.id,
+              fighter1Id: fight.fighter1Id,
+              fighter2Id: fight.fighter2Id,
+              weightClass: fight.weightClass,
+              titleFight: fight.titleFight || false,
+              mainEvent: fight.mainEvent || false,
+              cardPosition: fight.cardPosition || 'preliminary',
+              scheduledRounds: fight.scheduledRounds || 3,
+              fightNumber: fight.fightNumber,
+              // Preserve existing AI predictions during updates
+              funFactor: fight.funFactor || undefined,
+              finishProbability: fight.finishProbability || undefined,
+              entertainmentReason: fight.entertainmentReason || undefined,
+              keyFactors: fight.keyFactors ? JSON.stringify(fight.keyFactors) : undefined,
+              fightPrediction: fight.fightPrediction || undefined,
+              riskLevel: fight.riskLevel || undefined,
+              predictedFunScore: fight.predictedFunScore || undefined,
+              funFactors: fight.funFactors ? JSON.stringify(fight.funFactors) : undefined,
+              aiDescription: fight.aiDescription || undefined,
+              updatedAt: new Date()
+            },
+            create: {
               id: fight.id,
               eventId: existing.id,
               fighter1Id: fight.fighter1Id,
@@ -615,8 +636,18 @@ class AutomatedScraper {
               funFactors: JSON.stringify(fight.funFactors || []),
               aiDescription: fight.aiDescription
             }
-          })
+          }))
+
+          // Execute batch operations
+          await Promise.all(batchOps)
+
+          // Small delay between batches to prevent overwhelming the connection pool
+          if (i + batchSize < scraped.fightCard.length) {
+            await new Promise(resolve => setTimeout(resolve, 100))
+          }
         }
+
+        await this.log(`✅ Processed ${scraped.fightCard.length} fights in batches`)
       }
 
     } catch (error) {
