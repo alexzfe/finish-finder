@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import PerformanceDashboard from '@/components/admin/PerformanceDashboard'
+import DatabaseManagement from '@/components/admin/DatabaseManagement'
 
 /**
  * Admin Dashboard Page
@@ -83,8 +84,9 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto">
+      <main className="max-w-7xl mx-auto p-6 space-y-6">
         <PerformanceDashboard />
+        <DatabaseManagement />
       </main>
     </div>
   )
