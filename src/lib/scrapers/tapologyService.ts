@@ -427,7 +427,7 @@ export class TapologyUFCService {
         const hasEventHref = href.includes('/fightcenter/events/') ||
                             href.includes('/events/') ||
                             href.includes('/fightcenter/') ||
-                            href.match(/\/\d+\-/); // Pattern like /12345-event-name
+                            !!href.match(/\/\d+\-/); // Pattern like /12345-event-name
 
         const hasUfcText = linkText.includes('ufc') ||
                           linkText.includes('fight night') ||
