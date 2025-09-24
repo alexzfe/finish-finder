@@ -216,3 +216,348 @@ error: Environment variable not found: DATABASE_URL.
 
 Validation Error Count: 1
 [2025-09-22T23:09:11.778Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T05:20:44.541Z] INFO: AutomatedScraper initialized
+[2025-09-24T05:20:44.562Z] INFO: Tapology ingest start (limit=2)
+[2025-09-24T05:20:48.309Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.findMany()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1022:53
+
+  1019 const tapology = new TapologyUFCService()
+  1020 
+  1021 // Fetch current upcoming events from DB for matching
+→ 1022 const currentEvents = await this.prisma.event.findMany(
+The table `public.events` does not exist in the current database.
+[2025-09-24T05:20:48.312Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T05:23:19.498Z] INFO: AutomatedScraper initialized
+[2025-09-24T05:23:19.500Z] INFO: Tapology ingest start (limit=2)
+[2025-09-24T05:23:26.598Z] INFO: Tapology returned 0 events
+[2025-09-24T05:23:26.608Z] INFO: Tapology ingest completed: 0 events, 0 fights
+[2025-09-24T05:23:26.610Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T05:30:19.848Z] INFO: AutomatedScraper initialized
+[2025-09-24T05:30:19.850Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T05:30:27.855Z] INFO: Tapology returned 1 events
+[2025-09-24T05:30:30.085Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T05:30:30.104Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.create()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1169:52
+
+  1166 // Create new event
+  1167 await this.log(`Creating new event: ${effectiveName}`)
+  1168 
+→ 1169 const newEvent = await this.prisma.event.create({
+         data: {
+           id: "ufc-fight-night-132921",
+           name: "UFC Fight Night",
+           date: new Date("2025-10-24T00:00:00.000Z"),
+           location: "TBA",
+           venue: "TBA",
+           status: "upcoming",
+           ~~~~~~
+           tapologyUrl: "https://www.tapology.com/fightcenter/events/132921-ufc-fight-night",
+       ?   completed?: Boolean,
+       ?   createdAt?: DateTime,
+       ?   updatedAt?: DateTime,
+       ?   fights?: FightCreateNestedManyWithoutEventInput,
+       ?   predictionUsage?: PredictionUsageCreateNestedManyWithoutEventInput
+         }
+       })
+
+Unknown argument `status`. Available options are marked with ?.
+[2025-09-24T05:30:30.106Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T05:32:53.470Z] INFO: AutomatedScraper initialized
+[2025-09-24T05:32:53.472Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T05:33:00.442Z] INFO: Tapology returned 1 events
+[2025-09-24T05:33:03.365Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T05:33:04.065Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.fighter.upsert()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1183:56
+
+  1180 // Create fights for new event
+  1181 for (const scrapedFight of fightCard) {
+  1182   // Create fighters if they don't exist
+→ 1183   const fighter1 = await this.prisma.fighter.upsert({
+           where: {
+             name: "Dawg Royval",
+         ?   id?: String,
+         ?   AND?: FighterWhereInput | FighterWhereInput[],
+         ?   OR?: FighterWhereInput[],
+         ?   NOT?: FighterWhereInput | FighterWhereInput[],
+         ?   nickname?: StringNullableFilter | String | Null,
+         ?   wins?: IntFilter | Int,
+         ?   losses?: IntFilter | Int,
+         ?   draws?: IntFilter | Int,
+         ?   weightClass?: StringFilter | String,
+         ?   imageUrl?: StringNullableFilter | String | Null,
+         ?   record?: StringNullableFilter | String | Null,
+         ?   height?: StringNullableFilter | String | Null,
+         ?   reach?: StringNullableFilter | String | Null,
+         ?   age?: IntNullableFilter | Int | Null,
+         ?   nationality?: StringNullableFilter | String | Null,
+         ?   winsByKO?: IntFilter | Int,
+         ?   winsBySubmission?: IntFilter | Int,
+         ?   winsByDecision?: IntFilter | Int,
+         ?   currentStreak?: StringNullableFilter | String | Null,
+         ?   ranking?: IntNullableFilter | Int | Null,
+         ?   finishRate?: FloatFilter | Float,
+         ?   koPercentage?: FloatFilter | Float,
+         ?   submissionPercentage?: FloatFilter | Float,
+         ?   averageFightTime?: IntFilter | Int,
+         ?   significantStrikesPerMinute?: FloatFilter | Float,
+         ?   takedownAccuracy?: FloatFilter | Float,
+         ?   socialFollowers?: IntFilter | Int,
+         ?   recentBuzzScore?: FloatFilter | Float,
+         ?   fanFavorite?: BoolFilter | Boolean,
+         ?   funScore?: FloatFilter | Float,
+         ?   fightingStyles?: StringFilter | String,
+         ?   lastFightDate?: DateTimeNullableFilter | DateTime | Null,
+         ?   createdAt?: DateTimeFilter | DateTime,
+         ?   updatedAt?: DateTimeFilter | DateTime,
+         ?   fighter1Fights?: FightListRelationFilter,
+         ?   fighter2Fights?: FightListRelationFilter
+           },
+           update: {},
+           create: {
+             name: "Dawg Royval",
+             weightClass: "unknown"
+           }
+         })
+
+Argument `where` of type FighterWhereUniqueInput needs at least one of `id` arguments. Available options are marked with ?.
+[2025-09-24T05:33:04.066Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T05:33:37.240Z] INFO: AutomatedScraper initialized
+[2025-09-24T05:33:37.242Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T05:33:42.378Z] INFO: Tapology returned 1 events
+[2025-09-24T05:33:45.035Z] INFO: Updating existing event: UFC Fight Night
+[2025-09-24T05:33:45.057Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.update()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1102:37
+
+  1099 if (!existing.tapologyUrl && listing.tapologyUrl) updates.tapologyUrl = listing.tapologyUrl
+  1100 
+  1101 if (Object.keys(updates).length > 0) {
+→ 1102   await this.prisma.event.update({
+           where: {
+             id: "ufc-fight-night-132921"
+           },
+           data: {
+             tapologyUrl: "https://www.tapology.com/fightcenter/events/132921-ufc-fight-night",
+             ~~~~~~~~~~~
+         ?   id?: String | StringFieldUpdateOperationsInput,
+         ?   name?: String | StringFieldUpdateOperationsInput,
+         ?   date?: DateTime | DateTimeFieldUpdateOperationsInput,
+         ?   location?: String | StringFieldUpdateOperationsInput,
+         ?   venue?: String | StringFieldUpdateOperationsInput,
+         ?   completed?: Boolean | BoolFieldUpdateOperationsInput,
+         ?   createdAt?: DateTime | DateTimeFieldUpdateOperationsInput,
+         ?   updatedAt?: DateTime | DateTimeFieldUpdateOperationsInput,
+         ?   fights?: FightUpdateManyWithoutEventNestedInput,
+         ?   predictionUsage?: PredictionUsageUpdateManyWithoutEventNestedInput
+           }
+         })
+
+Unknown argument `tapologyUrl`. Available options are marked with ?.
+[2025-09-24T05:33:45.058Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T05:35:22.324Z] INFO: AutomatedScraper initialized
+[2025-09-24T05:35:22.326Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T05:35:30.600Z] INFO: Tapology returned 1 events
+[2025-09-24T05:35:32.575Z] INFO: Updating existing event: UFC Fight Night
+[2025-09-24T05:35:32.576Z] INFO: Creating new fight: Dawg Royval vs Manel Starboy
+[2025-09-24T05:35:32.592Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.fighter.upsert()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1124:58
+
+  1121 await this.log(`Creating new fight: ${scrapedFight.fighter1Name} vs ${scrapedFight.fighter2Name}`)
+  1122 
+  1123 // Create fighters if they don't exist
+→ 1124 const fighter1 = await this.prisma.fighter.upsert({
+         where: {
+           name: "Dawg Royval",
+       ?   id?: String,
+       ?   AND?: FighterWhereInput | FighterWhereInput[],
+       ?   OR?: FighterWhereInput[],
+       ?   NOT?: FighterWhereInput | FighterWhereInput[],
+       ?   nickname?: StringNullableFilter | String | Null,
+       ?   wins?: IntFilter | Int,
+       ?   losses?: IntFilter | Int,
+       ?   draws?: IntFilter | Int,
+       ?   weightClass?: StringFilter | String,
+       ?   imageUrl?: StringNullableFilter | String | Null,
+       ?   record?: StringNullableFilter | String | Null,
+       ?   height?: StringNullableFilter | String | Null,
+       ?   reach?: StringNullableFilter | String | Null,
+       ?   age?: IntNullableFilter | Int | Null,
+       ?   nationality?: StringNullableFilter | String | Null,
+       ?   winsByKO?: IntFilter | Int,
+       ?   winsBySubmission?: IntFilter | Int,
+       ?   winsByDecision?: IntFilter | Int,
+       ?   currentStreak?: StringNullableFilter | String | Null,
+       ?   ranking?: IntNullableFilter | Int | Null,
+       ?   finishRate?: FloatFilter | Float,
+       ?   koPercentage?: FloatFilter | Float,
+       ?   submissionPercentage?: FloatFilter | Float,
+       ?   averageFightTime?: IntFilter | Int,
+       ?   significantStrikesPerMinute?: FloatFilter | Float,
+       ?   takedownAccuracy?: FloatFilter | Float,
+       ?   socialFollowers?: IntFilter | Int,
+       ?   recentBuzzScore?: FloatFilter | Float,
+       ?   fanFavorite?: BoolFilter | Boolean,
+       ?   funScore?: FloatFilter | Float,
+       ?   fightingStyles?: StringFilter | String,
+       ?   lastFightDate?: DateTimeNullableFilter | DateTime | Null,
+       ?   createdAt?: DateTimeFilter | DateTime,
+       ?   updatedAt?: DateTimeFilter | DateTime,
+       ?   fighter1Fights?: FightListRelationFilter,
+       ?   fighter2Fights?: FightListRelationFilter
+         },
+         update: {},
+         create: {
+           name: "Dawg Royval",
+           weightClass: "unknown"
+         }
+       })
+
+Argument `where` of type FighterWhereUniqueInput needs at least one of `id` arguments. Available options are marked with ?.
+[2025-09-24T05:35:32.594Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T05:37:32.217Z] INFO: AutomatedScraper initialized
+[2025-09-24T05:37:32.219Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T05:37:39.144Z] INFO: Tapology returned 1 events
+[2025-09-24T05:37:41.125Z] INFO: Updating existing event: UFC Fight Night
+[2025-09-24T05:37:41.125Z] INFO: Creating new fight: Dawg Royval vs Manel Starboy
+[2025-09-24T05:37:44.660Z] INFO: Creating new fight: Iasmin Lucindo vs Gillian The
+[2025-09-24T05:37:48.215Z] INFO: Creating new fight: Tereza Bleda vs Jamey Lyn
+[2025-09-24T05:37:51.899Z] INFO: Creating new fight: Cesinha Almeida vs Cezary Oleksiejczuk
+[2025-09-24T05:37:55.411Z] INFO: Creating new fight: Aj Frye vs Guilherme Kong
+[2025-09-24T05:37:59.116Z] INFO: Tapology ingest completed: 0 events, 5 fights
+[2025-09-24T05:37:59.118Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T05:42:11.743Z] INFO: AutomatedScraper initialized
+[2025-09-24T05:42:11.745Z] INFO: Tapology ingest start (limit=10)
+[2025-09-24T05:42:19.152Z] INFO: Tapology returned 10 events
+[2025-09-24T05:42:21.666Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T05:42:44.441Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T05:42:45.253Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.create()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1174:52
+
+  1171 // Create new event
+  1172 await this.log(`Creating new event: ${effectiveName}`)
+  1173 
+→ 1174 const newEvent = await this.prisma.event.create(
+Unique constraint failed on the fields: (`id`)
+[2025-09-24T05:42:45.255Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T05:43:39.340Z] INFO: AutomatedScraper initialized
+[2025-09-24T05:43:39.342Z] INFO: Tapology ingest start (limit=20)
+[2025-09-24T05:43:47.447Z] INFO: Tapology returned 20 events
+[2025-09-24T05:43:49.230Z] INFO: Updating existing event: UFC Fight Night
+[2025-09-24T05:43:51.877Z] INFO: Creating new event: UFC 323
+[2025-09-24T05:44:02.857Z] INFO: Updating existing event: UFC Fight Night
+[2025-09-24T05:44:02.858Z] INFO: Creating new fight: Alex Perez vs Asu Zulfikar
+[2025-09-24T05:44:06.272Z] INFO: Creating new fight: Bear Spivac vs Shamil Gaziev
+[2025-09-24T05:44:09.786Z] INFO: Creating new fight: Hunter Yakhyaev vs Raffael The
+[2025-09-24T05:44:13.187Z] INFO: Creating new fight: Boy Lima vs Daniel Soncora
+[2025-09-24T05:44:16.652Z] INFO: Creating new fight: Bujdzilla Bujlo vs Jose Montanha
+[2025-09-24T05:44:22.429Z] INFO: Creating new event: UFC 322
+[2025-09-24T05:44:56.542Z] INFO: Updating existing event: UFC Fight Night
+[2025-09-24T05:44:56.542Z] INFO: Creating new fight: Bueno Silva vs Jacqueline The
+[2025-09-24T05:45:00.084Z] INFO: Creating new fight: Austin Bashi vs Jamall Pretty
+[2025-09-24T05:45:03.454Z] INFO: Creating new fight: Darya Zheleznyakova vs Luana Santos
+[2025-09-24T05:45:10.333Z] INFO: Updating existing event: UFC Fight Night
+[2025-09-24T05:45:10.334Z] INFO: Creating new fight: Machine Garcia vs David Silent
+[2025-09-24T05:45:13.628Z] INFO: Creating new fight: Cortes Acosta vs Ante Walking
+[2025-09-24T05:45:16.979Z] INFO: Creating new fight: Fenomeno Vieira vs Norma The
+[2025-09-24T05:45:20.256Z] INFO: Creating new fight: Choppa Dulgarian vs Yadier The
+[2025-09-24T05:45:23.539Z] INFO: Creating new fight: Twilight Cuamba vs Chang Ho
+[2025-09-24T05:45:26.800Z] INFO: Creating new fight: Kevin Christian vs Billy Elekana
+[2025-09-24T05:45:30.189Z] INFO: Creating new fight: Osso Nascimento vs Rafael Macapa
+[2025-09-24T05:45:33.685Z] INFO: Creating new fight: Jaw Johnson vs Nick Blue
+[2025-09-24T05:45:37.066Z] INFO: Creating new fight: Prince Rowe vs The Korean
+[2025-09-24T06:01:54.048Z] INFO: AutomatedScraper initialized
+[2025-09-24T06:01:54.050Z] INFO: Tapology ingest start (limit=10)
+[2025-09-24T06:02:02.842Z] INFO: Tapology returned 10 events
+[2025-09-24T06:02:04.800Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T06:02:27.505Z] INFO: Creating new event: UFC 323
+[2025-09-24T06:02:39.565Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T06:03:01.847Z] INFO: Creating new event: UFC 322
+[2025-09-24T06:03:40.065Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T18:39:22.849Z] INFO: AutomatedScraper initialized
+[2025-09-24T18:39:22.851Z] INFO: Tapology ingest start (limit=10)
+[2025-09-24T18:39:26.841Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.findMany()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1022:53
+
+  1019 const tapology = new TapologyUFCService()
+  1020 
+  1021 // Fetch current upcoming events from DB for matching
+→ 1022 const currentEvents = await this.prisma.event.findMany(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42P05", message: "prepared statement \"s0\" already exists", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+[2025-09-24T18:39:26.841Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T18:41:16.384Z] INFO: AutomatedScraper initialized
+[2025-09-24T18:41:16.385Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T18:41:19.466Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.findMany()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1022:53
+
+  1019 const tapology = new TapologyUFCService()
+  1020 
+  1021 // Fetch current upcoming events from DB for matching
+→ 1022 const currentEvents = await this.prisma.event.findMany(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42P05", message: "prepared statement \"s0\" already exists", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+[2025-09-24T18:41:19.466Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T18:44:23.367Z] INFO: AutomatedScraper initialized
+[2025-09-24T18:44:23.369Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T18:44:25.434Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.findMany()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1022:53
+
+  1019 const tapology = new TapologyUFCService()
+  1020 
+  1021 // Fetch current upcoming events from DB for matching
+→ 1022 const currentEvents = await this.prisma.event.findMany(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42P05", message: "prepared statement \"s0\" already exists", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+[2025-09-24T18:44:25.435Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T18:45:05.980Z] INFO: AutomatedScraper initialized
+[2025-09-24T18:45:05.981Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T18:45:08.172Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.findMany()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1022:53
+
+  1019 const tapology = new TapologyUFCService()
+  1020 
+  1021 // Fetch current upcoming events from DB for matching
+→ 1022 const currentEvents = await this.prisma.event.findMany(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42P05", message: "prepared statement \"s0\" already exists", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+[2025-09-24T18:45:08.173Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T18:45:39.356Z] INFO: AutomatedScraper initialized
+[2025-09-24T18:45:39.357Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T18:45:41.579Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.findMany()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1027:53
+
+  1024 const tapology = new TapologyUFCService()
+  1025 
+  1026 // Fetch current upcoming events from DB for matching
+→ 1027 const currentEvents = await this.prisma.event.findMany(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42P05", message: "prepared statement \"s0\" already exists", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+[2025-09-24T18:45:41.580Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T18:46:00.989Z] INFO: AutomatedScraper initialized
+[2025-09-24T18:46:00.990Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T18:46:06.136Z] INFO: Tapology returned 1 events
+[2025-09-24T18:46:08.462Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T18:46:27.355Z] INFO: Tapology ingest completed: 1 events, 5 fights
+[2025-09-24T18:46:27.356Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T18:49:42.932Z] INFO: AutomatedScraper initialized
+[2025-09-24T18:49:42.933Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T18:49:48.557Z] INFO: Tapology returned 1 events
+[2025-09-24T18:49:50.808Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T18:50:09.287Z] INFO: Tapology ingest completed: 1 events, 5 fights
+[2025-09-24T18:50:09.288Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T18:51:35.855Z] INFO: AutomatedScraper initialized
+[2025-09-24T18:51:35.857Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T18:51:41.474Z] INFO: Tapology returned 1 events
+[2025-09-24T18:51:43.498Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T18:52:01.868Z] INFO: Tapology ingest completed: 1 events, 5 fights
+[2025-09-24T18:52:01.870Z] INFO: AutomatedScraper cleanup completed

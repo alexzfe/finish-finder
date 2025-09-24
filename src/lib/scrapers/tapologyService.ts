@@ -17,7 +17,9 @@ interface TapologyUFCEvent {
 interface TapologyFight {
   id: string
   fighter1Name: string
+  fighter1Nickname?: string
   fighter2Name: string
+  fighter2Nickname?: string
   weightClass: string
   cardPosition: string
   titleFight: boolean
@@ -25,6 +27,7 @@ interface TapologyFight {
 
 export interface TapologyFighterInfo {
   name: string
+  nickname?: string
   record?: string
   wins?: number
   losses?: number
@@ -63,6 +66,10 @@ export class TapologyUFCService {
       .normalize('NFKD')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
+  }
+
+  private capitalize(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
   }
 
   private extractWeightClass($fight: cheerio.Cheerio<any>): string {
@@ -403,44 +410,23 @@ export class TapologyUFCService {
     // Implementation for alternative parsing when standard selectors don't work
     console.log(`🔍 Alternative parsing: Found ${elements.length} elements to parse`)
 
+    const processedUrls = new Set<string>() // Track processed event URLs to avoid duplicates
+
     elements.each((index, element) => {
       if (events.length >= limit) return false
 
       const $element = $(element)
       const text = $element.text()
 
-      // Debug: log the HTML structure we're working with
-      if (index < 3) { // Only log first 3 elements to avoid spam
-        console.log(`📝 Element ${index} HTML:`, $element.html()?.substring(0, 200))
-        console.log(`📝 Element ${index} text:`, text.substring(0, 100))
-      }
+      // Process more elements to find all events (increased from 10 to 25)
+      if (index >= 25) return false
 
-      // Look for any links that might be event pages - be more aggressive
-      const allLinks = $element.find('a')
-      console.log(`🔗 Element ${index}: Found ${allLinks.length} total links`)
+      // Look for UFC event links specifically
+      const eventLinks = $element.find('a[href*="/fightcenter/events/"]')
 
-      const eventLinks = allLinks.filter((_, el) => {
-        const href = $(el).attr('href') || ''
-        const linkText = $(el).text().toLowerCase()
+      if (eventLinks.length === 0) return // Skip elements without direct event links
 
-        // More aggressive filtering
-        const hasEventHref = href.includes('/fightcenter/events/') ||
-                            href.includes('/events/') ||
-                            href.includes('/fightcenter/') ||
-                            !!href.match(/\/\d+\-/); // Pattern like /12345-event-name
-
-        const hasUfcText = linkText.includes('ufc') ||
-                          linkText.includes('fight night') ||
-                          text.toLowerCase().includes('ufc');
-
-        if (hasEventHref || hasUfcText) {
-          console.log(`🎯 Potential event link: href="${href}" text="${linkText.substring(0, 50)}"`)
-        }
-
-        return hasEventHref || hasUfcText
-      })
-
-      console.log(`🎯 Element ${index}: Found ${eventLinks.length} potential event links`)
+      console.log(`🎯 Element ${index}: Found ${eventLinks.length} event links`)
 
       eventLinks.each((_, linkEl) => {
         if (events.length >= limit) return false
@@ -449,50 +435,92 @@ export class TapologyUFCService {
         const href = $link.attr('href')
         const linkText = $link.text().trim()
 
-        console.log(`🔗 Processing link: href="${href}" text="${linkText}"`)
+        if (!href) return
 
-        // Basic parsing for UFC events mentioned in text
-        const ufcMatch = (linkText || text).match(/UFC\s*(\d+|Fight Night|on ESPN|Fight Night\s*\d*)/i)
-        if (ufcMatch && href) {
-          const eventName = ufcMatch[0]
-          const id = eventName.toLowerCase().replace(/\s+/g, '-')
+        const tapologyUrl = href.startsWith('http') ? href : `https://www.tapology.com${href}`
 
-          // Construct full Tapology URL
-          const tapologyUrl = href.startsWith('http') ? href : `https://www.tapology.com${href}`
+        // Skip if we've already processed this URL
+        if (processedUrls.has(tapologyUrl)) {
+          return
+        }
+        processedUrls.add(tapologyUrl)
 
-          // Try to extract date from surrounding text
-          const dateMatch = text.match(/\b\w+\s+\d{1,2},?\s+\d{4}\b/)
-          const parsedDate = dateMatch ? this.parseTapologyDate(dateMatch[0]) : new Date().toISOString().split('T')[0]
+        // Extract event name from link text, prioritize fuller names
+        let eventName = linkText
 
-          console.log(`✅ Creating event: "${eventName}" with URL: ${tapologyUrl}`)
+        // Look for UFC patterns in the link text
+        const ufcPatterns = [
+          /UFC\s+\d+/i,
+          /UFC\s+Fight\s+Night/i,
+          /UFC\s+on\s+ESPN/i
+        ]
 
-          // Only include future events
-          if (new Date(parsedDate) > new Date()) {
-            events.push({
-              id,
-              name: eventName,
-              date: parsedDate,
-              venue: 'TBA',
-              location: 'TBA',
-              source: 'tapology',
-              tapologyUrl
-            })
-          } else {
-            console.log(`⏰ Skipping past event: "${eventName}" (${parsedDate})`)
+        let foundPattern = false
+        for (const pattern of ufcPatterns) {
+          const match = linkText.match(pattern)
+          if (match) {
+            eventName = match[0]
+            foundPattern = true
+            break
           }
-        } else if (ufcMatch) {
-          console.log(`⚠️ Found UFC event "${ufcMatch[0]}" but no valid href: "${href}"`)
         }
-      })
 
-      // Fallback: if no links found, try text-based parsing but skip (since we need URLs)
-      if (eventLinks.length === 0) {
-        const ufcMatch = text.match(/UFC\s*(\d+|Fight Night|on ESPN)/i)
-        if (ufcMatch) {
-          console.log(`⚠️ Found UFC event "${ufcMatch[0]}" but no link - skipping`)
-          console.log(`📝 Element HTML sample:`, $element.html()?.substring(0, 150))
+        if (!foundPattern && !linkText.toLowerCase().includes('ufc')) {
+          return // Skip if no UFC pattern found
         }
-      }
+
+        const id = this.normalize(eventName)
+
+        // Try to extract date from the surrounding text
+        const $parent = $link.closest('div, section, article, li, tr')
+        const parentText = $parent.text()
+
+        // Look for date patterns in the text (focusing on 2025 and beyond)
+        const datePatterns = [
+          /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+(?:2025|2026|2027)\b/i,
+          /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+(?:2025|2026|2027)\b/i,
+          /\b\d{1,2}\/\d{1,2}\/(?:2025|2026|2027)\b/,
+          /\b(?:2025|2026|2027)-\d{2}-\d{2}\b/
+        ]
+
+        let parsedDate: string = ''
+        let foundDate = false
+
+        for (const pattern of datePatterns) {
+          const match = parentText.match(pattern)
+          if (match) {
+            try {
+              const dateObj = new Date(match[0])
+              if (!isNaN(dateObj.getTime()) && dateObj > new Date()) {
+                parsedDate = dateObj.toISOString().split('T')[0]
+                foundDate = true
+                break
+              }
+            } catch (e) {
+              // Continue to next pattern
+            }
+          }
+        }
+
+        // Fallback: set to near future if no date found
+        if (!foundDate) {
+          const futureDate = new Date()
+          futureDate.setMonth(futureDate.getMonth() + 1)
+          parsedDate = futureDate.toISOString().split('T')[0]
+        }
+
+        console.log(`✅ Adding event: "${eventName}" (${parsedDate}) -> ${tapologyUrl}`)
+
+        events.push({
+          id,
+          name: eventName,
+          date: parsedDate,
+          venue: 'TBA',
+          location: 'TBA',
+          source: 'tapology',
+          tapologyUrl
+        })
+      })
     })
   }
 
@@ -561,46 +589,177 @@ export class TapologyUFCService {
       const fights: TapologyFight[] = []
       const fighterInfos: Map<string, TapologyFighterInfo> = new Map()
 
-      // Look for fight listings on the event page
-      const fightElements = $('.fight_card_bout, .bout, .fight_listing')
+      // Look for fight links and fighter patterns on the event page
+      const boutLinks = $('a[href*="/bouts/"]')
+      console.log(`🥊 Found ${boutLinks.length} bout links on event page`)
 
-      fightElements.each((index, element) => {
-        const $fight = $(element)
+      // Also collect all fighter links for additional context
+      const allFighterLinks = $('a[href*="/fighters/"]')
+      console.log(`👤 Found ${allFighterLinks.length} fighter links`)
 
-        // Extract fighter names and attempt to capture record/URL nearby
-        const fighterNodes = $fight.find('.fighter_name, .bout_fighter, a[href*="/fighters/"]')
-        const fighters = fighterNodes.map((_, el) => $(el).text().trim()).get().filter(Boolean)
+      // Process bout links to extract fights
+      const processedBouts = new Set<string>() // Avoid duplicates
+      const processedEvents = new Set<string>() // Avoid duplicate events
+
+      boutLinks.each((index, element) => {
+        const $bout = $(element)
+        const boutHref = $bout.attr('href')
+        const boutText = $bout.text().trim()
+
+        if (!boutHref || processedBouts.has(boutHref)) return
+        processedBouts.add(boutHref)
+
+        // Try multiple strategies to find fighter names for this bout
+
+        // Strategy 1: Parse fighter names from the bout URL itself
+        // URL format: /fightcenter/bouts/1038570-ufc-fight-night-brandon-raw-dawg-royval-vs-manel-starboy-kape
+        let fighters: Array<{name: string, nickname: string}> = []
+        if (boutHref && boutHref.includes('-vs-')) {
+          const urlParts = boutHref.split('-vs-')
+          if (urlParts.length >= 2) {
+            // More intelligent parsing - look for fighter segments
+            const fighter1Segment = urlParts[0]
+            const fighter2Segment = urlParts[1]
+
+            const parseFighter = (segment: string) => {
+              // Clean up the segment first - remove any URL prefixes
+              let cleanSegment = segment.replace(/^\/fightcenter\/bouts\/\d+\s*/, '')
+
+              // If the segment still has URL-like structure, try to extract from URL format
+              // Format: /fightcenter/bouts/1038570-ufc-fight-night-brandon-raw-dawg-royval-vs-manel-starboy-kape
+              // Check for dash-separated format that might be from URLs
+              if (cleanSegment.includes('-')) {
+                const parts = cleanSegment.split('-')
+
+                // Skip everything before the actual fighter info
+                const skipParts = ['', 'fightcenter', 'bouts', 'ufc', 'fight', 'night', 'on', 'espn', 'main', 'card', 'vs']
+                let fighterStartIdx = -1
+
+                for (let i = 0; i < parts.length; i++) {
+                  const part = parts[i].toLowerCase().replace(/^\/+|\/+$/g, '') // Clean slashes
+                  // Skip numeric IDs, URL parts, and event words
+                  if (!skipParts.includes(part) && !part.match(/^\d+$/) && part.length > 1) {
+                    fighterStartIdx = i
+                    break
+                  }
+                }
+
+                if (fighterStartIdx !== -1) {
+                  const fighterParts = parts.slice(fighterStartIdx)
+
+                  // Find "vs" to separate fighters - take everything before it
+                  const vsIndex = fighterParts.findIndex(part => part.toLowerCase() === 'vs')
+                  const relevantParts = vsIndex > 0 ? fighterParts.slice(0, vsIndex) : fighterParts
+
+                  if (relevantParts.length >= 2) {
+                    // More intelligent parsing:
+                    // - First part: likely first name
+                    // - Last part: likely last name
+                    // - Middle parts: likely nicknames
+                    const firstName = this.capitalize(relevantParts[0])
+                    const lastName = this.capitalize(relevantParts[relevantParts.length - 1])
+
+                    // Extract nickname from middle parts
+                    const nicknameParts = relevantParts.slice(1, -1)
+                    const nickname = nicknameParts.length > 0 ?
+                      nicknameParts.map(p => this.capitalize(p)).join(' ') : ''
+
+                    return {
+                      name: `${firstName} ${lastName}`,
+                      nickname: nickname
+                    }
+                  }
+
+                  // Fallback for single name
+                  if (relevantParts.length === 1) {
+                    return {
+                      name: this.capitalize(relevantParts[0]),
+                      nickname: ''
+                    }
+                  }
+                }
+              }
+
+              // If no URL structure, treat as plain name
+              const nameParts = cleanSegment.trim().split(/\s+/)
+              if (nameParts.length >= 2) {
+                const firstName = this.capitalize(nameParts[0])
+                const lastName = this.capitalize(nameParts[nameParts.length - 1])
+                const nickname = nameParts.length > 2 ?
+                  nameParts.slice(1, -1).map(p => this.capitalize(p)).join(' ') : ''
+
+                return {
+                  name: `${firstName} ${lastName}`,
+                  nickname: nickname
+                }
+              } else if (nameParts.length === 1) {
+                return {
+                  name: this.capitalize(nameParts[0]),
+                  nickname: ''
+                }
+              }
+
+              return null
+            }
+
+            const fighter1 = parseFighter(fighter1Segment)
+            const fighter2 = parseFighter(fighter2Segment)
+
+            if (fighter1 && fighter2) {
+              fighters = [fighter1, fighter2]
+            }
+          }
+        }
+
+        // Strategy 2: Look for fighter links in a wider area if URL parsing failed
+        if (fighters.length < 2) {
+          const $parent = $bout.closest('div, section, article, li, tr')
+          const parentText = $parent.text()
+
+          // Look for fighter links in the same container
+          const fighterLinks = $parent.find('a[href*="/fighters/"]')
+          const parentFighters = fighterLinks.map((_, el) => $(el).text().trim()).get().filter(Boolean)
+
+          if (parentFighters.length >= 2) {
+            // Convert to new format with separate name/nickname
+            fighters = parentFighters.slice(0, 2).map(name => ({ name, nickname: '' }))
+          }
+        }
+
+        // Debug: show what we found for the first few bouts
+        if (index < 3) {
+          console.log(`🔍 Bout ${index + 1}: "${boutText}" -> ${boutHref}`)
+          console.log(`   Extracted fighters: [${fighters.map(f => `${f.name}${f.nickname ? ` "${f.nickname}"` : ''}`).join(', ')}]`)
+        }
 
         if (fighters.length >= 2) {
-          const weightClass = this.extractWeightClass($fight)
-          const titleFight = $fight.text().toLowerCase().includes('title') || $fight.find('.title').length > 0
+          // Extract weight class from the bout context
+          const $parent = $bout.closest('div, section, article, li, tr')
+          const weightClass = this.extractWeightClass($parent) || 'unknown'
+          const titleFight = boutText.toLowerCase().includes('title') || boutHref.toLowerCase().includes('title')
 
-          const fightId = `${fighters[0]}-vs-${fighters[1]}`.toLowerCase()
+          const fightId = `${fighters[0].name}-vs-${fighters[1].name}`.toLowerCase()
             .replace(/[^a-z0-9]/g, '-')
             .replace(/-+/g, '-')
 
+          console.log(`⚔️ Found fight: ${fighters[0].name}${fighters[0].nickname ? ` "${fighters[0].nickname}"` : ''} vs ${fighters[1].name}${fighters[1].nickname ? ` "${fighters[1].nickname}"` : ''} (${weightClass})`)
+
           fights.push({
             id: fightId,
-            fighter1Name: fighters[0],
-            fighter2Name: fighters[1],
+            fighter1Name: fighters[0].name,
+            fighter1Nickname: fighters[0].nickname,
+            fighter2Name: fighters[1].name,
+            fighter2Nickname: fighters[1].nickname,
             weightClass,
             cardPosition: index === 0 ? 'main' : 'preliminary',
             titleFight
           })
 
-          // Collect records for the two fighters if present
-          const anchors = $fight.find('a[href*="/fighters/"]')
-          const texts: string[] = []
-          $fight.find('.fighter_name, .bout_fighter, .record, .fighter_record, .result').each((_, el) => {
-            texts.push($(el).text().trim())
-          })
-
-          const recordPattern = /\b(\d+)-(\d+)(?:-(\d+))?\b/
-
           // Build a helper to register fighter info
-          function setInfo(name: string, url?: string, recordText?: string) {
-            const info = fighterInfos.get(name) || { name }
+          function setInfo(name: string, nickname: string, url?: string, recordText?: string) {
+            const info: TapologyFighterInfo = fighterInfos.get(name) || { name, nickname }
             if (url) info.url = url
+            const recordPattern = /\b(\d+)-(\d+)(?:-(\d+))?\b/
             const match = recordText?.match(recordPattern)
             if (match) {
               info.record = `${match[1]}-${match[2]}-${match[3] ?? '0'}`
@@ -611,28 +770,9 @@ export class TapologyUFCService {
             fighterInfos.set(name, info)
           }
 
-          // Map anchors (usually contain fighter URLs) to names
-          anchors.each((i, a) => {
-            const name = $(a).text().trim()
-            const url = $(a).attr('href') ? `https://www.tapology.com${$(a).attr('href')}` : undefined
-            if (name) setInfo(name, url)
-          })
-
-          // Try find records by scanning nearby texts for each fighter name
-          for (const name of [fighters[0], fighters[1]]) {
-            let foundRecord: string | undefined
-            for (const t of texts) {
-              if (t.includes(name)) {
-                const m = t.match(recordPattern)
-                if (m) { foundRecord = m[0]; break }
-              }
-            }
-            // Fallback: search any record pattern in the fight block
-            if (!foundRecord) {
-              const any = $fight.text().match(recordPattern)
-              if (any) foundRecord = any[0]
-            }
-            setInfo(name, undefined, foundRecord)
+          // Add basic fighter info (will be enriched later by the main scraper)
+          for (const fighter of [fighters[0], fighters[1]]) {
+            setInfo(fighter.name, fighter.nickname)
           }
         }
       })

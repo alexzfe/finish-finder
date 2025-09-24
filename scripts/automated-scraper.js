@@ -25,7 +25,12 @@ class AutomatedScraper {
           url: process.env.DATABASE_URL
         }
       },
-      log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['warn', 'error']
+      log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['warn', 'error'],
+      __internal: {
+        engine: {
+          connectionLimit: 1
+        }
+      }
     })
     this.ufcService = new HybridUFCService()
     this.logFile = path.join(__dirname, '../logs/scraper.log')
@@ -1080,9 +1085,8 @@ class AutomatedScraper {
           tapologyUrl: listing.tapologyUrl
         }
 
-        // Find existing event by name similarity or tapologyUrl
+        // Find existing event by name similarity and date proximity
         const existing = currentEvents.find(e =>
-          e.tapologyUrl === listing.tapologyUrl ||
           (e.name.toLowerCase().includes(effectiveName.toLowerCase().substring(0, 10)) &&
            Math.abs(new Date(e.date) - new Date(listing.date)) < 7 * 24 * 60 * 60 * 1000)
         )
@@ -1096,7 +1100,7 @@ class AutomatedScraper {
           if (existing.name !== effectiveName) updates.name = effectiveName
           if (existing.location !== (listing.location || '')) updates.location = listing.location || ''
           if (existing.venue !== (listing.venue || '')) updates.venue = listing.venue || ''
-          if (!existing.tapologyUrl && listing.tapologyUrl) updates.tapologyUrl = listing.tapologyUrl
+          // Note: tapologyUrl not stored in database schema
 
           if (Object.keys(updates).length > 0) {
             await this.prisma.event.update({
@@ -1122,23 +1126,51 @@ class AutomatedScraper {
               await this.log(`Creating new fight: ${scrapedFight.fighter1Name} vs ${scrapedFight.fighter2Name}`)
 
               // Create fighters if they don't exist
-              const fighter1 = await this.prisma.fighter.upsert({
-                where: { name: scrapedFight.fighter1Name },
-                update: {},
-                create: {
-                  name: scrapedFight.fighter1Name,
-                  weightClass: scrapedFight.weightClass
-                }
+              // Debug: Check what we're getting from scraper
+              console.log('🐛 Debug fighter data:', {
+                fighter1Name: scrapedFight.fighter1Name,
+                fighter1Nickname: scrapedFight.fighter1Nickname,
+                fighter2Name: scrapedFight.fighter2Name,
+                fighter2Nickname: scrapedFight.fighter2Nickname
               })
 
-              const fighter2 = await this.prisma.fighter.upsert({
-                where: { name: scrapedFight.fighter2Name },
-                update: {},
-                create: {
-                  name: scrapedFight.fighter2Name,
-                  weightClass: scrapedFight.weightClass
-                }
+              let fighter1 = await this.prisma.fighter.findFirst({
+                where: { name: scrapedFight.fighter1Name }
               })
+              if (!fighter1) {
+                fighter1 = await this.prisma.fighter.create({
+                  data: {
+                    name: scrapedFight.fighter1Name,
+                    nickname: scrapedFight.fighter1Nickname || null,
+                    weightClass: scrapedFight.weightClass || 'unknown'
+                  }
+                })
+              } else if (scrapedFight.fighter1Nickname && !fighter1.nickname) {
+                // Update nickname if we didn't have it before
+                await this.prisma.fighter.update({
+                  where: { id: fighter1.id },
+                  data: { nickname: scrapedFight.fighter1Nickname }
+                })
+              }
+
+              let fighter2 = await this.prisma.fighter.findFirst({
+                where: { name: scrapedFight.fighter2Name }
+              })
+              if (!fighter2) {
+                fighter2 = await this.prisma.fighter.create({
+                  data: {
+                    name: scrapedFight.fighter2Name,
+                    nickname: scrapedFight.fighter2Nickname || null,
+                    weightClass: scrapedFight.weightClass || 'unknown'
+                  }
+                })
+              } else if (scrapedFight.fighter2Nickname && !fighter2.nickname) {
+                // Update nickname if we didn't have it before
+                await this.prisma.fighter.update({
+                  where: { id: fighter2.id },
+                  data: { nickname: scrapedFight.fighter2Nickname }
+                })
+              }
 
               await this.prisma.fight.create({
                 data: {
@@ -1171,33 +1203,52 @@ class AutomatedScraper {
               id: eventId,
               name: effectiveName,
               date: new Date(listing.date),
-              location: listing.location || '',
-              venue: listing.venue || '',
-              status: 'upcoming',
-              tapologyUrl: listing.tapologyUrl
+              location: listing.location || 'TBA',
+              venue: listing.venue || 'TBA',
+              completed: false
             }
           })
 
           // Create fights for new event
           for (const scrapedFight of fightCard) {
             // Create fighters if they don't exist
-            const fighter1 = await this.prisma.fighter.upsert({
-              where: { name: scrapedFight.fighter1Name },
-              update: {},
-              create: {
-                name: scrapedFight.fighter1Name,
-                weightClass: scrapedFight.weightClass
-              }
+            let fighter1 = await this.prisma.fighter.findFirst({
+              where: { name: scrapedFight.fighter1Name }
             })
+            if (!fighter1) {
+              fighter1 = await this.prisma.fighter.create({
+                data: {
+                  name: scrapedFight.fighter1Name,
+                  nickname: scrapedFight.fighter1Nickname || null,
+                  weightClass: scrapedFight.weightClass || 'unknown'
+                }
+              })
+            } else if (scrapedFight.fighter1Nickname && !fighter1.nickname) {
+              // Update nickname if we didn't have it before
+              await this.prisma.fighter.update({
+                where: { id: fighter1.id },
+                data: { nickname: scrapedFight.fighter1Nickname }
+              })
+            }
 
-            const fighter2 = await this.prisma.fighter.upsert({
-              where: { name: scrapedFight.fighter2Name },
-              update: {},
-              create: {
-                name: scrapedFight.fighter2Name,
-                weightClass: scrapedFight.weightClass
-              }
+            let fighter2 = await this.prisma.fighter.findFirst({
+              where: { name: scrapedFight.fighter2Name }
             })
+            if (!fighter2) {
+              fighter2 = await this.prisma.fighter.create({
+                data: {
+                  name: scrapedFight.fighter2Name,
+                  nickname: scrapedFight.fighter2Nickname || null,
+                  weightClass: scrapedFight.weightClass || 'unknown'
+                }
+              })
+            } else if (scrapedFight.fighter2Nickname && !fighter2.nickname) {
+              // Update nickname if we didn't have it before
+              await this.prisma.fighter.update({
+                where: { id: fighter2.id },
+                data: { nickname: scrapedFight.fighter2Nickname }
+              })
+            }
 
             await this.prisma.fight.create({
               data: {

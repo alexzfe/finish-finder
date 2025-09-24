@@ -73,7 +73,7 @@ export default function Home() {
 
             setError(null)
             setLoading(false)
-            console.log('✅ Successfully loaded events from API')
+            console.log('✅ Successfully loaded events from main database')
             return
           } else {
             console.log('❌ No events found in API response')
