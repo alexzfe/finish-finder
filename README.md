@@ -23,7 +23,7 @@ Finish Finder helps UFC fans pick the most electric fights. The system:
 - Delivers a mobile-first, responsive UFC-styled interface with optimized touch targets and sticky fight insights.
 - Exports static JSON bundles for GitHub Pages while supporting a dynamic API on Vercel/Supabase.
 
-> ✅ **Automated Scraping Status**: **Operational (Wikipedia-first + Tapology records)**. Scraper extracts complete fight cards from upcoming UFC events via Wikipedia and enriches fighter win/loss records via Tapology. Sherdog is currently disabled in CI due to IP blocking.
+> ⚠️ **Automated Scraping Status**: **Partially Operational (Under Investigation)**. Enhanced Tapology parsing implemented with 4-strategy fallback system, but complete end-to-end functionality requires further debugging. See [Scraper Issues](#scraper-issues) below.
 
 Core repo pillars:
 - **Frontend** – Next.js App Router with client components in `src/app` and modular UI widgets under `src/components`.
@@ -109,7 +109,7 @@ node fresh-duplicate-check.js        # Quick duplicate analysis
 For cleanup operations, see `OPERATIONS.md` for detailed instructions.
 
 ### Automation Commands
-**✅ Automated scraping runs daily (Wikipedia-first).**
+**⚠️ Automated scraping runs daily (Tapology-first with enhanced parsing).**
 
 ```bash
 npm run scraper:check     # Run scraper locally
@@ -123,6 +123,7 @@ npm run pages:build       # Refresh GitHub Pages bundle under docs/
 Scraper and prediction commands require `DATABASE_URL` and `OPENAI_API_KEY`. They also honour `SCRAPER_CANCEL_THRESHOLD` and `SCRAPER_FIGHT_CANCEL_THRESHOLD` for strike-ledger logic. Logs are written to `logs/scraper.log`, `logs/missing-events.json`, and `logs/missing-fights.json`.
 
 #### Scraper flags
+- `SCRAPER_SOURCE`: `tapology|wikipedia` (default `tapology`; controls primary scraping source).
 - `SHERDOG_ENABLED`: `true|false` (default `true` locally; CI sets `false`).
 - `TAPOLOGY_ENRICH_RECORDS`: `true|false` (default `true` locally and CI; set to `false` to disable).
 - `SHERDOG_MAX_RPS`: optional throttle for Sherdog when enabled.
@@ -133,6 +134,53 @@ Helper scripts:
 - `node scripts/test-tapology-fighter-record.js "Fighter Name"` – fetch a single fighter record from Tapology.
 
 For VPN setup details, see [docker/mullvad/README.md](docker/mullvad/README.md).
+
+## Scraper Issues
+
+### Current Status (2025-09-23)
+The automated scraper is experiencing intermittent issues despite significant debugging improvements. Recent work includes:
+
+#### ✅ Implemented Enhanced Tapology Parsing
+- **4-Strategy Fallback System**: When standard CSS selectors fail, the scraper now tries 4 progressive strategies:
+  1. Elements containing "UFC" + year with comprehensive filtering
+  2. Elements with links containing UFC content
+  3. Table rows/list items with UFC content
+  4. Broad search with size constraints
+- **Comprehensive Debugging**: Added extensive console logging to understand HTML structure in real-time
+- **Aggressive Link Detection**: Enhanced href pattern matching for Tapology event URLs
+
+#### ✅ Fixed TypeScript Compilation Issues
+- Resolved RegExpMatchArray return type conflicts in filter methods
+- Ensured CI/CD compatibility for GitHub Actions workflows
+
+#### ⚠️ Remaining Issues
+Despite successful URL extraction in testing (events like "UFC Fight Night: Royval vs. Kape" and "UFC 323" were found), the complete end-to-end scraper workflow still reports issues. Investigation ongoing.
+
+#### 🔧 Recent Changes (Commits fb1ba52, a5a7a09)
+- Enhanced `src/lib/scrapers/tapologyService.ts` with debugging and fallback strategies
+- Modified GitHub Actions workflow to use Tapology-first configuration
+- Added comprehensive logging throughout the parsing pipeline
+
+#### 🛠️ Debugging Commands
+```bash
+# Check current scraper status
+gh run list --workflow=scraper.yml --limit=5
+
+# View detailed logs from latest run
+gh run view --log
+
+# Trigger manual scraper run with limited events
+gh workflow run scraper.yml --field events_limit=5
+
+# Local debugging with comprehensive logging
+SCRAPER_SOURCE=tapology TAPOLOGY_ENRICH_RECORDS=true npm run scraper:check
+```
+
+#### 📋 Known Patterns
+- Tapology website structure changes frequently, requiring adaptive parsing
+- Standard CSS selectors (`.fightcenter_event_listing`, `.event_listing`) often fail
+- Alternative parsing strategies successfully find events but integration requires refinement
+- GitHub Actions environment may behave differently than local testing
 
 ## Deployment
 Recommended production topology:

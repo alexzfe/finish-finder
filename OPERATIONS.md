@@ -34,9 +34,9 @@ Store sensitive values in platform secret managers (Vercel, GitHub Actions, 1Pas
 ## Runbooks
 
 ### Daily Scraper Job
-**✅ AUTOMATED SCRAPING ENABLED (Wikipedia-first + Tapology enrichment)**
+**⚠️ AUTOMATED SCRAPING PARTIALLY OPERATIONAL (Tapology-first + enhanced parsing)**
 
-The GitHub Actions workflow runs on schedule with Sherdog disabled to avoid CI IP blocks. Wikipedia provides events/fights; Tapology enriches fighter W‑L‑D records.
+The GitHub Actions workflow runs on schedule with enhanced Tapology parsing and comprehensive debugging. Recent improvements include 4-strategy fallback parsing system.
 
 **Current Setup:**
 1. **AI Predictions**: `.github/workflows/ai-predictions.yml` runs daily at 1:30 AM UTC
@@ -46,17 +46,25 @@ The GitHub Actions workflow runs on schedule with Sherdog disabled to avoid CI I
 
 2. **Data Scraping**: `.github/workflows/scraper.yml` runs daily at 2:00 AM UTC
    - Runs `scripts/automated-scraper.js check`
+   - **New Configuration**: `SCRAPER_SOURCE=tapology`, `SCRAPER_LIMIT=10`
    - Env flags: `SHERDOG_ENABLED=false`, `TAPOLOGY_ENRICH_RECORDS=true`
+   - **Enhanced Parsing**: Uses 4-strategy fallback system when standard selectors fail
    - Creates events and fights without AI predictions
 
+**Recent Improvements (2025-09-23):**
+- Enhanced `TapologyService` with comprehensive debugging and fallback strategies
+- Fixed TypeScript compilation issues preventing CI execution
+- Added extensive logging for HTML structure analysis
+- Implemented aggressive link detection for Tapology event URLs
+
 **Status:**
-- **✅ Operational**: Multi-source system running in GitHub Actions
-- **✅ Wikipedia Primary**: Stable, comprehensive fight cards
-- **✅ Records Enrichment**: Tapology provides fighter records in daily runs
+- **⚠️ Partially Operational**: Enhanced Tapology parsing implemented but end-to-end workflow needs investigation
+- **✅ Enhanced Parsing**: 4-strategy fallback system finds events when standard selectors fail
+- **✅ Comprehensive Debugging**: Extensive logging for HTML structure analysis and URL extraction
 - **✅ AI Predictions**: Separate workflow generates predictions daily (78 fights updated in last run)
 - **🚫 Sherdog in CI**: Disabled due to IP blocking; can be used locally
 - Manual trigger: **AVAILABLE** via workflow_dispatch for both workflows
-- Local scraping: **FUNCTIONAL** (see Manual Scrape section below)
+- Local scraping: **UNDER INVESTIGATION** (see Troubleshooting section below)
 
 ### Manual Scrape & Prediction Replay
 **✅ AVAILABLE FOR TESTING OR EMERGENCY USE**
@@ -77,6 +85,87 @@ node scripts/ai-predictions-runner.js                 # all events missing predi
 - Use `node scripts/automated-scraper.js status` to inspect strike counts.
 - For clean-room reruns, execute `node scripts/clear-predictions.js` followed by `node scripts/verify-predictions-cleared.js` before regenerating.
 - If you get 403 errors locally (e.g., Sherdog), wait 30-60 minutes or test from a different network.
+
+### Scraper Debugging & Troubleshooting
+**⚠️ ENHANCED TROUBLESHOOTING FOR TAPOLOGY PARSING ISSUES**
+
+**Recent Issues (2025-09-23):**
+The automated scraper has been enhanced with comprehensive debugging but may still experience intermittent failures.
+
+#### GitHub Actions Debugging
+```bash
+# Check recent workflow runs
+gh run list --workflow=scraper.yml --limit=10
+
+# View detailed logs from specific run (replace with actual run ID)
+gh run view 17961992466 --log
+
+# Trigger manual test run with limited events
+gh workflow run scraper.yml --field events_limit=5
+
+# Monitor real-time execution
+gh run watch $(gh run list --workflow=scraper.yml --limit=1 --json databaseId --jq '.[0].databaseId')
+```
+
+#### Local Debugging with Enhanced Logging
+```bash
+# Run with comprehensive Tapology debugging
+SCRAPER_SOURCE=tapology TAPOLOGY_ENRICH_RECORDS=true SCRAPER_LIMIT=5 npm run scraper:check
+
+# Test specific Tapology functionality
+node scripts/test-tapology-parsing.js
+
+# Verify database connectivity
+node scripts/test-database-connection.js
+```
+
+#### Common Issues & Solutions
+
+**1. TypeScript Compilation Errors**
+- **Symptom**: `TSError: ⨯ Unable to compile TypeScript` in GitHub Actions
+- **Solution**: Check for RegExpMatchArray vs boolean return type conflicts
+- **Fix**: Use `!!` operator to convert RegExp matches to boolean
+
+**2. Standard CSS Selectors Failing**
+- **Symptom**: "⚠️ Standard selectors found no events, trying alternatives..."
+- **Expected**: System should automatically fall back to 4-strategy parsing
+- **Monitor**: Look for "✅ Using strategy X with Y elements" messages
+
+**3. No Event URLs Found**
+- **Symptom**: "⚠️ Found UFC event but no link - skipping"
+- **Debug**: Check logs for "🎯 Potential event link" messages
+- **Investigation**: Examine HTML structure in debug logs
+
+**4. Zero Events Processed**
+- **Symptom**: "✅ Successfully scraped 0 upcoming UFC events"
+- **Likely Cause**: Website structure changed or parsing strategies need refinement
+- **Action**: Review HTML debug output and enhance parsing strategies
+
+#### Enhanced Tapology Parsing System
+The system now includes 4 progressive strategies when standard selectors fail:
+
+1. **Strategy 1**: Elements with UFC + year content
+2. **Strategy 2**: Elements with UFC links
+3. **Strategy 3**: Table/list structures with UFC content
+4. **Strategy 4**: Broad search with size constraints
+
+Each strategy includes extensive debugging output showing:
+- Number of elements found
+- HTML structure samples (first 3 elements)
+- Potential event links discovered
+- URL extraction success/failure reasons
+
+#### Environment Variables for Debugging
+```bash
+# Enhanced debugging mode
+export SCRAPER_SOURCE=tapology
+export TAPOLOGY_ENRICH_RECORDS=true
+export SCRAPER_LIMIT=5
+
+# Local testing with debug output
+export DEBUG=scraper:*
+export NODE_ENV=development
+```
 
 ### Duplicate Event Management
 **✅ ENHANCED DEDUPLICATION SYSTEM**
