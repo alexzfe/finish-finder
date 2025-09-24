@@ -47,12 +47,15 @@ export default function Home() {
 
       try {
         // Try API first so local development keeps dynamic data
+        console.log('🔍 Fetching events from API...')
         const apiResponse = await fetch('/api/db-events')
         if (apiResponse.ok) {
           const apiData = await apiResponse.json()
+          console.log('📊 API Response:', { success: apiData?.success, eventCount: apiData?.data?.events?.length })
           if (apiData?.success && Array.isArray(apiData.data?.events) && apiData.data.events.length > 0) {
             const sortedEvents = normalizeEvents(apiData.data.events)
             setEvents(sortedEvents)
+            console.log('✅ Events loaded from API:', sortedEvents.length)
 
             const now = new Date()
             const nearestEventIndex = sortedEvents.findIndex((event: UFCEvent) => event.date >= now)
@@ -71,7 +74,7 @@ export default function Home() {
           }
         }
       } catch (error) {
-        console.warn('API event fetch failed, falling back to static data.', error)
+        console.warn('❌ API event fetch failed, falling back to static data.', error)
       }
 
       try {
