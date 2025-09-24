@@ -51,37 +51,32 @@ export default function Home() {
         const apiResponse = await fetch('/api/db-events')
         if (apiResponse.ok) {
           const apiData = await apiResponse.json()
-          console.log('📊 API Response:', { success: apiData?.success, eventCount: apiData?.data?.events?.length })
-          console.log('🔍 Condition check:', {
-            hasSuccess: apiData?.success,
-            isArray: Array.isArray(apiData.data?.events),
-            hasEvents: apiData.data.events.length > 0,
-            eventsData: apiData.data?.events?.slice(0,1) // Show first event for debugging
-          })
-          if (apiData?.success && Array.isArray(apiData.data?.events) && apiData.data.events.length > 0) {
-            console.log('✅ Condition passed, processing events...')
+          console.log('📊 API Response:', apiData)
+
+          // More lenient condition - just check if we have events
+          if (apiData && apiData.data && apiData.data.events && apiData.data.events.length > 0) {
+            console.log('✅ Found events, processing...')
             const sortedEvents = normalizeEvents(apiData.data.events)
             setEvents(sortedEvents)
-            console.log('✅ Events loaded from API:', sortedEvents.length)
 
+            // Set current event index
             const now = new Date()
             const nearestEventIndex = sortedEvents.findIndex((event: UFCEvent) => event.date >= now)
             const resolvedIndex = nearestEventIndex >= 0 ? nearestEventIndex : 0
             setCurrentEventIndex(resolvedIndex)
+
+            // Set selected fight
             const defaultEvent = sortedEvents[resolvedIndex]
             if (defaultEvent?.fightCard?.length) {
-              setSelectedFight((prev) => {
-                const stillValid = prev && defaultEvent.fightCard.some(fight => fight.id === prev.id)
-                return stillValid ? prev : defaultEvent.fightCard[0]
-              })
+              setSelectedFight(defaultEvent.fightCard[0])
             }
+
             setError(null)
-            console.log('🔧 Setting loading to false...')
             setLoading(false)
-            console.log('✅ Loading state should now be false')
+            console.log('✅ Successfully loaded events from API')
             return
           } else {
-            console.log('❌ Condition failed, will try static fallback')
+            console.log('❌ No events found in API response')
           }
         } else {
           console.log('❌ API response not OK:', apiResponse.status)
