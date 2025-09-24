@@ -52,7 +52,14 @@ export default function Home() {
         if (apiResponse.ok) {
           const apiData = await apiResponse.json()
           console.log('📊 API Response:', { success: apiData?.success, eventCount: apiData?.data?.events?.length })
+          console.log('🔍 Condition check:', {
+            hasSuccess: apiData?.success,
+            isArray: Array.isArray(apiData.data?.events),
+            hasEvents: apiData.data.events.length > 0,
+            eventsData: apiData.data?.events?.slice(0,1) // Show first event for debugging
+          })
           if (apiData?.success && Array.isArray(apiData.data?.events) && apiData.data.events.length > 0) {
+            console.log('✅ Condition passed, processing events...')
             const sortedEvents = normalizeEvents(apiData.data.events)
             setEvents(sortedEvents)
             console.log('✅ Events loaded from API:', sortedEvents.length)
@@ -69,9 +76,15 @@ export default function Home() {
               })
             }
             setError(null)
+            console.log('🔧 Setting loading to false...')
             setLoading(false)
+            console.log('✅ Loading state should now be false')
             return
+          } else {
+            console.log('❌ Condition failed, will try static fallback')
           }
+        } else {
+          console.log('❌ API response not OK:', apiResponse.status)
         }
       } catch (error) {
         console.warn('❌ API event fetch failed, falling back to static data.', error)
