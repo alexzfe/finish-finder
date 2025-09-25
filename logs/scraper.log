@@ -561,3 +561,167 @@ ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(Postgr
 [2025-09-24T18:51:43.498Z] INFO: Creating new event: UFC Fight Night
 [2025-09-24T18:52:01.868Z] INFO: Tapology ingest completed: 1 events, 5 fights
 [2025-09-24T18:52:01.870Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T22:03:18.784Z] INFO: AutomatedScraper initialized
+[2025-09-24T22:03:18.787Z] INFO: Tapology ingest start (limit=2)
+[2025-09-24T22:03:23.840Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.findMany()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1027:53
+
+  1024 const tapology = new TapologyUFCService()
+  1025 
+  1026 // Fetch current upcoming events from DB for matching
+→ 1027 const currentEvents = await this.prisma.event.findMany(
+Can't reach database server at `aws-1-us-east-2.pooler.supabase.com:6543`
+
+Please make sure your database server is running at `aws-1-us-east-2.pooler.supabase.com:6543`.
+[2025-09-24T22:03:23.841Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T22:03:39.293Z] INFO: AutomatedScraper initialized
+[2025-09-24T22:03:39.295Z] INFO: Tapology ingest start (limit=2)
+[2025-09-24T22:03:52.237Z] INFO: Tapology returned 2 events
+[2025-09-24T22:03:55.783Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T22:04:42.761Z] INFO: Creating new event: UFC 323
+[2025-09-24T22:05:01.315Z] INFO: Tapology ingest completed: 2 events, 7 fights
+[2025-09-24T22:05:01.316Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T22:40:11.946Z] INFO: AutomatedScraper initialized
+[2025-09-24T22:40:11.947Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T22:40:25.632Z] INFO: Tapology returned 1 events
+[2025-09-24T22:40:28.661Z] INFO: Updating existing event: UFC Fight Night
+[2025-09-24T22:40:28.661Z] INFO: Tapology ingest completed: 0 events, 0 fights
+[2025-09-24T22:40:28.662Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T22:41:30.163Z] INFO: AutomatedScraper initialized
+[2025-09-24T22:41:30.165Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T22:41:35.204Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.findMany()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1027:53
+
+  1024 const tapology = new TapologyUFCService()
+  1025 
+  1026 // Fetch current upcoming events from DB for matching
+→ 1027 const currentEvents = await this.prisma.event.findMany(
+Can't reach database server at `aws-1-us-east-2.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-1-us-east-2.pooler.supabase.com:5432`.
+[2025-09-24T22:41:35.205Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T22:45:34.252Z] INFO: AutomatedScraper initialized
+[2025-09-24T22:45:34.253Z] INFO: Tapology ingest start (limit=1)
+[2025-09-24T22:45:47.396Z] INFO: Tapology returned 1 events
+[2025-09-24T22:45:49.363Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T22:45:51.185Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.create()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1201:52
+
+  1198 // Create new event
+  1199 await this.log(`Creating new event: ${effectiveName}`)
+  1200 
+→ 1201 const newEvent = await this.prisma.event.create(
+Unique constraint failed on the fields: (`id`)
+[2025-09-24T22:45:51.186Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T22:46:20.923Z] INFO: AutomatedScraper initialized
+[2025-09-24T22:46:20.925Z] INFO: Tapology ingest start (limit=3)
+[2025-09-24T22:46:31.017Z] INFO: Tapology returned 3 events
+[2025-09-24T22:46:33.235Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T22:46:34.643Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.create()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1201:52
+
+  1198 // Create new event
+  1199 await this.log(`Creating new event: ${effectiveName}`)
+  1200 
+→ 1201 const newEvent = await this.prisma.event.create(
+Unique constraint failed on the fields: (`id`)
+[2025-09-24T22:46:34.644Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T22:53:40.068Z] INFO: AutomatedScraper initialized
+[2025-09-24T22:53:40.070Z] INFO: Tapology ingest start (limit=10)
+[2025-09-24T22:53:45.103Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.findMany()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1027:53
+
+  1024 const tapology = new TapologyUFCService()
+  1025 
+  1026 // Fetch current upcoming events from DB for matching
+→ 1027 const currentEvents = await this.prisma.event.findMany(
+Can't reach database server at `aws-1-us-east-2.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-1-us-east-2.pooler.supabase.com:5432`.
+[2025-09-24T22:53:45.103Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T22:55:00.759Z] INFO: AutomatedScraper initialized
+[2025-09-24T22:55:00.760Z] INFO: Tapology ingest start (limit=5)
+[2025-09-24T22:55:14.256Z] INFO: Tapology returned 5 events
+[2025-09-24T22:55:18.211Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T22:55:50.523Z] INFO: Creating new event: UFC 322
+[2025-09-24T23:06:45.643Z] INFO: AutomatedScraper initialized
+[2025-09-24T23:06:45.645Z] INFO: Tapology ingest start (limit=2)
+[2025-09-24T23:06:59.482Z] INFO: Tapology returned 2 events
+[2025-09-24T23:07:02.431Z] INFO: Creating new event: UFC 323
+[2025-09-24T23:07:04.002Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.event.create()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1202:52
+
+  1199 // Create new event
+  1200 await this.log(`Creating new event: ${effectiveName}`)
+  1201 
+→ 1202 const newEvent = await this.prisma.event.create(
+Unique constraint failed on the fields: (`id`)
+[2025-09-24T23:07:04.003Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T23:09:05.690Z] INFO: AutomatedScraper initialized
+[2025-09-24T23:09:05.692Z] INFO: Tapology ingest start (limit=2)
+[2025-09-24T23:09:16.117Z] INFO: Tapology returned 2 events
+[2025-09-24T23:09:19.022Z] INFO: Creating new event: UFC 323
+[2025-09-24T23:09:41.500Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T23:10:16.890Z] INFO: Tapology ingest completed: 2 events, 7 fights
+[2025-09-24T23:10:16.891Z] INFO: Wikipedia enrichment start (limit=2)
+[2025-09-24T23:10:24.785Z] INFO: Wikipedia returned 7 events
+[2025-09-24T23:10:24.786Z] INFO: 🔗 Matched "UFC 323" with Wikipedia event "UFC 323"
+[2025-09-24T23:10:28.511Z] INFO: 🔗 Matched "UFC Fight Night" with Wikipedia event "UFC Fight Night: de Ridder vs. Allen"
+[2025-09-24T23:10:28.511Z] INFO: ⚠️ Date mismatch for "UFC Fight Night": DB=Fri Dec 12 2025 19:00:00 GMT-0500 (Peru Standard Time), Wikipedia=2025-10-18
+[2025-09-24T23:10:28.511Z] INFO: 📅 Updated date for "UFC Fight Night" from Fri Dec 12 2025 19:00:00 GMT-0500 (Peru Standard Time) to 2025-10-18
+[2025-09-24T23:10:32.186Z] INFO: Wikipedia enrichment completed: 2 events enriched, 0 fighters enriched
+[2025-09-24T23:10:32.191Z] INFO: AutomatedScraper cleanup completed
+[2025-09-24T23:14:14.765Z] INFO: AutomatedScraper initialized
+[2025-09-24T23:14:14.767Z] INFO: Tapology ingest start (limit=20)
+[2025-09-24T23:14:23.744Z] INFO: Tapology returned 20 events
+[2025-09-24T23:14:26.985Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T23:16:48.164Z] INFO: Creating new event: UFC 320
+[2025-09-24T23:18:31.721Z] INFO: Creating new event: UFC Fight Night
+[2025-09-24T23:19:23.950Z] ERROR: Tapology ingest failed: 
+Invalid `this.prisma.fight.create()` invocation in
+/home/alex/projects/finish-finder/scripts/automated-scraper.js:1254:37
+
+  1251   })
+  1252 }
+  1253 
+→ 1254 await this.prisma.fight.create(
+Can't reach database server at `aws-1-us-east-2.pooler.supabase.com:6543`
+
+Please make sure your database server is running at `aws-1-us-east-2.pooler.supabase.com:6543`.
+[2025-09-24T23:19:23.951Z] INFO: Wikipedia enrichment start (limit=20)
+[2025-09-24T23:19:33.996Z] INFO: Wikipedia returned 7 events
+[2025-09-24T23:19:33.997Z] INFO: 🔗 Matched "UFC Fight Night" with Wikipedia event "UFC Fight Night: de Ridder vs. Allen"
+[2025-09-24T23:19:33.998Z] INFO: ⚠️ Date mismatch for "UFC Fight Night": DB=Fri Sep 26 2025 19:00:00 GMT-0500 (Peru Standard Time), Wikipedia=2025-10-18
+[2025-09-24T23:19:33.998Z] INFO: 📅 Updated date for "UFC Fight Night" from Fri Sep 26 2025 19:00:00 GMT-0500 (Peru Standard Time) to 2025-10-18
+[2025-09-24T23:19:37.229Z] INFO: 🔗 Matched "UFC 320" with Wikipedia event "UFC 320: Ankalaev vs. Pereira 2"
+[2025-09-24T23:19:40.657Z] INFO: 🔗 Matched "UFC Fight Night" with Wikipedia event "UFC Fight Night: de Ridder vs. Allen"
+[2025-09-24T23:19:40.657Z] INFO: ⚠️ Date mismatch for "UFC Fight Night": DB=Fri Oct 10 2025 19:00:00 GMT-0500 (Peru Standard Time), Wikipedia=2025-10-18
+[2025-09-24T23:19:40.658Z] INFO: 📅 Updated date for "UFC Fight Night" from Fri Oct 10 2025 19:00:00 GMT-0500 (Peru Standard Time) to 2025-10-18
+[2025-09-24T23:19:44.216Z] INFO: Wikipedia enrichment completed: 3 events enriched, 12 fighters enriched
+[2025-09-24T23:19:44.217Z] INFO: AutomatedScraper cleanup completed
+[2025-09-25T00:06:20.797Z] INFO: AutomatedScraper initialized
+[2025-09-25T00:06:20.798Z] INFO: Tapology ingest start (limit=10)
+[2025-09-25T00:06:32.554Z] INFO: Tapology returned 10 events
+[2025-09-25T00:06:36.488Z] INFO: Creating new event: UFC 320
+[2025-09-25T00:08:38.434Z] INFO: Creating new event: UFC Fight Night
+[2025-09-25T00:10:53.076Z] INFO: Creating new event: UFC Fight Night
+[2025-09-25T00:27:29.713Z] INFO: AutomatedScraper initialized
+[2025-09-25T00:27:29.715Z] INFO: Tapology ingest start (limit=5)
+[2025-09-25T00:27:42.796Z] INFO: Tapology returned 5 events
+[2025-09-25T00:27:46.102Z] INFO: Creating new event: UFC Fight Night
+[2025-09-25T00:28:22.876Z] INFO: Creating new event: UFC 322
+[2025-09-25T00:31:35.231Z] INFO: AutomatedScraper initialized
+[2025-09-25T00:31:35.232Z] INFO: Tapology ingest start (limit=2)
+[2025-09-25T00:31:47.167Z] INFO: Tapology returned 2 events
+[2025-09-25T00:31:51.029Z] INFO: Creating new event: UFC 323
+[2025-09-25T00:32:14.233Z] INFO: Creating new event: UFC Fight Night
+[2025-09-25T00:32:56.907Z] INFO: Tapology ingest completed: 2 events, 7 fights
+[2025-09-25T00:32:56.908Z] INFO: Wikipedia enrichment start (limit=2)
+[2025-09-25T00:33:05.242Z] ERROR: Wikipedia enrichment failed: Error
+[2025-09-25T00:33:05.243Z] INFO: AutomatedScraper cleanup completed
