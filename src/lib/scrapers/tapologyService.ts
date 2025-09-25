@@ -448,12 +448,30 @@ export class TapologyUFCService {
         // Extract event name from link text, prioritize fuller names
         let eventName = linkText
 
-        // Look for UFC patterns in the link text
+        // Look for UFC patterns in the link text - be more strict
         const ufcPatterns = [
-          /UFC\s+\d+/i,
-          /UFC\s+Fight\s+Night/i,
-          /UFC\s+on\s+ESPN/i
+          /^UFC\s+\d+/i,                    // UFC 123
+          /^UFC\s+Fight\s+Night/i,          // UFC Fight Night
+          /^UFC\s+on\s+ESPN/i               // UFC on ESPN
         ]
+
+        // Exclude non-UFC events
+        const excludePatterns = [
+          /road\s+to\s+ufc/i,               // Road to UFC
+          /dana\s+white/i,                  // Dana White's Contender Series
+          /contender\s+series/i,            // Contender Series
+          /legacy\s+fighting/i,             // Legacy Fighting
+          /pfl/i,                           // PFL events
+          /bellator/i,                      // Bellator events
+          /one\s+championship/i             // ONE Championship
+        ]
+
+        // Check if this is an excluded event
+        for (const excludePattern of excludePatterns) {
+          if (linkText.match(excludePattern)) {
+            return // Skip non-UFC events
+          }
+        }
 
         let foundPattern = false
         for (const pattern of ufcPatterns) {
@@ -465,8 +483,8 @@ export class TapologyUFCService {
           }
         }
 
-        if (!foundPattern && !linkText.toLowerCase().includes('ufc')) {
-          return // Skip if no UFC pattern found
+        if (!foundPattern) {
+          return // Skip if no valid UFC pattern found
         }
 
         const id = this.normalize(eventName)
@@ -475,35 +493,48 @@ export class TapologyUFCService {
         const $parent = $link.closest('div, section, article, li, tr')
         const parentText = $parent.text()
 
-        // Look for date patterns in the text (focusing on 2025 and beyond)
-        const datePatterns = [
-          /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+(?:2025|2026|2027)\b/i,
-          /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+(?:2025|2026|2027)\b/i,
-          /\b\d{1,2}\/\d{1,2}\/(?:2025|2026|2027)\b/,
-          /\b(?:2025|2026|2027)-\d{2}-\d{2}\b/
-        ]
+        console.log(`🔍 Looking for date in context: "${parentText.slice(0, 200)}..."`)
 
+        // Use the improved parseTapologyDate method
         let parsedDate: string = ''
         let foundDate = false
 
-        for (const pattern of datePatterns) {
-          const match = parentText.match(pattern)
-          if (match) {
+        // Try multiple approaches to find date text
+        const dateSearchTexts = [
+          parentText,
+          $link.parent().text(),
+          $link.closest('td, th').text(),
+          $link.nextAll().text(),
+          $link.prevAll().text()
+        ]
+
+        for (const searchText of dateSearchTexts) {
+          if (searchText && searchText.trim()) {
+            console.log(`🗓️ Trying date extraction from: "${searchText.slice(0, 100)}..."`)
             try {
-              const dateObj = new Date(match[0])
-              if (!isNaN(dateObj.getTime()) && dateObj > new Date()) {
-                parsedDate = dateObj.toISOString().split('T')[0]
+              const testDate = this.parseTapologyDate(searchText)
+              const testDateObj = new Date(testDate)
+
+              // Check if it's a reasonable future date (not the fallback current date)
+              const now = new Date()
+              const oneMonthFromNow = new Date()
+              oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1)
+
+              if (testDateObj > now && testDate !== now.toISOString().split('T')[0]) {
+                parsedDate = testDate
                 foundDate = true
+                console.log(`✅ Successfully extracted date: ${parsedDate} from "${searchText.slice(0, 50)}..."`)
                 break
               }
             } catch (e) {
-              // Continue to next pattern
+              // Continue to next text
             }
           }
         }
 
         // Fallback: set to near future if no date found
         if (!foundDate) {
+          console.log(`⚠️ No valid date found for "${eventName}", using fallback`)
           const futureDate = new Date()
           futureDate.setMonth(futureDate.getMonth() + 1)
           parsedDate = futureDate.toISOString().split('T')[0]
@@ -552,21 +583,103 @@ export class TapologyUFCService {
     try {
       // Clean up the date text
       const cleaned = dateText.replace(/\s+/g, ' ').trim()
+      console.log(`🗓️ Parsing date: "${cleaned}"`)
 
       // Handle "TBA" or similar
       if (cleaned.toLowerCase().includes('tba') || cleaned.toLowerCase().includes('announced')) {
+        console.log(`⚠️ TBA date found, using current date`)
         return new Date().toISOString().split('T')[0]
       }
 
-      // Try to parse the date
-      const parsed = new Date(cleaned)
+      // Multiple date pattern attempts
+      const datePatterns = [
+        // With year patterns first
+        /\b(\d{1,2}\/\d{1,2}\/(?:20)?\d{2})\b/,     // MM/DD/YYYY or MM/DD/YY
+        /\b(\d{1,2}-\d{1,2}-(?:20)?\d{2})\b/,      // MM-DD-YYYY
+        /\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?,?\s+(?:20)?\d{2})\b/i,
+        /\b((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+(?:20)?\d{2})\b/i,
+        /\b((?:20)?\d{2}-\d{1,2}-\d{1,2})\b/,      // YYYY-MM-DD
 
-      if (isNaN(parsed.getTime())) {
-        console.warn(`⚠️ Could not parse Tapology date: ${dateText}`)
-        return new Date().toISOString().split('T')[0]
+        // Without year patterns - need special handling
+        /\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?)\b/i,
+        /\b((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?)\b/i,
+        /\b(\d{1,2}\/\d{1,2})\b/,                   // MM/DD without year
+        /\b((?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?)\b/i
+      ]
+
+      let parsedDate: Date | null = null
+
+      // Try each pattern
+      for (const pattern of datePatterns) {
+        const match = cleaned.match(pattern)
+        if (match) {
+          let dateStr = match[1]
+          console.log(`🎯 Matched pattern: "${dateStr}"`)
+
+          try {
+            let testDate = new Date(dateStr)
+
+            // If parsing failed or date is clearly wrong, try adding current year
+            if (isNaN(testDate.getTime()) || testDate.getFullYear() < 2020) {
+              const currentYear = new Date().getFullYear()
+              const nextYear = currentYear + 1
+
+              // Try with current year first
+              const withCurrentYear = `${dateStr}, ${currentYear}`
+              testDate = new Date(withCurrentYear)
+
+              if (isNaN(testDate.getTime()) || testDate < new Date()) {
+                // Try with next year
+                const withNextYear = `${dateStr}, ${nextYear}`
+                testDate = new Date(withNextYear)
+                console.log(`🔄 Trying with next year: "${withNextYear}"`)
+              } else {
+                console.log(`🔄 Trying with current year: "${withCurrentYear}"`)
+              }
+            }
+
+            if (!isNaN(testDate.getTime())) {
+              // Ensure it's a reasonable future date (not too far in the past)
+              const now = new Date()
+              const oneYearAgo = new Date()
+              oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+
+              // For future dates, prefer dates that are actually in the future
+              if (testDate >= now || (testDate >= oneYearAgo && testDate.getFullYear() >= now.getFullYear())) {
+                parsedDate = testDate
+                console.log(`✅ Successfully parsed: ${testDate.toISOString().split('T')[0]}`)
+                break
+              }
+            }
+          } catch (e) {
+            // Continue to next pattern
+            console.log(`❌ Pattern match failed: ${e}`)
+          }
+        }
       }
 
-      return parsed.toISOString().split('T')[0]
+      // Fallback: try direct parsing
+      if (!parsedDate) {
+        console.log(`🔄 Trying direct parse on: "${cleaned}"`)
+        const directParsed = new Date(cleaned)
+        if (!isNaN(directParsed.getTime())) {
+          const now = new Date()
+          const oneYearAgo = new Date()
+          oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+
+          if (directParsed >= oneYearAgo) {
+            parsedDate = directParsed
+            console.log(`✅ Direct parse successful: ${directParsed.toISOString().split('T')[0]}`)
+          }
+        }
+      }
+
+      if (parsedDate) {
+        return parsedDate.toISOString().split('T')[0]
+      }
+
+      console.warn(`⚠️ Could not parse Tapology date: "${dateText}", using fallback`)
+      return new Date().toISOString().split('T')[0]
 
     } catch (error) {
       console.warn(`⚠️ Tapology date parsing error for "${dateText}":`, (error as any)?.message || error)

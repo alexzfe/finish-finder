@@ -8,6 +8,7 @@ require('ts-node').register({
 // Import from TypeScript source
 const { HybridUFCService } = require('../src/lib/ai/hybridUFCService.ts')
 const { TapologyUFCService } = require('../src/lib/scrapers/tapologyService.ts')
+const { WikipediaUFCService } = require('../src/lib/scrapers/wikipediaService.ts')
 const { PrismaClient } = require('@prisma/client')
 const { validateJsonField, validateFightData, validateFighterData } = require('../src/lib/database/validation.ts')
 const fs = require('fs/promises')
@@ -1285,6 +1286,214 @@ class AutomatedScraper {
     }
   }
 
+  async enrichWithWikipedia(limit = 10) {
+    const startTime = Date.now()
+    const result = {
+      eventsEnriched: 0,
+      fightsEnriched: 0,
+      validationsPerformed: 0,
+      changesDetected: [],
+      errors: [],
+      executionTime: 0
+    }
+
+    try {
+      await this.log(`Wikipedia enrichment start (limit=${limit})`)
+      const wikipedia = new WikipediaUFCService()
+
+      // Get recent events from database that could use enrichment
+      const recentEvents = await this.prisma.event.findMany({
+        include: { fights: { include: { fighter1: true, fighter2: true } } },
+        where: {
+          date: { gte: new Date() },
+          // Only enrich events that don't have Wikipedia data yet
+          OR: [
+            { location: { equals: 'TBA' } },
+            { venue: { equals: 'TBA' } }
+          ]
+        },
+        orderBy: { date: 'asc' },
+        take: limit
+      })
+
+      // Fetch upcoming events from Wikipedia
+      const wikipediaEvents = await wikipedia.getUpcomingEvents(limit * 2) // Get more to increase match chances
+      await this.log(`Wikipedia returned ${wikipediaEvents.length} events`)
+
+      // Cross-reference and enrich events
+      for (const dbEvent of recentEvents) {
+        // Try to find matching Wikipedia event
+        const matchingWikiEvent = this.findMatchingEvent(dbEvent, wikipediaEvents)
+
+        if (matchingWikiEvent) {
+          await this.log(`🔗 Matched "${dbEvent.name}" with Wikipedia event "${matchingWikiEvent.name}"`)
+
+          // Enrich event data
+          let eventUpdated = false
+          const updateData = {}
+
+          // Enhance venue and location if Wikipedia has better data
+          if (matchingWikiEvent.venue && matchingWikiEvent.venue !== 'TBA' &&
+              (dbEvent.venue === 'TBA' || dbEvent.venue.length < matchingWikiEvent.venue.length)) {
+            updateData.venue = matchingWikiEvent.venue
+            eventUpdated = true
+          }
+
+          if (matchingWikiEvent.location && matchingWikiEvent.location !== 'TBA' &&
+              (dbEvent.location === 'TBA' || dbEvent.location.length < matchingWikiEvent.location.length)) {
+            updateData.location = matchingWikiEvent.location
+            eventUpdated = true
+          }
+
+          // Validate and potentially update date
+          const wikiDate = new Date(matchingWikiEvent.date)
+          const dbDate = new Date(dbEvent.date)
+          const dateDiffDays = Math.abs((wikiDate.getTime() - dbDate.getTime()) / (1000 * 60 * 60 * 24))
+
+          if (dateDiffDays > 1) {
+            await this.log(`⚠️ Date mismatch for "${dbEvent.name}": DB=${dbEvent.date}, Wikipedia=${matchingWikiEvent.date}`)
+            result.validationsPerformed++
+
+            // If Wikipedia date seems more reliable (not today's date), consider using it
+            if (matchingWikiEvent.date !== new Date().toISOString().split('T')[0]) {
+              updateData.date = wikiDate
+              eventUpdated = true
+              await this.log(`📅 Updated date for "${dbEvent.name}" from ${dbEvent.date} to ${matchingWikiEvent.date}`)
+            }
+          }
+
+          if (eventUpdated) {
+            await this.prisma.event.update({
+              where: { id: dbEvent.id },
+              data: updateData
+            })
+
+            result.eventsEnriched++
+            result.changesDetected.push({
+              type: 'event_enriched',
+              eventName: dbEvent.name,
+              changes: Object.keys(updateData)
+            })
+          }
+
+          // Enrich fighter data if Wikipedia has detailed fight card
+          if (matchingWikiEvent.wikipediaUrl) {
+            try {
+              const { fights: wikiFights, fighters: wikiFighters } = await wikipedia.getEventDetails(matchingWikiEvent.wikipediaUrl)
+
+              if (wikiFighters.length > 0) {
+                // Cross-reference and enrich fighters
+                for (const wikiFighter of wikiFighters) {
+                  const dbFighter = await this.findMatchingFighter(wikiFighter.name, dbEvent.fights)
+
+                  if (dbFighter) {
+                    // Enhance fighter data from Wikipedia
+                    await this.enrichFighterData(dbFighter, wikiFighter)
+                    result.fightsEnriched++
+                  }
+                }
+              }
+            } catch (enrichmentError) {
+              await this.log(`⚠️ Fighter enrichment failed for ${dbEvent.name}: ${enrichmentError.message}`)
+            }
+          }
+        } else {
+          await this.log(`❌ No Wikipedia match found for "${dbEvent.name}"`)
+        }
+      }
+
+      result.executionTime = Date.now() - startTime
+      await this.log(`Wikipedia enrichment completed: ${result.eventsEnriched} events enriched, ${result.fightsEnriched} fighters enriched`)
+      return result
+
+    } catch (error) {
+      await this.log(`Wikipedia enrichment failed: ${error.message}`, 'error')
+      result.errors.push(error.message)
+      result.executionTime = Date.now() - startTime
+      return result
+    }
+  }
+
+  // Helper method to find matching events between Tapology and Wikipedia
+  findMatchingEvent(dbEvent, wikipediaEvents) {
+    const dbName = dbEvent.name.toLowerCase().trim()
+    const dbDate = new Date(dbEvent.date)
+
+    // First try exact name match
+    let match = wikipediaEvents.find(wikiEvent =>
+      wikiEvent.name.toLowerCase().trim() === dbName
+    )
+
+    if (match) return match
+
+    // Try fuzzy matching by removing common variations
+    const normalizedDbName = dbName
+      .replace(/ufc\s*fight\s*night:?\s*/gi, 'ufc fight night')
+      .replace(/ufc\s*(\d+):?\s*/gi, 'ufc $1')
+
+    match = wikipediaEvents.find(wikiEvent => {
+      const normalizedWikiName = wikiEvent.name.toLowerCase().trim()
+        .replace(/ufc\s*fight\s*night:?\s*/gi, 'ufc fight night')
+        .replace(/ufc\s*(\d+):?\s*/gi, 'ufc $1')
+
+      return normalizedWikiName === normalizedDbName ||
+             normalizedWikiName.includes(normalizedDbName) ||
+             normalizedDbName.includes(normalizedWikiName)
+    })
+
+    if (match) return match
+
+    // Try date-based matching for events within 7 days
+    return wikipediaEvents.find(wikiEvent => {
+      const wikiDate = new Date(wikiEvent.date)
+      const dateDiffDays = Math.abs((wikiDate.getTime() - dbDate.getTime()) / (1000 * 60 * 60 * 24))
+      return dateDiffDays <= 7 && (
+        dbName.includes('ufc') && wikiEvent.name.toLowerCase().includes('ufc')
+      )
+    })
+  }
+
+  // Helper method to find matching fighter
+  async findMatchingFighter(fighterName, dbFights) {
+    const normalizedName = fighterName.toLowerCase().trim()
+
+    for (const fight of dbFights) {
+      if (fight.fighter1.name.toLowerCase().trim() === normalizedName) {
+        return fight.fighter1
+      }
+      if (fight.fighter2.name.toLowerCase().trim() === normalizedName) {
+        return fight.fighter2
+      }
+    }
+
+    return null
+  }
+
+  // Helper method to enrich fighter data
+  async enrichFighterData(dbFighter, wikiFighter) {
+    const updateData = {}
+    let updated = false
+
+    // Add Wikipedia URL if not present
+    if (wikiFighter.wikipediaUrl && !dbFighter.wikipediaUrl) {
+      // Note: This would require adding wikipediaUrl field to Fighter schema
+      // For now, we'll just log this enrichment opportunity
+      await this.log(`🔗 Wikipedia URL available for fighter: ${dbFighter.name}`)
+    }
+
+    // Future: Could add more fighter enrichment here
+    // - Height, reach, nationality from Wikipedia infobox
+    // - Fight record validation
+    // - Career statistics
+
+    if (updated) {
+      await this.prisma.fighter.update({
+        where: { id: dbFighter.id },
+        data: updateData
+      })
+    }
+  }
+
   async cleanup() {
     await this.prisma.$disconnect()
     await this.log('AutomatedScraper cleanup completed')
@@ -1324,6 +1533,30 @@ async function main() {
                 console.log(`- ${change.type}: ${change.eventName}`)
                 if (change.fightName) console.log(`  Fight: ${change.fightName}`)
               })
+            }
+
+            // Add Wikipedia enrichment step if enabled
+            if (process.env.WIKIPEDIA_ENRICHMENT !== 'false' && result.eventsProcessed > 0) {
+              console.log('\n🔍 Starting Wikipedia enrichment...')
+              const enrichmentResult = await scraper.enrichWithWikipedia(limit)
+              console.log('\nWikipedia Enrichment Results:')
+              console.log(`Events enriched: ${enrichmentResult.eventsEnriched}`)
+              console.log(`Fighters enriched: ${enrichmentResult.fightsEnriched}`)
+              console.log(`Validations performed: ${enrichmentResult.validationsPerformed}`)
+              console.log(`Execution time: ${enrichmentResult.executionTime}ms`)
+
+              if (enrichmentResult.errors.length > 0) {
+                console.log('\nEnrichment Errors:')
+                enrichmentResult.errors.forEach(error => console.log(`- ${error}`))
+              }
+
+              if (enrichmentResult.changesDetected.length > 0) {
+                console.log('\nEnrichment Changes:')
+                enrichmentResult.changesDetected.forEach(change => {
+                  console.log(`- ${change.type}: ${change.eventName}`)
+                  if (change.changes) console.log(`  Updated: ${change.changes.join(', ')}`)
+                })
+              }
             }
           } else {
             const result = await scraper.checkForEventUpdates()
