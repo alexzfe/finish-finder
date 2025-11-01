@@ -108,9 +108,16 @@ export async function GET() {
 
     // Organize fights by card position
     transformedEvents.forEach(event => {
-      event.mainCard = event.fightCard.filter(f => f.cardPosition === 'main')
-      event.prelimCard = event.fightCard.filter(f => f.cardPosition === 'preliminary')
-      event.earlyPrelimCard = event.fightCard.filter(f => f.cardPosition === 'early-preliminary')
+      // Main card includes Main Event, Co-Main Event, and Main Card fights
+      event.mainCard = event.fightCard.filter(f =>
+        f.cardPosition === 'Main Event' ||
+        f.cardPosition === 'Co-Main Event' ||
+        f.cardPosition === 'Main Card'
+      )
+      // Prelims
+      event.prelimCard = event.fightCard.filter(f => f.cardPosition === 'Prelims')
+      // Early Prelims
+      event.earlyPrelimCard = event.fightCard.filter(f => f.cardPosition === 'Early Prelims')
     })
 
     return NextResponse.json({
