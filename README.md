@@ -17,18 +17,19 @@ AI-assisted UFC fight discovery built with Next.js 15, Prisma, and an automated 
 
 ## Overview
 Finish Finder helps UFC fans pick the most electric fights. The system:
-- Scrapes upcoming UFC cards and fighter data from a **multi-source system** (Wikipedia primary → Tapology enrichment → Sherdog optional).
+- Scrapes upcoming UFC cards and fighter data from **UFCStats.com** using a Python/Scrapy scraper.
 - Persists the data in PostgreSQL (SQLite for local play).
 - Calls OpenAI to score finish probability, fun factor, and risk.
 - Delivers a mobile-first, responsive UFC-styled interface with optimized touch targets and sticky fight insights.
 - Exports static JSON bundles for GitHub Pages while supporting a dynamic API on Vercel/Supabase.
 
-> ⚠️ **Automated Scraping Status**: **Partially Operational (Under Investigation)**. Enhanced Tapology parsing implemented with 4-strategy fallback system, but complete end-to-end functionality requires further debugging. See [Scraper Issues](#scraper-issues) below.
+> ✅ **Automated Scraping Status**: **Phase 1 Complete**. Python/Scrapy scraper infrastructure deployed with content hash change detection, database schema updated, and ingestion API operational. Scraper implementation (parsers, tests) in progress.
 
 Core repo pillars:
 - **Frontend** – Next.js App Router with client components in `src/app` and modular UI widgets under `src/components`.
-- **APIs** – Prisma-backed routes in `src/app/api`, including `/api/db-events` (event feed), `/api/fighter-image` (scraped imagery, currently placeholder-only), `/api/health` (system health checks), and `/api/performance` (database performance metrics).
-- **Data & AI** – `src/lib/ai/hybridUFCService.ts` orchestrates scraping and prediction requests. Supporting utilities live in `src/lib`.
+- **APIs** – Prisma-backed routes in `src/app/api`, including `/api/db-events` (event feed), `/api/internal/ingest` (scraper ingestion), `/api/health` (system health checks), and `/api/performance` (database performance metrics).
+- **Scraper** – Python/Scrapy scraper in `/scraper` directory that crawls UFCStats.com and POSTs to the ingestion API with content hash change detection.
+- **Data & AI** – `src/lib/ai/hybridUFCService.ts` orchestrates prediction requests. Supporting utilities and validation schemas live in `src/lib`.
 - **Automation** – Node scripts in `scripts/` schedule scrapes, regenerate predictions, export static JSON, and prep GitHub Pages artifacts.
 
 ## Architecture Snapshot
@@ -36,8 +37,9 @@ Core repo pillars:
 | --- | --- | --- |
 | UI | `src/app/page.tsx`, `src/components/**` | Mobile-first responsive design. Fetches `/api/db-events` first, falls back to `public/data/events.json`. Adaptive sidebar: prominent on mobile, sticky on desktop. |
 | API | `src/app/api/db-events/route.ts`, `src/app/api/fighter-image/route.ts`, `src/app/api/health/route.ts`, `src/app/api/performance/route.ts` | Prisma event feed with JSON safety guards; fighter-image route currently disabled to reduce third-party scraping noise. Health and performance monitoring endpoints for observability. |
-| Data Layer | `prisma/schema.prisma`, `prisma/migrations/**` | Runs on SQLite locally and Supabase/Postgres remotely. Includes prediction usage telemetry tables. |
-| Scraper & AI | `scripts/automated-scraper.js`, `src/lib/ai/hybridUFCService.ts`, `src/lib/scrapers/*`, `scripts/generate-*.js` | Handles scrape → diff → persist → prediction replays. Wikipedia supplies fight cards; Tapology enriches fighter records (W-L-D). Writes audit logs under `logs/`. |
+| Data Layer | `prisma/schema.prisma`, `prisma/migrations/**` | Runs on SQLite locally and Supabase/Postgres remotely. Includes ScrapeLog audit table and scraper fields (sourceUrl, contentHash, lastScrapedAt). |
+| Scraper | `scraper/ufc_scraper/`, `src/app/api/internal/ingest/route.ts`, `src/lib/scraper/validation.ts` | Python/Scrapy spider extracts data from UFCStats.com → POSTs JSON to Next.js API → Transaction-safe upserts with SHA256 change detection. Creates ScrapeLog entries for monitoring. |
+| AI | `src/lib/ai/hybridUFCService.ts`, `scripts/generate-*.js` | Generates fight predictions using OpenAI GPT-4o based on scraped data. |
 | Static Export | `scripts/export-static-data.js`, `scripts/prepare-github-pages.js`, `docs/` | Produces GitHub Pages snapshot with `_next` assets and pre-rendered data. |
 | Monitoring | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts`, `src/app/admin/`, `src/lib/database/monitoring.ts` | Sentry is wired for client, server, and edge; logger utilities keep console output structured. Database performance monitoring with admin dashboard at `/admin`. |
 
@@ -46,6 +48,7 @@ Core repo pillars:
 ### Prerequisites
 - Node.js 20.x (or newer 18+ release that supports `fetch`).
 - npm 9+
+- **Python 3.11+** (for web scraper)
 - PostgreSQL database for persistent runs (SQLite is bundled for local exploration).
 - OpenAI API key with access to `gpt-4o` (used by prediction helpers).
 
@@ -108,95 +111,65 @@ node fresh-duplicate-check.js        # Quick duplicate analysis
 ```
 For cleanup operations, see `OPERATIONS.md` for detailed instructions.
 
-### Automation Commands
-**⚠️ Automated scraping runs daily (Tapology-first with enhanced parsing).**
+### Python Scraper Setup
 
 ```bash
-npm run scraper:check     # Run scraper locally
-npm run scraper:status    # Summarise strike counters and pending predictions
-npm run scraper:schedule  # Prepare scheduled execution metadata
+# Install Python dependencies
+cd scraper
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+# Configure environment variables
+export INGEST_API_URL="http://localhost:3000/api/internal/ingest"
+export INGEST_API_SECRET="your-secret-token"
+
+# Run the scraper
+scrapy crawl ufcstats
+```
+
+For detailed scraper documentation, see [`scraper/README.md`](scraper/README.md) and [`docs/NEW_SCRAPER_ARCHITECTURE.md`](docs/NEW_SCRAPER_ARCHITECTURE.md).
+
+### Automation Commands
+
+```bash
 npm run predict:event     # Generate AI predictions for the newest event(s)
 npm run predict:all       # Regenerate predictions for every tracked fight
 npm run pages:build       # Refresh GitHub Pages bundle under docs/
 ```
 
-Scraper and prediction commands require `DATABASE_URL` and `OPENAI_API_KEY`. They also honour `SCRAPER_CANCEL_THRESHOLD` and `SCRAPER_FIGHT_CANCEL_THRESHOLD` for strike-ledger logic. Logs are written to `logs/scraper.log`, `logs/missing-events.json`, and `logs/missing-fights.json`.
+Prediction commands require `DATABASE_URL` and `OPENAI_API_KEY`.
 
-#### Scraper flags
-- `SCRAPER_SOURCE`: `tapology|wikipedia` (default `tapology`; controls primary scraping source).
-- `SHERDOG_ENABLED`: `true|false` (default `true` locally; CI sets `false`).
-- `TAPOLOGY_ENRICH_RECORDS`: `true|false` (default `true` locally and CI; set to `false` to disable).
-- `SHERDOG_MAX_RPS`: optional throttle for Sherdog when enabled.
+## Scraper Architecture
 
-Helper scripts:
-- `npm run sherdog:test:local` – probe Sherdog org+event pages with rotated headers.
-- `node scripts/test-enrich-records.js 1` – run 1 event with Tapology record enrichment.
-- `node scripts/test-tapology-fighter-record.js "Fighter Name"` – fetch a single fighter record from Tapology.
+### Current Implementation (2025-11-01)
 
-For VPN setup details, see [docker/mullvad/README.md](docker/mullvad/README.md).
+The scraper has been completely rebuilt using Python/Scrapy with a decoupled architecture:
 
-## Scraper Issues
+**Architecture:** Python Scrapy Spider → Next.js Ingestion API → PostgreSQL Database
 
-### Current Status (2025-09-23)
-The automated scraper is experiencing intermittent issues despite significant debugging improvements. Recent work includes:
+**Key Features:**
+- **Single Data Source**: UFCStats.com exclusively (official UFC stats partner)
+- **Content Hash Change Detection**: SHA256-based change detection skips unnecessary database writes
+- **Transaction Safety**: All upserts wrapped in Prisma transactions for atomicity
+- **Audit Trail**: ScrapeLog table tracks every scraper execution with metrics
+- **Authentication**: Bearer token authentication for API security
 
-#### ✅ Implemented Enhanced Tapology Parsing
-- **4-Strategy Fallback System**: When standard CSS selectors fail, the scraper now tries 4 progressive strategies:
-  1. Elements containing "UFC" + year with comprehensive filtering
-  2. Elements with links containing UFC content
-  3. Table rows/list items with UFC content
-  4. Broad search with size constraints
-- **Comprehensive Debugging**: Added extensive console logging to understand HTML structure in real-time
-- **Aggressive Link Detection**: Enhanced href pattern matching for Tapology event URLs
+**Implementation Status:**
+- ✅ **Phase 1 Complete**: Database schema, ingestion API, and scraper infrastructure deployed
+- 🔨 **In Progress**: Python spider implementation (parsers, HTML extraction, tests)
+- 📋 **Planned**: GitHub Actions automation workflow
 
-#### ✅ Fixed TypeScript Compilation Issues
-- Resolved RegExpMatchArray return type conflicts in filter methods
-- Ensured CI/CD compatibility for GitHub Actions workflows
+For complete architecture details, see [`docs/NEW_SCRAPER_ARCHITECTURE.md`](docs/NEW_SCRAPER_ARCHITECTURE.md).
 
-#### ⚠️ Remaining Issues
-Despite successful URL extraction in testing (events like "UFC Fight Night: Royval vs. Kape" and "UFC 323" were found), the complete end-to-end scraper workflow still reports issues. Investigation ongoing.
-
-#### 🔧 Recent Changes (Commits fb1ba52, a5a7a09)
-- Enhanced `src/lib/scrapers/tapologyService.ts` with debugging and fallback strategies
-- Modified GitHub Actions workflow to use Tapology-first configuration
-- Added comprehensive logging throughout the parsing pipeline
-
-#### 🛠️ Debugging Commands
-```bash
-# Check current scraper status
-gh run list --workflow=scraper.yml --limit=5
-
-# View detailed logs from latest run
-gh run view --log
-
-# Trigger manual scraper run with limited events
-gh workflow run scraper.yml --field events_limit=5
-
-# Local debugging with comprehensive logging
-SCRAPER_SOURCE=tapology TAPOLOGY_ENRICH_RECORDS=true npm run scraper:check
-```
-
-#### 📋 Known Patterns
-- Tapology website structure changes frequently, requiring adaptive parsing
-- Standard CSS selectors (`.fightcenter_event_listing`, `.event_listing`) often fail
-- Alternative parsing strategies successfully find events but integration requires refinement
-- GitHub Actions environment may behave differently than local testing
+**Archived:** Previous TypeScript multi-source scraper (Wikipedia/Tapology) moved to `/archive/scrapers-old-2025-01/` due to reliability issues and complex deduplication requirements.
 
 ## Deployment
 Recommended production topology:
 1. **Vercel + Supabase** – Deploy the Next.js app to Vercel (`npm run build`) and point Prisma at Supabase Postgres.
-2. **Secrets** – Configure `DATABASE_URL`, `OPENAI_API_KEY`, `SENTRY_*`, `NEXT_PUBLIC_SENTRY_*`, and scraper thresholds in Vercel env settings and GitHub Actions secrets.
-3. **Automated Scraper** – Runs in GitHub Actions. CI disables Sherdog (`SHERDOG_ENABLED=false`) and enables Tapology record enrichment (`TAPOLOGY_ENRICH_RECORDS=true`).
+2. **Secrets** – Configure `DATABASE_URL`, `DIRECT_DATABASE_URL`, `INGEST_API_SECRET`, `OPENAI_API_KEY`, and `SENTRY_*` in Vercel env settings and GitHub Actions secrets.
+3. **Automated Scraper** – Python/Scrapy scraper runs in GitHub Actions, POSTs to `/api/internal/ingest` endpoint.
 4. **Static Mirror (Optional)** – After successful scrapes, run `npm run pages:build` and publish `docs/` to GitHub Pages for a static fallback.
-
-### GitHub Actions VPN Setup
-```bash
-# Configure Mullvad VPN for automated scraping
-gh secret set MULLVAD_ACCOUNT_TOKEN --body "your_account_token"
-
-# Optional: customize VPN relay location
-gh variable set MULLVAD_RELAY_LOCATION --body "us-nyc-wg-301"
-```
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`OPERATIONS.md`](OPERATIONS.md) for deeper diagrams, runbooks, and deployment checklists.
 

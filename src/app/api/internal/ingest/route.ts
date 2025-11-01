@@ -196,6 +196,8 @@ async function upsertScrapedData(data: any) {
               fighter2Id: fighter2.id,
               eventId: event.id,
               weightClass: fight.weightClass ?? 'Unknown',
+              titleFight: fight.titleFight ?? false,
+              mainEvent: fight.mainEvent ?? false,
               cardPosition: fight.cardPosition ?? 'preliminary',
               sourceUrl: fight.sourceUrl,
               lastScrapedAt: new Date(),
@@ -209,6 +211,8 @@ async function upsertScrapedData(data: any) {
             where: { sourceUrl: fight.sourceUrl },
             data: {
               weightClass: fight.weightClass ?? existing.weightClass,
+              titleFight: fight.titleFight ?? existing.titleFight,
+              mainEvent: fight.mainEvent ?? existing.mainEvent,
               cardPosition: fight.cardPosition ?? existing.cardPosition,
               lastScrapedAt: new Date(),
               contentHash,

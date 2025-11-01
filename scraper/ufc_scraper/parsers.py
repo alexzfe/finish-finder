@@ -171,8 +171,9 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
                 fighter2_name = fighter_links[1].text.strip()
                 fighter2_id = extract_id_from_url(fighter2_url)
 
-                # Extract weight class
+                # Extract weight class and title fight status
                 weight_class = None
+                is_title_fight = False
                 # Weight class is in a specific column
                 cells = row.find_all('td', class_='b-fight-details__table-col')
                 for cell in cells:
@@ -181,10 +182,35 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
                     if 'weight' in cell_text.lower() or 'Catch Weight' in cell_text:
                         # Extract just the weight class name (before any newlines or "Bout")
                         weight_class = cell_text.split('\n')[0].strip()
+
+                        # Check for title fight (belt.png image)
+                        belt_img = cell.find('img', src=lambda x: x and 'belt.png' in x)
+                        if belt_img:
+                            is_title_fight = True
                         break
+
+                # Determine card position and main event status based on fight order
+                # UFCStats lists fights from most important (main event) to least important
+                is_main_event = (idx == 1)  # First fight is main event
+
+                # Infer card position based on index
+                if idx == 1:
+                    card_position = "Main Event"
+                elif idx == 2:
+                    card_position = "Co-Main Event"
+                elif idx <= 5:
+                    card_position = "Main Card"
+                elif idx <= 9:
+                    card_position = "Prelims"
+                else:
+                    card_position = "Early Prelims"
 
                 # Generate fight ID
                 fight_id = f"{event_id}-{fighter1_id}-{fighter2_id}"
+
+                # Generate unique sourceUrl for this fight by appending fight ID as fragment
+                # This ensures each fight has a unique sourceUrl for database constraints
+                fight_source_url = f"{event_url}#fight-{fight_id}"
 
                 # Add fight
                 fight = {
@@ -193,8 +219,10 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
                     'fighter1Id': fighter1_id,
                     'fighter2Id': fighter2_id,
                     'weightClass': weight_class,
-                    'cardPosition': f"Fight {idx}",  # Simple position for now
-                    'sourceUrl': event_url  # Fights don't have their own detail page on event page
+                    'titleFight': is_title_fight,
+                    'mainEvent': is_main_event,
+                    'cardPosition': card_position,
+                    'sourceUrl': fight_source_url
                 }
                 fights.append(fight)
 
@@ -231,20 +259,42 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
     }
 
 
-def parse_fighter_profile(soup: BeautifulSoup) -> Dict:
+def parse_fighter_profile(soup: BeautifulSoup, fighter_url: str) -> Dict:
     """
     Parse a fighter profile page to extract fighter data.
 
     Args:
         soup: BeautifulSoup object of the fighter profile page
+        fighter_url: URL of the fighter profile
 
     Returns:
-        Dictionary with fighter data
+        Dictionary with fighter data including record
     """
     fighter = {}
 
-    # TODO: Implement parsing logic for fighter profile
-    # This will be implemented based on actual UFCStats.com HTML structure
+    # Extract fighter name
+    title_elem = soup.find('span', class_='b-content__title-highlight')
+    if title_elem:
+        fighter['name'] = title_elem.text.strip()
+
+    # Extract record (e.g., "Record: 18-5-0")
+    record_elem = soup.find('span', class_='b-content__title-record')
+    if record_elem:
+        record_text = record_elem.text.strip()
+        # Extract just the numbers "18-5-0"
+        record_str = record_text.replace('Record:', '').strip()
+        fighter['record'] = record_str
+
+        # Parse into wins, losses, draws
+        parsed_record = parse_record(record_str)
+        if parsed_record:
+            fighter['wins'] = parsed_record['wins']
+            fighter['losses'] = parsed_record['losses']
+            fighter['draws'] = parsed_record['draws']
+
+    # Extract fighter ID from URL
+    fighter['id'] = extract_id_from_url(fighter_url)
+    fighter['sourceUrl'] = fighter_url
 
     return fighter
 

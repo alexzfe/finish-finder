@@ -28,6 +28,8 @@ export const ScrapedFightSchema = z.object({
   fighter1Id: z.string(),
   fighter2Id: z.string(),
   weightClass: z.string().optional(),
+  titleFight: z.boolean().optional().default(false),
+  mainEvent: z.boolean().optional().default(false),
   cardPosition: z.string().optional(),
   sourceUrl: z.string().url(),
 }).refine(
