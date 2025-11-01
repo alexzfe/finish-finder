@@ -1,7 +1,77 @@
 # Engineering Handoff - Finish Finder
 
 **Last Updated:** 2025-11-01
-**Session Context:** UFC Scraper with Fighter Profiles + Fight Enrichment - COMPLETE! 🎉
+**Session Context:** Connected UI to New Database - COMPLETE! 🎉
+
+---
+
+## Session 8: UI Database Connection (2025-11-01) ✅
+
+**Goal:** Connect the Vercel-hosted UI to the new Supabase database containing scraped UFC data.
+
+**Problem:** The Python/Scrapy scraper had been running and populating the new database since Nov 1st, but the Vercel production deployment was not connected to it. Users visiting the site couldn't see the scraped data.
+
+**What Was Accomplished:**
+
+1. **Environment Variable Configuration:**
+   - Installed Vercel CLI (`vercel@48.8.0`)
+   - Authenticated and linked to project (`alexzfes-projects/finish-finder`)
+   - Identified newline character issue in environment variables (`\n` at end of values)
+   - Fixed DATABASE_URL for all environments (production, preview, development):
+     ```
+     postgresql://postgres.niaiixwcxvkohtsmatvc:how-now-brown-cow@aws-1-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+     ```
+   - Fixed DIRECT_DATABASE_URL for all environments:
+     ```
+     postgresql://postgres:how-now-brown-cow@db.niaiixwcxvkohtsmatvc.supabase.co:5432/postgres
+     ```
+
+2. **Critical Bug Fix:**
+   - **Problem**: `prisma.ts` exported as default, but API routes imported as named export
+   - **Symptom**: Database client showed as "not initialized" despite env vars being set
+   - **Solution**: Added named export to `prisma.ts`: `export { prisma };`
+   - **File**: `src/lib/database/prisma.ts:24`
+   - **Commit**: `1d38c03` - "fix(database): export prisma as both default and named export"
+
+3. **Updated GitHub Actions:**
+   - Updated `DATABASE_URL` secret to point to new database
+   - Ensures AI predictions workflow uses correct database
+
+4. **Verification:**
+   - Health check endpoint: ✅ Database connected (1 event)
+   - Events API: ✅ Returns "UFC Fight Night: Bonfim vs. Brown"
+   - Fight data: ✅ 13 fights with complete fighter records
+   - Fighter data: ✅ 26 fighters with wins/losses/draws
+
+5. **Documentation Updates:**
+   - Updated `DEPLOYMENT.md` with new database details
+   - Updated deployment status section
+   - Updated `HANDOFF.md` (this file) with session summary
+
+**Production URLs:**
+- Main site: https://finish-finder.vercel.app/
+- Health check: https://finish-finder.vercel.app/api/health
+- Events API: https://finish-finder.vercel.app/api/db-events
+
+**Database Details:**
+- **Provider**: Supabase PostgreSQL
+- **Project**: `niaiixwcxvkohtsmatvc`
+- **Region**: `aws-1-us-east-1`
+- **Data**: 1 event (UFC Fight Night: Bonfim vs. Brown), 13 fights, 26 fighters
+- **Connection**: Pooler (port 6543) for runtime, Direct (port 5432) for migrations
+
+**Key Learnings:**
+1. **Import/Export Mismatch**: Always ensure exports match imports (default vs named)
+2. **Environment Variable Format**: Watch for hidden characters like `\n` when piping to env commands
+3. **Vercel CLI**: Use `printf` instead of `echo` to avoid newlines in env values
+4. **Deployment Timing**: Environment variable changes require redeployment to take effect
+
+**Status:** ✅ COMPLETE - UI successfully connected to new database and displaying scraped UFC data.
+
+**Next Steps:**
+- Monitor scraper runs to accumulate more events
+- Consider running AI predictions workflow to generate entertainment scores
+- Monitor database performance as data grows
 
 ---
 

@@ -8,12 +8,13 @@
 ## Production Deployment (Vercel + Supabase)
 
 ### 1. Database Setup
-1. Create a Supabase project at https://supabase.com
-2. Note your PostgreSQL connection string
-3. Create a shadow database for migrations:
-   ```sql
-   CREATE DATABASE postgres_shadow;
-   ```
+**Current Production Database:**
+- **Project**: `niaiixwcxvkohtsmatvc` (Supabase)
+- **Region**: `aws-1-us-east-1`
+- **Connection Pooler** (port 6543): For runtime (Next.js app, scraper ingestion)
+- **Direct Connection** (port 5432): For migrations only
+
+Connection strings are configured in Vercel environment variables (see step 2 below).
 
 ### 2. Vercel Deployment
 1. Connect your GitHub repository to Vercel
@@ -59,9 +60,13 @@ DATABASE_URL="your_production_db_url" OPENAI_API_KEY="your_openai_key" node scri
 ```
 
 #### Automated Updates
-Set up GitHub Actions (workflow included) to run the scraper on a schedule. CI is configured to disable Sherdog and enable Tapology enrichment by default.
+Python/Scrapy scraper runs automatically via GitHub Actions daily at 2:00 AM UTC. Workflow file: `.github/workflows/scraper.yml`
 ```bash
-node scripts/automated-scraper.js check
+# Manual trigger (GitHub CLI)
+gh workflow run scraper.yml -f limit=1
+
+# Local testing (requires Python 3.11+)
+cd scraper && scrapy crawl ufcstats -a limit=1
 ```
 
 ### Build Configuration on Vercel
@@ -71,7 +76,7 @@ Future step: once lint/type cleanup is finished, revert `eslint.ignoreDuringBuil
 
 ## ✅ Deployment Status
 
-**Production deployment successfully completed!**
+**Production deployment successfully completed! (Updated: 2025-11-01)**
 
 - **Live Site**: https://finish-finder.vercel.app/
 - **API Endpoints**:
@@ -79,10 +84,13 @@ Future step: once lint/type cleanup is finished, revert `eslint.ignoreDuringBuil
   - Health Check: https://finish-finder.vercel.app/api/health ✅
   - Performance: https://finish-finder.vercel.app/api/performance ✅
 - **Admin Dashboard**: https://finish-finder.vercel.app/admin ✅
-- **Database**: 5 UFC events with 66 fights and AI predictions
+- **Database**: New Supabase instance (`niaiixwcxvkohtsmatvc`) with 1 UFC event, 13 fights, 26 fighters
 - **Architecture**: Vercel + Supabase PostgreSQL with connection pooling + monitoring
-- **Data Pipeline**: Wikipedia scraping (+ Tapology record enrichment) → PostgreSQL → API → Next.js frontend
+- **Data Pipeline**: Python/Scrapy scraper (UFCStats.com) → Next.js Ingestion API → PostgreSQL → API → Next.js frontend
 - **Monitoring**: Real-time query performance tracking and admin dashboard
+- **Recent Updates**:
+  - 2025-11-01: Connected UI to new database, fixed Prisma export issue
+  - 2025-11-01: Updated environment variables with new database connection strings
 
 ## GitHub Pages Deployment (Static)
 
