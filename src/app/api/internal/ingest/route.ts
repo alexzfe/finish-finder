@@ -30,8 +30,20 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // 2. Check database connection
+  if (!prisma) {
+    console.error('Database not configured: DATABASE_URL is missing')
+    return NextResponse.json(
+      {
+        error: 'Database not configured',
+        message: 'DATABASE_URL environment variable is not set',
+      },
+      { status: 503 }
+    )
+  }
+
   try {
-    // 2. Parse and validate request body
+    // 3. Parse and validate request body
     const body = await req.json()
     const errors = validateScrapedData(body)
 
@@ -47,10 +59,10 @@ export async function POST(req: NextRequest) {
 
     const data = ScrapedDataSchema.parse(body)
 
-    // 3. Upsert data in transaction
+    // 4. Upsert data in transaction
     const scrapeLog = await upsertScrapedData(data)
 
-    // 4. Return success response
+    // 5. Return success response
     return NextResponse.json({
       success: true,
       scrapeLogId: scrapeLog.id,
