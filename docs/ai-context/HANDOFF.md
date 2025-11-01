@@ -1,7 +1,7 @@
 # Engineering Handoff - Finish Finder
 
 **Last Updated:** 2025-11-01
-**Session Context:** UFC Scraper with Fighter Profile Enhancement - COMPLETE! 🎉
+**Session Context:** UFC Scraper with Fighter Profiles + Fight Enrichment - COMPLETE! 🎉
 
 ---
 
@@ -13,9 +13,10 @@
 **Phase 2 Core Parsers & Testing: COMPLETE ✅**
 **Phase 2 E2E Integration: COMPLETE ✅**
 **Phase 3 Fighter Profile Enhancement: COMPLETE ✅**
-**Phase 4 Automation & Operations: READY TO IMPLEMENT ⏳**
+**Phase 4 Fight Enrichment (Title Fights, Card Position): COMPLETE ✅**
+**Phase 5 Automation & Operations: READY TO IMPLEMENT ⏳**
 
-**🎉 THE SCRAPER IS NOW FULLY OPERATIONAL WITH COMPLETE FIGHTER DATA! 🎉**
+**🎉 THE SCRAPER IS NOW FULLY OPERATIONAL WITH COMPLETE FIGHTER & FIGHT DATA! 🎉**
 
 The UFC scraper has been completely rebuilt using Python/Scrapy with a decoupled architecture. All infrastructure components are deployed and the core HTML parsing logic is complete and tested:
 
@@ -160,7 +161,7 @@ The UFC scraper has been completely rebuilt using Python/Scrapy with a decoupled
    - Parses wins, losses, draws from fighter profile pages
    - Ready to integrate into spider (not yet connected)
 
-**Session 5: Fighter Profile Enhancement (THIS SESSION) ✅**
+**Session 5: Fighter Profile Enhancement ✅**
 
 **Major Achievement: Fighters now have complete records with wins/losses/draws!**
 
@@ -193,6 +194,52 @@ The UFC scraper has been completely rebuilt using Python/Scrapy with a decoupled
      - Adrian Yanez: Record: 17-6-0, W: 17, L: 6
      - Gabriel Bonfim: Record: 18-1-0, W: 18, L: 1
      - Daniel Marcos: Record: 17-1-0 (1 NC), W: 17, L: 1
+
+**Session 6: Fight Enrichment - Title Fights, Card Position, Main Event (THIS SESSION) ✅**
+
+**Major Achievement: Fights now have complete enrichment data!**
+
+1. **Implemented Fight Enrichment Parser** (`/scraper/ufc_scraper/parsers.py:174-226`):
+   - Detects title fights by checking for `belt.png` image in weight class cell
+   - Identifies main event (first fight, index 1)
+   - Assigns card positions based on fight order:
+     - Fight 1: "Main Event" (+ mainEvent flag)
+     - Fight 2: "Co-Main Event"
+     - Fights 3-5: "Main Card"
+     - Fights 6-9: "Prelims"
+     - Fights 10+: "Early Prelims"
+
+2. **Updated Data Models**:
+   - FightItem (`items.py`): Added `titleFight`, `mainEvent` boolean fields
+   - Validation schema (`validation.ts`): Added titleFight/mainEvent with defaults
+   - API route (`route.ts`): Saves enrichment fields to database
+
+3. **Fixed Critical Bug**:
+   - **Problem**: All fights shared same `sourceUrl` (event URL), violating unique constraint
+   - **Symptom**: Only 1 of 13 fights saved to database (others overwritten)
+   - **Solution**: Generate unique `sourceUrl` per fight: `{event_url}#fight-{fight_id}`
+   - **Result**: All 13 fights now save correctly
+
+4. **Test Results** (UFC Fight Night: Bonfim vs. Brown):
+   ```
+   1. Main Event       [MAIN]  | Welterweight         | Gabriel Bonfim vs Randy Brown
+   2. Co-Main Event            | Flyweight            | Matt Schnell vs Joseph Morales
+   3-5. Main Card (3 fights)
+   6-9. Prelims (4 fights)
+   10-13. Early Prelims (4 fights)
+
+   13/13 fights saved (100% success)
+   Title fights: 0 (correct - Fight Night has no title bouts)
+   Main events: 1 (correct)
+   ```
+
+5. **Verified with Fixture** (UFC 320):
+   ```
+   1. Main Event       [TITLE] [MAIN]  | Light Heavyweight
+   2. Co-Main Event    [TITLE]          | Bantamweight
+   ...
+   Total: 14 fights, 2 title fights, 1 main event
+   ```
 
 **Session 3 (Previous): Phase 2 - Core Parser and Spider Implementation**
 
