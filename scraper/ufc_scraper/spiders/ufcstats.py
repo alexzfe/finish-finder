@@ -7,6 +7,7 @@ This spider crawls UFCStats.com to extract upcoming UFC events, fights, and figh
 import scrapy
 from bs4 import BeautifulSoup
 from typing import Generator
+from datetime import datetime, timezone
 from ufc_scraper.items import EventItem, FightItem, FighterItem
 from ufc_scraper import parsers
 
@@ -17,8 +18,10 @@ class UFCStatsSpider(scrapy.Spider):
 
     Start URL: http://ufcstats.com/statistics/events/completed
 
+    Automatically filters for upcoming events only (date >= today).
+
     Spider arguments:
-        limit (int): Limit number of events to scrape (default: all)
+        limit (int): Limit number of upcoming events to scrape (default: 3)
                      Usage: scrapy crawl ufcstats -a limit=5
     """
 
@@ -43,13 +46,36 @@ class UFCStatsSpider(scrapy.Spider):
         soup = BeautifulSoup(response.text, 'html.parser')
         events = parsers.parse_event_list(soup)
 
-        self.logger.info(f"Found {len(events)} events")
+        self.logger.info(f"Found {len(events)} total events")
 
-        if self.limit:
-            self.logger.info(f"Limiting to first {self.limit} events")
-            events = events[:self.limit]
+        # Filter for upcoming events only (date >= today)
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        upcoming_events = []
 
         for event in events:
+            if event.get('date'):
+                try:
+                    # Parse the ISO date string
+                    event_date = datetime.fromisoformat(event['date'].replace('Z', '+00:00'))
+                    # Only include events that are today or in the future
+                    if event_date >= today:
+                        upcoming_events.append(event)
+                except (ValueError, AttributeError) as e:
+                    self.logger.warning(f"Could not parse date for event {event.get('name')}: {e}")
+                    continue
+
+        self.logger.info(f"Found {len(upcoming_events)} upcoming events")
+
+        # Sort by date ascending (nearest events first)
+        upcoming_events.sort(key=lambda x: x['date'])
+
+        # Limit to specified number or default to 3
+        limit = self.limit if self.limit else 3
+        self.logger.info(f"Limiting to nearest {limit} upcoming events")
+        upcoming_events = upcoming_events[:limit]
+
+        for event in upcoming_events:
+            self.logger.info(f"Will scrape: {event['name']} ({event['date']})")
             # Follow each event detail page
             yield scrapy.Request(
                 url=event['sourceUrl'],
