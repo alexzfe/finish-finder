@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")        // For runtime (uses pooler)
+  directUrl = env("DIRECT_DATABASE_URL") // For migrations (uses direct connection)
 }
 
 model Fighter {
@@ -38,6 +39,10 @@ model Fighter {
   funScore                    Float     @default(0)
   fightingStyles              String    @default("[]")
   lastFightDate               DateTime?
+  // New scraper fields
+  sourceUrl                   String?   @unique
+  lastScrapedAt               DateTime?
+  contentHash                 String?
   createdAt                   DateTime  @default(now())
   updatedAt                   DateTime  @updatedAt
   fighter1Fights              Fight[]   @relation("Fighter1")
@@ -53,6 +58,11 @@ model Event {
   location        String
   venue           String
   completed       Boolean           @default(false)
+  cancelled       Boolean           @default(false)
+  // New scraper fields
+  sourceUrl       String?           @unique
+  lastScrapedAt   DateTime?
+  contentHash     String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   fights          Fight[]
@@ -88,6 +98,10 @@ model Fight {
   round               Int?
   time                String?
   bookingDate         DateTime @default(now())
+  // New scraper fields
+  sourceUrl           String?  @unique
+  lastScrapedAt       DateTime?
+  contentHash         String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   event               Event    @relation(fields: [eventId], references: [id])
@@ -157,4 +171,21 @@ model QueryMetric {
   @@index([performance])
   @@index([model, action])
   @@map("query_metrics")
+}
+
+model ScrapeLog {
+  id            String   @id @default(cuid())
+  startTime     DateTime
+  endTime       DateTime?
+  status        String   // "SUCCESS" | "FAILURE" | "IN_PROGRESS"
+  eventsFound   Int      @default(0)
+  fightsAdded   Int      @default(0)
+  fightsUpdated Int      @default(0)
+  fightersAdded Int      @default(0)
+  errorMessage  String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  @@index([startTime])
+  @@index([status])
+  @@map("scrape_logs")
 }
