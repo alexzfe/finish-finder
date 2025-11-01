@@ -12,10 +12,10 @@ import { z } from 'zod'
 export const ScrapedFighterSchema = z.object({
   id: z.string(),
   name: z.string(),
-  record: z.string().optional(),
-  wins: z.number().int().optional(),
-  losses: z.number().int().optional(),
-  draws: z.number().int().optional(),
+  record: z.string().nullable().optional(),
+  wins: z.number().int().nullable().optional(),
+  losses: z.number().int().nullable().optional(),
+  draws: z.number().int().nullable().optional(),
   sourceUrl: z.string().url(),
 })
 

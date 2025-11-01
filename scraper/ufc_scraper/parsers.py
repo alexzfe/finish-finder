@@ -59,7 +59,8 @@ def parse_event_list(soup: BeautifulSoup) -> List[Dict]:
             try:
                 # Parse "November 01, 2025" format
                 parsed_date = datetime.strptime(event_date_str, "%B %d, %Y")
-                event_date = parsed_date.isoformat()
+                # Add UTC timezone for API validation
+                event_date = parsed_date.isoformat() + 'Z'
             except ValueError:
                 # If parsing fails, store as-is
                 event_date = event_date_str
@@ -119,7 +120,8 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
                 try:
                     # Parse "November 01, 2025" format
                     parsed_date = datetime.strptime(date_str, "%B %d, %Y")
-                    event_date = parsed_date.isoformat()
+                    # Add UTC timezone for API validation
+                    event_date = parsed_date.isoformat() + 'Z'
                 except ValueError:
                     event_date = date_str
             elif 'Location:' in text:
