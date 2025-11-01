@@ -1,47 +1,23 @@
+// lib/database/prisma.ts
 import { PrismaClient } from '@prisma/client'
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
+// This prevents TypeScript errors in a global scope.
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined
 }
 
-// Create PrismaClient only if DATABASE_URL is available
-// This prevents build-time errors when env vars aren't set
-function createPrismaClient() {
-  if (!process.env.DATABASE_URL) {
-    return null
-  }
+// This is the recommended approach for instantiating PrismaClient in a Next.js/serverless environment.
+// It prevents creating too many connections by caching the client in a global variable.
+const prisma = global.prisma || new PrismaClient({
+  // Optional: Add logging to see what Prisma is doing.
+  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+});
 
-  const client = new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL
-      }
-    }
-  })
-
-  // Add monitoring middleware only after successful client creation
-  if (typeof window === 'undefined' && process.env.DATABASE_URL) {
-    // Use setTimeout to defer middleware registration until after module initialization
-    setTimeout(async () => {
-      try {
-        const monitoringModule = await import('./monitoring')
-        const middleware = monitoringModule.createQueryMonitoringMiddleware()
-        // Type assertion needed for Prisma middleware integration
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(client as any).$use(middleware)
-      } catch (error) {
-        // Monitoring is optional - don't break the app if it fails
-        console.warn('Could not load monitoring middleware:', error instanceof Error ? error.message : 'Unknown error')
-      }
-    }, 0)
-  }
-
-  return client
+// In development, we cache the prisma instance on the global object to avoid exhausting
+// the database connection limit with hot reloads.
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient()
-
-if (process.env.NODE_ENV !== 'production' && prisma) {
-  globalForPrisma.prisma = prisma
-}
+export default prisma;

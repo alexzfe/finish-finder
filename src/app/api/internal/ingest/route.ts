@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/database/prisma'
+import prisma from '@/lib/database/prisma'
 import { ScrapedDataSchema, validateScrapedData } from '@/lib/scraper/validation'
 import * as crypto from 'crypto'
 
@@ -30,19 +30,10 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // 2. Check database connection
-  if (!prisma) {
-    console.error('Database not configured: DATABASE_URL is missing')
-    return NextResponse.json(
-      {
-        error: 'Database not configured',
-        message: 'DATABASE_URL environment variable is not set',
-      },
-      { status: 503 }
-    )
-  }
-
   try {
+    // 2. Diagnostic logging
+    console.log('Inspecting prisma object. Keys:', Object.keys(prisma || {}))
+
     // 3. Parse and validate request body
     const body = await req.json()
     const errors = validateScrapedData(body)
