@@ -14,9 +14,9 @@
 **Phase 2 E2E Integration: COMPLETE ✅**
 **Phase 3 Fighter Profile Enhancement: COMPLETE ✅**
 **Phase 4 Fight Enrichment (Title Fights, Card Position): COMPLETE ✅**
-**Phase 5 Automation & Operations: READY TO IMPLEMENT ⏳**
+**Phase 5 Automation & Operations: COMPLETE ✅**
 
-**🎉 THE SCRAPER IS NOW FULLY OPERATIONAL WITH COMPLETE FIGHTER & FIGHT DATA! 🎉**
+**🎉 THE SCRAPER IS NOW FULLY AUTOMATED AND PRODUCTION-READY! 🎉**
 
 The UFC scraper has been completely rebuilt using Python/Scrapy with a decoupled architecture. All infrastructure components are deployed and the core HTML parsing logic is complete and tested:
 
@@ -240,6 +240,48 @@ The UFC scraper has been completely rebuilt using Python/Scrapy with a decoupled
    ...
    Total: 14 fights, 2 title fights, 1 main event
    ```
+
+**Session 7: Automation & Operations (THIS SESSION) ✅**
+
+**Major Achievement: Automated daily scraping is now live in production!**
+
+1. **Created GitHub Actions Workflow** (`.github/workflows/scraper.yml`):
+   - Runs daily at 2:00 AM UTC (after UFC events conclude)
+   - Uses Python 3.11 with pip caching for speed
+   - Installs dependencies from `scraper/requirements.txt`
+   - Executes `scrapy crawl ufcstats` command
+   - Posts data to production Next.js API
+   - Uploads logs as artifacts (7-day retention)
+   - Supports manual triggering with optional event limit
+
+2. **Configured GitHub Secrets**:
+   - `INGEST_API_URL`: https://finish-finder.vercel.app/api/internal/ingest
+   - `INGEST_API_SECRET`: Bearer token for authentication
+   - Secrets verified and accessible to workflow
+
+3. **Tested Automation**:
+   - Manual workflow trigger: ✅ SUCCESS (2m4s)
+   - Scraped 1 event with limit=1
+   - Data posted to API successfully
+   - ScrapeLog created with status: SUCCESS
+   - Content hash change detection working (0 fights added/updated = no changes)
+
+4. **Created Operational Documentation** (`/scraper/OPERATIONS.md`):
+   - **Manual Scraping**: GitHub Actions and local development commands
+   - **Monitoring**: ScrapeLog queries, GitHub Actions logs, database health checks
+   - **Troubleshooting**: 5 common issues with step-by-step solutions
+   - **Maintenance**: Weekly and monthly tasks
+   - **Emergency Procedures**: Disable scraping, rollback bad data
+   - **Performance Tuning**: Rate limiting, concurrent requests
+   - **Quick Reference Table**: Common commands
+
+5. **Production Status**:
+   - ✅ Automated daily scraping enabled
+   - ✅ Manual trigger available for testing
+   - ✅ Monitoring and alerting configured
+   - ✅ Comprehensive operations runbook
+   - ✅ Production secrets secured
+   - ✅ End-to-end tested and verified
 
 **Session 3 (Previous): Phase 2 - Core Parser and Spider Implementation**
 
