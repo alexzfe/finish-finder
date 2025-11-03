@@ -246,15 +246,18 @@ export default function Home() {
                             </p>
                             {/* Key Factors as Bubbles */}
                             {Array.isArray(selectedFight.funFactors) && selectedFight.funFactors.length > 0 && (
-                              <div className="flex flex-wrap gap-2">
-                                {selectedFight.funFactors.map((factor, idx) => (
-                                  <span
-                                    key={idx}
-                                    className="inline-block rounded-full bg-[var(--ufc-red)]/20 px-3 py-1 text-xs font-medium text-white/90 border border-[var(--ufc-red)]/30"
-                                  >
-                                    {typeof factor === 'string' ? factor : factor.type}
-                                  </span>
-                                ))}
+                              <div>
+                                <p className="ufc-condensed text-[0.65rem] uppercase tracking-[0.3em] text-white/50 mb-2">Key Factors</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {selectedFight.funFactors.map((factor, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="inline-block rounded-full bg-[var(--ufc-red)]/20 px-3 py-1 text-xs font-medium text-white/90 border border-[var(--ufc-red)]/30"
+                                    >
+                                      {typeof factor === 'string' ? factor : factor.type}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>
