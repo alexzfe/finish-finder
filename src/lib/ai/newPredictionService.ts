@@ -71,6 +71,35 @@ export interface FightPrediction {
 }
 
 /**
+ * Calculate risk level from AI confidence scores
+ *
+ * Risk level represents how unpredictable the fight outcome is:
+ * - "low" = High confidence (>= 0.7 avg) → Predictable outcome
+ * - "balanced" = Medium confidence (0.4-0.7 avg) → Moderate uncertainty
+ * - "high" = Low confidence (< 0.4 avg) → Unpredictable outcome
+ *
+ * @param finishConfidence - Confidence in finish probability prediction (0-1)
+ * @param funConfidence - Confidence in fun score prediction (0-1)
+ * @returns Risk level: "low", "balanced", or "high"
+ */
+export function calculateRiskLevel(
+  finishConfidence: number,
+  funConfidence: number
+): 'low' | 'balanced' | 'high' {
+  // Average the two confidence scores
+  const avgConfidence = (finishConfidence + funConfidence) / 2
+
+  // Map confidence to risk (inverse relationship)
+  if (avgConfidence >= 0.7) {
+    return 'low' // High confidence = predictable = low risk
+  } else if (avgConfidence >= 0.4) {
+    return 'balanced' // Medium confidence = moderate risk
+  } else {
+    return 'high' // Low confidence = unpredictable = high risk
+  }
+}
+
+/**
  * AI Prediction Service
  *
  * Generates finish probability and fun score predictions for MMA fights.

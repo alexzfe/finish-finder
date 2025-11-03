@@ -100,12 +100,15 @@ See [`DATABASE_PRODUCTION_STATUS.md`](DATABASE_PRODUCTION_STATUS.md) for complet
 ### Database Schema Enhancements
 Added comprehensive fighter statistics from UFCStats.com to support advanced AI predictions:
 
-**New Fighter Fields (17 statistics total):**
+**New Fighter Fields (26 statistics total):**
 - **Physical Attributes**: `weightLbs`, `reachInches`, `stance`, `dob`
 - **Striking Stats**: `significantStrikesLandedPerMinute`, `strikingAccuracyPercentage`, `significantStrikesAbsorbedPerMinute`, `strikingDefensePercentage`
 - **Grappling Stats**: `takedownAverage`, `takedownAccuracyPercentage`, `takedownDefensePercentage`, `submissionAverage`
-- **Fight Averages**: `averageFightTimeSeconds`, `winsByKO`, `winsBySubmission`, `winsByDecision`
-- **Calculated Stats**: `finishRate`, `koPercentage`, `submissionPercentage` (derived from win methods)
+- **Win Methods**: `winsByKO`, `winsBySubmission`, `winsByDecision`
+- **Loss Methods**: `lossesByKO`, `lossesBySubmission`, `lossesByDecision` (for defensive analysis)
+- **Fight Averages**: `averageFightTimeSeconds`
+- **Calculated Win Stats**: `finishRate`, `koPercentage`, `submissionPercentage` (derived from win methods)
+- **Calculated Loss Stats**: `lossFinishRate`, `koLossPercentage`, `submissionLossPercentage` (defensive metrics)
 
 **New AI Prediction Tracking Models:**
 ```prisma
@@ -139,6 +142,7 @@ Updated `parse_fighter_profile()` function to extract all 17 statistics from UFC
 - `_parse_percentage()` - Converts "50%" → 0.5
 - `_parse_time_to_seconds()` - Converts "5:00" → 300 seconds
 - `_parse_int()` / `_parse_float()` - Safe numeric parsing with error handling
+- `_parse_fight_history()` - Extracts win AND loss methods from fight history table for comprehensive offensive/defensive metrics
 
 **Data Flow:**
 1. Scraper visits fighter profile page on UFCStats.com
@@ -191,6 +195,11 @@ Complete implementation plan stored in `/docs/AI_PREDICTION_IMPLEMENTATION_PLAN.
 - ✅ Prediction runner script with version management (`scripts/new-ai-predictions-runner.ts`)
 - ✅ SHA256 hash-based prompt versioning for A/B testing
 - ✅ Command line interface: `--dry-run`, `--force`, `--event-id=<id>`
+- ✅ **Risk Level Calculation** - Automatically derives Fight.riskLevel from AI confidence scores:
+  - `calculateRiskLevel()` function averages finish + fun confidence scores
+  - Maps confidence to risk: High confidence (≥0.7) → "low" risk, Medium (0.4-0.7) → "balanced", Low (<0.4) → "high"
+  - Populated automatically when predictions are generated
+  - Displayed in UI "Risk Profile" section (`src/components/fight/FightDetailsModal.tsx:97-100`)
 - ✅ Progress tracking and error handling with detailed metrics logging
 - ✅ Tested with dry-run: 51 fights found across 4 upcoming events
 

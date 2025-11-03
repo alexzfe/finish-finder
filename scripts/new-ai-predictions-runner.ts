@@ -38,7 +38,7 @@ import { createHash } from 'crypto'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { prisma } from '../src/lib/database/prisma'
-import { NewPredictionService } from '../src/lib/ai/newPredictionService'
+import { NewPredictionService, calculateRiskLevel } from '../src/lib/ai/newPredictionService'
 import { classifyFighterStyle } from '../src/lib/ai/prompts'
 import { FighterContextService } from '../src/lib/ai/fighterContextService'
 import { getDefaultSearchFunction } from '../src/lib/ai/webSearchWrapper'
@@ -185,19 +185,19 @@ async function findFightsNeedingPredictions(
   versionId: string,
   args: Args
 ): Promise<FightWithRelations[]> {
-  const whereConditions: Record<string, unknown> = {
+  const whereConditions: Record<string, unknown> = {}
+
+  // Filter by event ID if specified, otherwise filter by upcoming events
+  if (args.eventId) {
+    whereConditions.eventId = args.eventId
+  } else {
     // Only upcoming events (not completed)
-    event: {
+    whereConditions.event = {
       completed: false,
       date: {
         gte: new Date(), // Future events only
       },
-    },
-  }
-
-  // Filter by event ID if specified
-  if (args.eventId) {
-    whereConditions.eventId = args.eventId
+    }
   }
 
   // If not forcing, exclude fights that already have predictions for this version
@@ -268,6 +268,9 @@ async function generatePrediction(
           fighter1.significantStrikesAbsorbedPerMinute,
         strikingDefensePercentage: fighter1.strikingDefensePercentage,
         takedownDefensePercentage: fighter1.takedownDefensePercentage,
+        lossFinishRate: fighter1.lossFinishRate,
+        koLossPercentage: fighter1.koLossPercentage,
+        submissionLossPercentage: fighter1.submissionLossPercentage,
         finishRate: fighter1.finishRate,
         koPercentage: fighter1.koPercentage,
         submissionPercentage: fighter1.submissionPercentage,
@@ -283,6 +286,9 @@ async function generatePrediction(
           fighter2.significantStrikesAbsorbedPerMinute,
         strikingDefensePercentage: fighter2.strikingDefensePercentage,
         takedownDefensePercentage: fighter2.takedownDefensePercentage,
+        lossFinishRate: fighter2.lossFinishRate,
+        koLossPercentage: fighter2.koLossPercentage,
+        submissionLossPercentage: fighter2.submissionLossPercentage,
         finishRate: fighter2.finishRate,
         koPercentage: fighter2.koPercentage,
         submissionPercentage: fighter2.submissionPercentage,
@@ -392,6 +398,17 @@ async function generatePrediction(
         tokensUsed: prediction.tokensUsed,
         costUsd: prediction.costUsd,
       },
+    })
+
+    // Calculate and save risk level to Fight table (derived from confidence scores)
+    const riskLevel = calculateRiskLevel(
+      prediction.finishConfidence,
+      prediction.funConfidence
+    )
+
+    await prisma.fight.update({
+      where: { id: fight.id },
+      data: { riskLevel },
     })
 
     return {
