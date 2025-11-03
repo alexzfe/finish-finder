@@ -546,17 +546,20 @@ def parse_fighter_profile(soup: BeautifulSoup, fighter_url: str) -> Dict[str, An
                 fighter[schema_key] = parser_func(value_str) if parser_func else value_str
 
     # --- Calculated Stats for AI Model ---
-    total_wins = fighter.get('wins', 0)
+    # Use UFC-only wins (not overall career wins) for finish rate calculations
+    # UFCStats.com only shows UFC fight statistics, so we must calculate UFC wins
     wins_by_ko = fighter.get('winsByKO', 0)
     wins_by_sub = fighter.get('winsBySubmission', 0)
+    wins_by_decision = fighter.get('winsByDecision', 0)
+    ufc_wins = wins_by_ko + wins_by_sub + wins_by_decision
 
-    if total_wins and total_wins > 0 and wins_by_ko is not None and wins_by_sub is not None:
-        finish_rate = (wins_by_ko + wins_by_sub) / total_wins
+    if ufc_wins and ufc_wins > 0 and wins_by_ko is not None and wins_by_sub is not None:
+        finish_rate = (wins_by_ko + wins_by_sub) / ufc_wins
         fighter['finishRate'] = round(finish_rate, 3)
-        fighter['koPercentage'] = round(wins_by_ko / total_wins, 3)
-        fighter['submissionPercentage'] = round(wins_by_sub / total_wins, 3)
+        fighter['koPercentage'] = round(wins_by_ko / ufc_wins, 3)
+        fighter['submissionPercentage'] = round(wins_by_sub / ufc_wins, 3)
     else:
-        # Set defaults for fighters with no wins or missing data
+        # Set defaults for fighters with no UFC wins or missing data
         fighter['finishRate'] = 0.0
         fighter['koPercentage'] = 0.0
         fighter['submissionPercentage'] = 0.0
