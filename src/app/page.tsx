@@ -225,22 +225,38 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {selectedFight.aiDescription && (
+                    {(selectedFight.aiDescription || selectedFight.funReasoning) && (
                       <div className="space-y-3">
-                        <div>
-                          <p className="ufc-condensed text-xs text-white/70 mb-2">Finish Probability Analysis</p>
-                          <p className="text-sm leading-relaxed text-white/80">
-                            {selectedFight.aiDescription}
-                          </p>
-                        </div>
-                        {Array.isArray(selectedFight.funFactors) && selectedFight.funFactors.length > 0 && (
+                        {/* Finish Probability Analysis */}
+                        {selectedFight.aiDescription && (
+                          <div>
+                            <p className="ufc-condensed text-xs text-white/70 mb-2">Finish Probability Analysis</p>
+                            <p className="text-sm leading-relaxed text-white/80">
+                              {selectedFight.aiDescription}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Fun Score Analysis */}
+                        {selectedFight.funReasoning && (
                           <div>
                             <p className="ufc-condensed text-xs text-white/70 mb-2">Fun Score Analysis</p>
-                            <p className="text-sm leading-relaxed text-white/80">
-                              {selectedFight.funFactors.map((factor, idx) => (
-                                <span key={idx}>{typeof factor === 'string' ? factor : factor.type}</span>
-                              ))}
+                            <p className="text-sm leading-relaxed text-white/80 mb-3">
+                              {selectedFight.funReasoning}
                             </p>
+                            {/* Key Factors as Bubbles */}
+                            {Array.isArray(selectedFight.funFactors) && selectedFight.funFactors.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {selectedFight.funFactors.map((factor, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-block rounded-full bg-[var(--ufc-red)]/20 px-3 py-1 text-xs font-medium text-white/90 border border-[var(--ufc-red)]/30"
+                                  >
+                                    {typeof factor === 'string' ? factor : factor.type}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
