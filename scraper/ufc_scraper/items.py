@@ -36,11 +36,44 @@ class FightItem(scrapy.Item):
 
 
 class FighterItem(scrapy.Item):
-    """UFC Fighter"""
+    """UFC Fighter with comprehensive statistics"""
     id = scrapy.Field()  # URL slug: "Jon-Jones"
     name = scrapy.Field()
+    sourceUrl = scrapy.Field()
+
+    # Basic record
     record = scrapy.Field()  # "W-L-D" format
     wins = scrapy.Field()
     losses = scrapy.Field()
     draws = scrapy.Field()
-    sourceUrl = scrapy.Field()
+
+    # Physical attributes (from UFCStats.com)
+    height = scrapy.Field()  # e.g. "5' 11\""
+    weightLbs = scrapy.Field()
+    reach = scrapy.Field()  # e.g. "76\""
+    reachInches = scrapy.Field()
+    stance = scrapy.Field()  # Orthodox, Southpaw, Switch
+    dob = scrapy.Field()
+
+    # Striking statistics (from UFCStats.com)
+    significantStrikesLandedPerMinute = scrapy.Field()
+    strikingAccuracyPercentage = scrapy.Field()
+    significantStrikesAbsorbedPerMinute = scrapy.Field()
+    strikingDefensePercentage = scrapy.Field()
+
+    # Grappling statistics (from UFCStats.com)
+    takedownAverage = scrapy.Field()
+    takedownAccuracyPercentage = scrapy.Field()
+    takedownDefensePercentage = scrapy.Field()
+    submissionAverage = scrapy.Field()
+
+    # Win methods & fight averages (from UFCStats.com)
+    averageFightTimeSeconds = scrapy.Field()
+    winsByKO = scrapy.Field()
+    winsBySubmission = scrapy.Field()
+    winsByDecision = scrapy.Field()
+
+    # Calculated statistics (computed by parser)
+    finishRate = scrapy.Field()
+    koPercentage = scrapy.Field()
+    submissionPercentage = scrapy.Field()

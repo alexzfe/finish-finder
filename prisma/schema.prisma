@@ -18,35 +18,63 @@ model Fighter {
   weightClass                 String
   imageUrl                    String?
   record                      String?
-  height                      String?
-  reach                       String?
+
+  // Physical Attributes (from UFCStats.com)
+  height                      String?   // e.g. "5' 11\"" - kept for display
+  weightLbs                   Int?      // Weight in pounds
+  reach                       String?   // e.g. "76\"" - kept for display
+  reachInches                 Int?      // Reach in inches (parsed numeric)
+  stance                      String?   // Orthodox, Southpaw, Switch
+  dob                         String?   // Date of birth
   age                         Int?
   nationality                 String?
-  winsByKO                    Int       @default(0)
-  winsBySubmission            Int       @default(0)
-  winsByDecision              Int       @default(0)
-  currentStreak               String?
-  ranking                     Int?
-  finishRate                  Float     @default(0)
-  koPercentage                Float     @default(0)
-  submissionPercentage        Float     @default(0)
-  averageFightTime            Int       @default(0)
-  significantStrikesPerMinute Float     @default(0)
-  takedownAccuracy            Float     @default(0)
-  socialFollowers             Int       @default(0)
-  recentBuzzScore             Float     @default(0)
-  fanFavorite                 Boolean   @default(false)
-  funScore                    Float     @default(0)
-  fightingStyles              String    @default("[]")
-  lastFightDate               DateTime?
-  // New scraper fields
-  sourceUrl                   String?   @unique
-  lastScrapedAt               DateTime?
-  contentHash                 String?
-  createdAt                   DateTime  @default(now())
-  updatedAt                   DateTime  @updatedAt
-  fighter1Fights              Fight[]   @relation("Fighter1")
-  fighter2Fights              Fight[]   @relation("Fighter2")
+
+  // Striking Statistics (from UFCStats.com)
+  significantStrikesPerMinute        Float @default(0) // SLpM
+  significantStrikesLandedPerMinute  Float @default(0) // SLpM (alias for clarity)
+  strikingAccuracyPercentage         Float @default(0) // Str. Acc. (0-1)
+  significantStrikesAbsorbedPerMinute Float @default(0) // SApM
+  strikingDefensePercentage          Float @default(0) // Sig. Str. Defence (0-1)
+
+  // Grappling Statistics (from UFCStats.com)
+  takedownAverage            Float @default(0) // TD Avg. (per 15 min)
+  takedownAccuracy           Float @default(0) // Legacy field (kept for compatibility)
+  takedownAccuracyPercentage Float @default(0) // TD Acc. (0-1)
+  takedownDefensePercentage  Float @default(0) // TD Def. (0-1)
+  submissionAverage          Float @default(0) // Sub. Avg. (per 15 min)
+
+  // Win Methods & Fight Averages (from UFCStats.com)
+  winsByKO                   Int   @default(0) // Wins by KO/TKO
+  winsBySubmission           Int   @default(0) // Wins by Submission
+  winsByDecision             Int   @default(0) // Wins by Decision
+  averageFightTime           Int   @default(0) // Legacy field (kept for compatibility)
+  averageFightTimeSeconds    Int   @default(0) // Avg fight time in seconds (MM:SS converted)
+
+  // Calculated Statistics (derived from win methods)
+  finishRate                 Float @default(0) // (KO + Sub) / Total Wins
+  koPercentage               Float @default(0) // KO / Total Wins
+  submissionPercentage       Float @default(0) // Sub / Total Wins
+
+  // Legacy fields (to be deprecated eventually)
+  currentStreak              String?
+  ranking                    Int?
+  socialFollowers            Int     @default(0)
+  recentBuzzScore            Float   @default(0)
+  fanFavorite                Boolean @default(false)
+  funScore                   Float   @default(0)
+  fightingStyles             String  @default("[]")
+  lastFightDate              DateTime?
+
+  // Scraper metadata
+  sourceUrl                  String?   @unique
+  lastScrapedAt              DateTime?
+  contentHash                String?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+
+  // Relations
+  fighter1Fights             Fight[]   @relation("Fighter1")
+  fighter2Fights             Fight[]   @relation("Fighter2")
 
   @@map("fighters")
 }
@@ -82,6 +110,8 @@ model Fight {
   cardPosition        String   @default("preliminary")
   scheduledRounds     Int      @default(3)
   fightNumber         Int?
+
+  // Legacy AI prediction fields (to be deprecated)
   funFactor           Int      @default(0)
   finishProbability   Int      @default(0)
   entertainmentReason String?
@@ -91,22 +121,28 @@ model Fight {
   predictedFunScore   Float    @default(0)
   funFactors          String   @default("[]")
   aiDescription       String?
+
+  // Fight outcome data
   completed           Boolean  @default(false)
   actualFunScore      Float?
   winnerId            String?
-  method              String?
+  method              String?  // KO, TKO, SUB, DEC
   round               Int?
   time                String?
   bookingDate         DateTime @default(now())
-  // New scraper fields
+
+  // Scraper metadata
   sourceUrl           String?  @unique
   lastScrapedAt       DateTime?
   contentHash         String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
-  event               Event    @relation(fields: [eventId], references: [id])
-  fighter1            Fighter  @relation("Fighter1", fields: [fighter1Id], references: [id])
-  fighter2            Fighter  @relation("Fighter2", fields: [fighter2Id], references: [id])
+
+  // Relations
+  event               Event       @relation(fields: [eventId], references: [id])
+  fighter1            Fighter     @relation("Fighter1", fields: [fighter1Id], references: [id])
+  fighter2            Fighter     @relation("Fighter2", fields: [fighter2Id], references: [id])
+  predictions         Prediction[] // New AI prediction system
 
   @@map("fights")
 }
@@ -188,4 +224,67 @@ model ScrapeLog {
   @@index([startTime])
   @@index([status])
   @@map("scrape_logs")
+}
+
+// New AI Prediction System Models
+
+model PredictionVersion {
+  id                  String   @id @default(cuid())
+  version             String   @unique // e.g. "v1.0", "v1.1"
+  finishPromptHash    String            // SHA256 of finish probability prompt template
+  funScorePromptHash  String            // SHA256 of fun score prompt template
+  description         String   @db.Text // What changed in this version
+  active              Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  // Accuracy metrics (updated after events complete)
+  finishAccuracy      Float?   // % of finish predictions correct (threshold 0.5)
+  brierScore          Float?   // Calibration score for probabilities (lower = better)
+  funScoreCorrelation Float?   // Correlation with FOTN awards
+  evaluatedAt         DateTime? // When metrics were last calculated
+
+  // Relations
+  predictions         Prediction[]
+
+  @@index([active])
+  @@index([createdAt])
+  @@map("prediction_versions")
+}
+
+model Prediction {
+  id        String   @id @default(cuid())
+  fightId   String
+  versionId String
+
+  // Finish Probability Prediction
+  finishProbability Float // 0-1 (0-100%)
+  finishConfidence  Float // 0-1
+  finishReasoning   Json  // Chain-of-thought steps: { defensive_comparison, finish_rate_comparison, etc. }
+
+  // Fun Score Prediction
+  funScore     Float // 0-100
+  funConfidence Float // 0-1
+  funBreakdown Json  // Score breakdown: { pace_score, finish_rate_score, style_matchup_score, etc. }
+
+  // Metadata
+  modelUsed String // "claude-3-5-sonnet-20241022", "gpt-4o", etc.
+  tokensUsed Int   @default(0)
+  costUsd   Float  @default(0)
+  createdAt DateTime @default(now())
+
+  // Evaluation (filled after fight completes)
+  actualFinish            Boolean? // Did fight end in finish (KO/TKO/SUB)?
+  actualFinishMethod      String?  // KO, TKO, SUB, DEC
+  actualFunScore          Float?   // Manual rating or calculated from metrics
+  finishPredictionCorrect Boolean? // Was the finish prediction correct?
+
+  // Relations
+  fight   Fight             @relation(fields: [fightId], references: [id], onDelete: Cascade)
+  version PredictionVersion @relation(fields: [versionId], references: [id])
+
+  @@unique([fightId, versionId]) // One prediction per fight per version
+  @@index([versionId])
+  @@index([createdAt])
+  @@index([actualFinish]) // For evaluation queries
+  @@map("predictions")
 }

@@ -95,7 +95,7 @@ async function upsertScrapedData(data: any) {
         })
 
         if (!existing) {
-          // Create new fighter
+          // Create new fighter with all stats
           await tx.fighter.create({
             data: {
               name: fighter.name,
@@ -107,11 +107,42 @@ async function upsertScrapedData(data: any) {
               sourceUrl: fighter.sourceUrl,
               lastScrapedAt: new Date(),
               contentHash,
+
+              // Physical attributes
+              height: fighter.height,
+              weightLbs: fighter.weightLbs,
+              reach: fighter.reach,
+              reachInches: fighter.reachInches,
+              stance: fighter.stance,
+              dob: fighter.dob,
+
+              // Striking statistics
+              significantStrikesLandedPerMinute: fighter.significantStrikesLandedPerMinute ?? 0,
+              strikingAccuracyPercentage: fighter.strikingAccuracyPercentage ?? 0,
+              significantStrikesAbsorbedPerMinute: fighter.significantStrikesAbsorbedPerMinute ?? 0,
+              strikingDefensePercentage: fighter.strikingDefensePercentage ?? 0,
+
+              // Grappling statistics
+              takedownAverage: fighter.takedownAverage ?? 0,
+              takedownAccuracyPercentage: fighter.takedownAccuracyPercentage ?? 0,
+              takedownDefensePercentage: fighter.takedownDefensePercentage ?? 0,
+              submissionAverage: fighter.submissionAverage ?? 0,
+
+              // Win methods & averages
+              averageFightTimeSeconds: fighter.averageFightTimeSeconds ?? 0,
+              winsByKO: fighter.winsByKO ?? 0,
+              winsBySubmission: fighter.winsBySubmission ?? 0,
+              winsByDecision: fighter.winsByDecision ?? 0,
+
+              // Calculated statistics
+              finishRate: fighter.finishRate ?? 0,
+              koPercentage: fighter.koPercentage ?? 0,
+              submissionPercentage: fighter.submissionPercentage ?? 0,
             },
           })
           fightersAdded++
         } else if (existing.contentHash !== contentHash) {
-          // Update existing fighter
+          // Update existing fighter with new stats
           await tx.fighter.update({
             where: { sourceUrl: fighter.sourceUrl },
             data: {
@@ -122,6 +153,37 @@ async function upsertScrapedData(data: any) {
               draws: fighter.draws ?? existing.draws,
               lastScrapedAt: new Date(),
               contentHash,
+
+              // Physical attributes
+              height: fighter.height ?? existing.height,
+              weightLbs: fighter.weightLbs ?? existing.weightLbs,
+              reach: fighter.reach ?? existing.reach,
+              reachInches: fighter.reachInches ?? existing.reachInches,
+              stance: fighter.stance ?? existing.stance,
+              dob: fighter.dob ?? existing.dob,
+
+              // Striking statistics
+              significantStrikesLandedPerMinute: fighter.significantStrikesLandedPerMinute ?? existing.significantStrikesLandedPerMinute,
+              strikingAccuracyPercentage: fighter.strikingAccuracyPercentage ?? existing.strikingAccuracyPercentage,
+              significantStrikesAbsorbedPerMinute: fighter.significantStrikesAbsorbedPerMinute ?? existing.significantStrikesAbsorbedPerMinute,
+              strikingDefensePercentage: fighter.strikingDefensePercentage ?? existing.strikingDefensePercentage,
+
+              // Grappling statistics
+              takedownAverage: fighter.takedownAverage ?? existing.takedownAverage,
+              takedownAccuracyPercentage: fighter.takedownAccuracyPercentage ?? existing.takedownAccuracyPercentage,
+              takedownDefensePercentage: fighter.takedownDefensePercentage ?? existing.takedownDefensePercentage,
+              submissionAverage: fighter.submissionAverage ?? existing.submissionAverage,
+
+              // Win methods & averages
+              averageFightTimeSeconds: fighter.averageFightTimeSeconds ?? existing.averageFightTimeSeconds,
+              winsByKO: fighter.winsByKO ?? existing.winsByKO,
+              winsBySubmission: fighter.winsBySubmission ?? existing.winsBySubmission,
+              winsByDecision: fighter.winsByDecision ?? existing.winsByDecision,
+
+              // Calculated statistics
+              finishRate: fighter.finishRate ?? existing.finishRate,
+              koPercentage: fighter.koPercentage ?? existing.koPercentage,
+              submissionPercentage: fighter.submissionPercentage ?? existing.submissionPercentage,
             },
           })
         }

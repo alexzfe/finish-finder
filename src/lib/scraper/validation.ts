@@ -8,15 +8,49 @@ import { z } from 'zod'
 
 /**
  * Fighter schema - matches FighterItem from Python scraper
+ * Includes comprehensive statistics from UFCStats.com
  */
 export const ScrapedFighterSchema = z.object({
   id: z.string(),
   name: z.string(),
+  sourceUrl: z.string().url(),
+
+  // Basic record
   record: z.string().nullable().optional(),
   wins: z.number().int().nullable().optional(),
   losses: z.number().int().nullable().optional(),
   draws: z.number().int().nullable().optional(),
-  sourceUrl: z.string().url(),
+
+  // Physical attributes (from UFCStats.com)
+  height: z.string().nullable().optional(),  // e.g. "5' 11\""
+  weightLbs: z.number().int().nullable().optional(),
+  reach: z.string().nullable().optional(),  // e.g. "76\""
+  reachInches: z.number().int().nullable().optional(),
+  stance: z.string().nullable().optional(),  // Orthodox, Southpaw, Switch
+  dob: z.string().nullable().optional(),
+
+  // Striking statistics (from UFCStats.com)
+  significantStrikesLandedPerMinute: z.number().nullable().optional(),
+  strikingAccuracyPercentage: z.number().min(0).max(1).nullable().optional(),
+  significantStrikesAbsorbedPerMinute: z.number().nullable().optional(),
+  strikingDefensePercentage: z.number().min(0).max(1).nullable().optional(),
+
+  // Grappling statistics (from UFCStats.com)
+  takedownAverage: z.number().nullable().optional(),
+  takedownAccuracyPercentage: z.number().min(0).max(1).nullable().optional(),
+  takedownDefensePercentage: z.number().min(0).max(1).nullable().optional(),
+  submissionAverage: z.number().nullable().optional(),
+
+  // Win methods & fight averages (from UFCStats.com)
+  averageFightTimeSeconds: z.number().int().nullable().optional(),
+  winsByKO: z.number().int().nullable().optional(),
+  winsBySubmission: z.number().int().nullable().optional(),
+  winsByDecision: z.number().int().nullable().optional(),
+
+  // Calculated statistics (computed by scraper)
+  finishRate: z.number().min(0).max(1).nullable().optional(),
+  koPercentage: z.number().min(0).max(1).nullable().optional(),
+  submissionPercentage: z.number().min(0).max(1).nullable().optional(),
 })
 
 /**

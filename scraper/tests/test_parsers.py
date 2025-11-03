@@ -38,6 +38,14 @@ def event_detail_completed_html(fixtures_dir):
         return f.read()
 
 
+@pytest.fixture
+def fighter_profile_html(fixtures_dir):
+    """Load fighter profile HTML fixture"""
+    fixture_path = fixtures_dir / 'fighter_profile_yanez.html'
+    with open(fixture_path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+
 class TestParseEventList:
     """Tests for parse_event_list()"""
 
@@ -205,3 +213,171 @@ class TestHelperFunctions:
         assert parsers.normalize_event_name("UFC 300: Pereira vs. Hill") == "UFC-300"
         assert parsers.normalize_event_name("UFC Fight Night: Garcia vs. Onama") == "UFC-Fight-Night-Garcia-vs-Onama"
         assert parsers.normalize_event_name("ufc 299") == "UFC-299"  # Case insensitive
+
+
+class TestParseFighterProfile:
+    """Tests for parse_fighter_profile()"""
+
+    def test_parse_fighter_profile_returns_dict(self, fighter_profile_html):
+        """Should return dictionary with fighter data"""
+        soup = BeautifulSoup(fighter_profile_html, 'html.parser')
+        fighter = parsers.parse_fighter_profile(soup, "http://ufcstats.com/fighter-details/0232cabbc30a2372")
+
+        assert isinstance(fighter, dict)
+        assert 'id' in fighter
+        assert 'name' in fighter
+        assert 'sourceUrl' in fighter
+
+    def test_basic_info_extraction(self, fighter_profile_html):
+        """Should extract basic fighter information"""
+        soup = BeautifulSoup(fighter_profile_html, 'html.parser')
+        fighter = parsers.parse_fighter_profile(soup, "http://ufcstats.com/fighter-details/0232cabbc30a2372")
+
+        assert fighter['id'] == '0232cabbc30a2372'
+        assert fighter['sourceUrl'] == "http://ufcstats.com/fighter-details/0232cabbc30a2372"
+        assert 'name' in fighter
+        assert len(fighter.get('name', '')) > 0
+
+    def test_record_parsing(self, fighter_profile_html):
+        """Should parse fighter record"""
+        soup = BeautifulSoup(fighter_profile_html, 'html.parser')
+        fighter = parsers.parse_fighter_profile(soup, "http://ufcstats.com/fighter-details/0232cabbc30a2372")
+
+        assert 'record' in fighter
+        assert 'wins' in fighter
+        assert 'losses' in fighter
+        assert 'draws' in fighter
+
+        # Verify record is W-L-D format
+        if fighter['record']:
+            assert '-' in fighter['record']
+
+    def test_physical_attributes_extraction(self, fighter_profile_html):
+        """Should extract physical attributes"""
+        soup = BeautifulSoup(fighter_profile_html, 'html.parser')
+        fighter = parsers.parse_fighter_profile(soup, "http://ufcstats.com/fighter-details/0232cabbc30a2372")
+
+        # Check for physical attribute fields (may be None if not available)
+        assert 'height' in fighter
+        assert 'weightLbs' in fighter
+        assert 'reach' in fighter
+        assert 'reachInches' in fighter
+        assert 'stance' in fighter
+        assert 'dob' in fighter
+
+    def test_striking_statistics_extraction(self, fighter_profile_html):
+        """Should extract striking statistics"""
+        soup = BeautifulSoup(fighter_profile_html, 'html.parser')
+        fighter = parsers.parse_fighter_profile(soup, "http://ufcstats.com/fighter-details/0232cabbc30a2372")
+
+        # Check for striking stats fields
+        assert 'significantStrikesLandedPerMinute' in fighter
+        assert 'strikingAccuracyPercentage' in fighter
+        assert 'significantStrikesAbsorbedPerMinute' in fighter
+        assert 'strikingDefensePercentage' in fighter
+
+        # If values exist, they should be numeric
+        if fighter.get('significantStrikesLandedPerMinute') is not None:
+            assert isinstance(fighter['significantStrikesLandedPerMinute'], (int, float))
+        if fighter.get('strikingAccuracyPercentage') is not None:
+            assert 0 <= fighter['strikingAccuracyPercentage'] <= 1
+
+    def test_grappling_statistics_extraction(self, fighter_profile_html):
+        """Should extract grappling statistics"""
+        soup = BeautifulSoup(fighter_profile_html, 'html.parser')
+        fighter = parsers.parse_fighter_profile(soup, "http://ufcstats.com/fighter-details/0232cabbc30a2372")
+
+        # Check for grappling stats fields
+        assert 'takedownAverage' in fighter
+        assert 'takedownAccuracyPercentage' in fighter
+        assert 'takedownDefensePercentage' in fighter
+        assert 'submissionAverage' in fighter
+
+        # If values exist, they should be numeric
+        if fighter.get('takedownAccuracyPercentage') is not None:
+            assert 0 <= fighter['takedownAccuracyPercentage'] <= 1
+
+    def test_win_methods_extraction(self, fighter_profile_html):
+        """Should extract win method statistics"""
+        soup = BeautifulSoup(fighter_profile_html, 'html.parser')
+        fighter = parsers.parse_fighter_profile(soup, "http://ufcstats.com/fighter-details/0232cabbc30a2372")
+
+        # Check for win methods (THIS IS THE CRITICAL TEST - MUST USE winsByKO not winsByKo)
+        assert 'winsByKO' in fighter, "Field must be 'winsByKO' (uppercase O) to match Prisma schema"
+        assert 'winsBySubmission' in fighter
+        assert 'winsByDecision' in fighter
+
+        # If values exist, they should be integers
+        if fighter.get('winsByKO') is not None:
+            assert isinstance(fighter['winsByKO'], int)
+            assert fighter['winsByKO'] >= 0
+
+    def test_calculated_statistics(self, fighter_profile_html):
+        """Should calculate finish rate, KO percentage, submission percentage"""
+        soup = BeautifulSoup(fighter_profile_html, 'html.parser')
+        fighter = parsers.parse_fighter_profile(soup, "http://ufcstats.com/fighter-details/0232cabbc30a2372")
+
+        # Check for calculated stats
+        assert 'finishRate' in fighter
+        assert 'koPercentage' in fighter
+        assert 'submissionPercentage' in fighter
+
+        # Values should be between 0 and 1
+        if fighter['finishRate'] is not None:
+            assert 0 <= fighter['finishRate'] <= 1
+        if fighter['koPercentage'] is not None:
+            assert 0 <= fighter['koPercentage'] <= 1
+
+
+class TestParserHelperFunctions:
+    """Tests for parser helper functions"""
+
+    def test_parse_percentage(self):
+        """Should convert percentage strings to floats"""
+        assert parsers._parse_percentage("50%") == 0.5
+        assert parsers._parse_percentage("75%") == 0.75
+        assert parsers._parse_percentage("100%") == 1.0
+        assert parsers._parse_percentage("0%") == 0.0
+        assert parsers._parse_percentage("33%") == 0.33
+
+        # Invalid inputs
+        assert parsers._parse_percentage("") is None
+        assert parsers._parse_percentage("invalid") is None
+        assert parsers._parse_percentage(None) is None
+
+    def test_parse_time_to_seconds(self):
+        """Should convert MM:SS time strings to seconds"""
+        assert parsers._parse_time_to_seconds("5:00") == 300
+        assert parsers._parse_time_to_seconds("2:30") == 150
+        assert parsers._parse_time_to_seconds("0:45") == 45
+        assert parsers._parse_time_to_seconds("10:15") == 615
+
+        # Invalid inputs
+        assert parsers._parse_time_to_seconds("") is None
+        assert parsers._parse_time_to_seconds("invalid") is None
+        assert parsers._parse_time_to_seconds(None) is None
+        assert parsers._parse_time_to_seconds("5") is None  # No colon
+
+    def test_parse_int(self):
+        """Should parse integers from strings with units"""
+        assert parsers._parse_int("76\"") == 76
+        assert parsers._parse_int("185 lbs.") == 185
+        assert parsers._parse_int("5") == 5
+        assert parsers._parse_int("123") == 123
+
+        # Invalid inputs
+        assert parsers._parse_int("") is None
+        assert parsers._parse_int("abc") is None
+        assert parsers._parse_int(None) is None
+
+    def test_parse_float(self):
+        """Should parse float values from strings"""
+        assert parsers._parse_float("4.52") == 4.52
+        assert parsers._parse_float("2.1") == 2.1
+        assert parsers._parse_float("0.5") == 0.5
+        assert parsers._parse_float("10") == 10.0
+
+        # Invalid inputs
+        assert parsers._parse_float("") is None
+        assert parsers._parse_float("abc") is None
+        assert parsers._parse_float(None) is None

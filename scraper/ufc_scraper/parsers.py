@@ -4,10 +4,98 @@ HTML parsing functions for UFCStats.com
 These functions extract structured data from UFCStats.com HTML pages.
 """
 
-from bs4 import BeautifulSoup
-from typing import List, Dict, Optional
+from bs4 import BeautifulSoup, element
+from typing import List, Dict, Optional, Any
 from datetime import datetime
 import re
+
+
+# ============================================================================
+# Helper Functions for Data Cleaning and Parsing
+# ============================================================================
+
+def _clean_text(el: Optional[element.Tag]) -> str:
+    """Safely extracts and strips text from a BeautifulSoup element."""
+    return el.text.strip() if el else ''
+
+
+def _parse_percentage(value: str) -> Optional[float]:
+    """
+    Converts a percentage string 'X%' to a float 0.XX.
+
+    Examples:
+        >>> _parse_percentage("50%")
+        0.5
+        >>> _parse_percentage("75%")
+        0.75
+    """
+    if not value or '%' not in value:
+        return None
+    try:
+        return float(value.replace('%', '')) / 100.0
+    except (ValueError, AttributeError):
+        return None
+
+
+def _parse_time_to_seconds(value: str) -> Optional[int]:
+    """
+    Converts a time string 'MM:SS' to total seconds.
+
+    Examples:
+        >>> _parse_time_to_seconds("5:00")
+        300
+        >>> _parse_time_to_seconds("2:30")
+        150
+    """
+    if not value or ':' not in value:
+        return None
+    try:
+        parts = value.split(':')
+        if len(parts) == 2:
+            minutes, seconds = map(int, parts)
+            return (minutes * 60) + seconds
+        return None
+    except (ValueError, AttributeError):
+        return None
+
+
+def _parse_int(value: str) -> Optional[int]:
+    """
+    Safely parses a string to an integer.
+    Removes non-numeric characters before parsing.
+
+    Examples:
+        >>> _parse_int("76\"")
+        76
+        >>> _parse_int("185 lbs.")
+        185
+    """
+    if not value:
+        return None
+    try:
+        # Remove all non-digit characters except minus sign
+        cleaned = re.sub(r'[^\d-]', '', value)
+        return int(cleaned) if cleaned else None
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_float(value: str) -> Optional[float]:
+    """
+    Safely parses a string to a float.
+
+    Examples:
+        >>> _parse_float("4.52")
+        4.52
+        >>> _parse_float("2.1")
+        2.1
+    """
+    if not value:
+        return None
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return None
 
 
 def parse_event_list(soup: BeautifulSoup) -> List[Dict]:
@@ -259,42 +347,103 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
     }
 
 
-def parse_fighter_profile(soup: BeautifulSoup, fighter_url: str) -> Dict:
+def parse_fighter_profile(soup: BeautifulSoup, fighter_url: str) -> Dict[str, Any]:
     """
-    Parse a fighter profile page to extract fighter data.
+    Parses a fighter's profile page on UFCStats.com to extract a comprehensive
+    set of statistics for AI modeling.
 
     Args:
         soup: BeautifulSoup object of the fighter profile page
         fighter_url: URL of the fighter profile
 
     Returns:
-        Dictionary with fighter data including record
+        Dictionary with comprehensive fighter data including all statistics
     """
-    fighter = {}
+    fighter: Dict[str, Any] = {
+        'id': extract_id_from_url(fighter_url),
+        'sourceUrl': fighter_url,
+    }
 
-    # Extract fighter name
-    title_elem = soup.find('span', class_='b-content__title-highlight')
-    if title_elem:
-        fighter['name'] = title_elem.text.strip()
+    # --- Basic Info ---
+    fighter['name'] = _clean_text(soup.find('span', class_='b-content__title-highlight'))
 
-    # Extract record (e.g., "Record: 18-5-0")
     record_elem = soup.find('span', class_='b-content__title-record')
     if record_elem:
-        record_text = record_elem.text.strip()
-        # Extract just the numbers "18-5-0"
-        record_str = record_text.replace('Record:', '').strip()
+        record_str = _clean_text(record_elem).replace('Record:', '').strip()
         fighter['record'] = record_str
-
-        # Parse into wins, losses, draws
         parsed_record = parse_record(record_str)
         if parsed_record:
-            fighter['wins'] = parsed_record['wins']
-            fighter['losses'] = parsed_record['losses']
-            fighter['draws'] = parsed_record['draws']
+            fighter.update(parsed_record)
 
-    # Extract fighter ID from URL
-    fighter['id'] = extract_id_from_url(fighter_url)
-    fighter['sourceUrl'] = fighter_url
+    # --- Physical Attributes & Career Stats ---
+    info_box_elements = soup.find_all('li', class_='b-list__box-list-item')
+
+    # A mapping from the label on the website to our desired schema key and parser function
+    stats_map = {
+        'Height:': ('height', None),
+        'Weight:': ('weightLbs', _parse_int),
+        'Reach:': ('reachInches', _parse_int),
+        'STANCE:': ('stance', None),
+        'DOB:': ('dob', None),
+        'SLpM:': ('significantStrikesLandedPerMinute', _parse_float),
+        'Str. Acc.:': ('strikingAccuracyPercentage', _parse_percentage),
+        'SApM:': ('significantStrikesAbsorbedPerMinute', _parse_float),
+        'Str. Def:': ('strikingDefensePercentage', _parse_percentage),  # Note: HTML uses "Str. Def:" not "Sig. Str. Defence:"
+        'TD Avg.:': ('takedownAverage', _parse_float),
+        'TD Acc.:': ('takedownAccuracyPercentage', _parse_percentage),
+        'TD Def.:': ('takedownDefensePercentage', _parse_percentage),
+        'Sub. Avg.:': ('submissionAverage', _parse_float),
+        # NOTE: UFCStats.com does NOT provide these stats on fighter profile pages!
+        # They would need to be calculated from fight history or event results
+        # 'Avg. Fight Time:': ('averageFightTimeSeconds', _parse_time_to_seconds),
+        # 'Wins by KO/TKO:': ('winsByKO', _parse_int),
+        # 'Wins by Submission:': ('winsBySubmission', _parse_int),
+        # 'Wins by Decision:': ('winsByDecision', _parse_int),
+    }
+
+    # Set defaults for fields not available on profile page
+    fighter.setdefault('averageFightTimeSeconds', 0)
+    fighter.setdefault('winsByKO', 0)
+    fighter.setdefault('winsBySubmission', 0)
+    fighter.setdefault('winsByDecision', 0)
+
+    for item in info_box_elements:
+        label_element = item.find('i', class_='b-list__box-item-title')
+        if not label_element:
+            continue
+
+        label = _clean_text(label_element)
+        if label in stats_map:
+            schema_key, parser_func = stats_map[label]
+
+            # The value is the text of the <li> element minus the label's text
+            value_str = _clean_text(item).replace(label, '').strip()
+
+            # Store original height/reach strings for display, but also parse numeric values
+            if schema_key == 'height':
+                fighter['height'] = value_str  # e.g. "5' 11\""
+                fighter['reachInches'] = None  # Will be set separately from 'Reach:' field
+            elif schema_key == 'reachInches':
+                fighter['reach'] = value_str  # e.g. "76\""
+                fighter[schema_key] = parser_func(value_str) if parser_func else value_str
+            else:
+                fighter[schema_key] = parser_func(value_str) if parser_func else value_str
+
+    # --- Calculated Stats for AI Model ---
+    total_wins = fighter.get('wins', 0)
+    wins_by_ko = fighter.get('winsByKO', 0)
+    wins_by_sub = fighter.get('winsBySubmission', 0)
+
+    if total_wins and total_wins > 0 and wins_by_ko is not None and wins_by_sub is not None:
+        finish_rate = (wins_by_ko + wins_by_sub) / total_wins
+        fighter['finishRate'] = round(finish_rate, 3)
+        fighter['koPercentage'] = round(wins_by_ko / total_wins, 3)
+        fighter['submissionPercentage'] = round(wins_by_sub / total_wins, 3)
+    else:
+        # Set defaults for fighters with no wins or missing data
+        fighter['finishRate'] = 0.0
+        fighter['koPercentage'] = 0.0
+        fighter['submissionPercentage'] = 0.0
 
     return fighter
 
