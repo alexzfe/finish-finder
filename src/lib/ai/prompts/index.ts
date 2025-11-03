@@ -37,3 +37,9 @@ export {
   normalizeWeightClass,
   type WeightClassRates,
 } from './weightClassRates'
+
+// Key Factors Extraction Exports (Two-Step Chain - Solution 2)
+export {
+  buildFinishKeyFactorsExtractionPrompt,
+  buildFunKeyFactorsExtractionPrompt,
+} from './keyFactorsExtraction'

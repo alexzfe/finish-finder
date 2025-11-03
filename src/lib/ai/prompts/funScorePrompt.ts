@@ -183,16 +183,7 @@ ${fighter2.recentContext || 'No recent context available.'}
 Note: Consider recent momentum, injuries, or stylistic changes that could affect entertainment value.`
       : ''
 
-  return `You are an MMA entertainment analyst.
-
-INSTRUCTIONS:
-1. Perform a detailed analysis of the fight's entertainment potential using weighted factor analysis
-2. Populate the 'breakdown' object with your scoring and reasoning
-3. After writing your 'reasoning', review it carefully and identify the 2-3 most critical concepts that drive the fun score
-4. Summarize these concepts into concise 1-2 word labels for the 'keyFactors' array
-5. Construct the final JSON object, ensuring all fields are populated
-
-Rate this fight's excitement potential on a 0-100 scale using weighted factor analysis.
+  return `You are an MMA entertainment analyst. Rate this fight's excitement potential on a 0-100 scale using weighted factor analysis.
 
 EVENT: ${context.eventName}
 WEIGHT CLASS: ${context.weightClass}
@@ -285,12 +276,7 @@ OUTPUT (JSON only, no markdown):
     "contextBonus": <float 0-10>,
     "penalties": <float, negative or 0>,
     "reasoning": "<3-4 sentences>"
-  },
-  "keyFactors": [
-    "<A concise, 1-2 word summary of the most important factor from the reasoning>",
-    "<A concise, 1-2 word summary of the second most important factor>",
-    "<A concise, 1-2 word summary of the third most important factor>"
-  ]
+  }
 }
 
 IMPORTANT - ANALYSIS STYLE:
@@ -301,20 +287,6 @@ IMPORTANT - ANALYSIS STYLE:
   - "Two strikers averaging 6+ significant strikes per minute suggests a high-action fight"
   - "With 70% finish rates on both sides, this fight is unlikely to go the distance"
   - "The striker vs striker matchup typically produces more consistent action than grappling-heavy fights"
-
-IMPORTANT - KEY FACTORS:
-- Generate 4-5 concise factors (1-2 words each) that drove your fun score
-- Focus on the MOST IMPORTANT entertainment factors only
-- Examples of good key factors:
-  - "High Pace"
-  - "Brawler Style"
-  - "Finish Threat"
-  - "Title Fight"
-  - "Striker Battle"
-  - "No Defense"
-  - "Quick Finishes"
-  - "Action-Packed"
-  - "Main Event"
 
 IMPORTANT - TECHNICAL ACCURACY:
 - Be realistic: Scores >80 should be rare (reserved for guaranteed bangers)
