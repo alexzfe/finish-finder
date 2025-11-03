@@ -217,7 +217,7 @@ export default function Home() {
                       </div>
                       <div className="rounded-xl bg-white/5 px-4 py-3.5">
                         <span className="block text-[0.7rem] text-white/70">Finish Probability</span>
-                        <span className="ufc-condensed text-xl text-white md:text-2xl">{selectedFight.finishProbability || 0}%</span>
+                        <span className="ufc-condensed text-xl text-white md:text-2xl">{Math.round((selectedFight.finishProbability || 0) * 100)}%</span>
                       </div>
                       <div className="rounded-xl bg-white/5 px-4 py-3.5">
                         <span className="block text-[0.7rem] text-white/70">Risk Profile</span>

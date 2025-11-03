@@ -214,7 +214,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
               <span className="truncate">{fight.weightClass}</span>
               <span className="whitespace-nowrap">{fight.scheduledRounds || 3} Rounds</span>
               {fight.finishProbability ? (
-                <span className="whitespace-nowrap text-white">Finish {fight.finishProbability}%</span>
+                <span className="whitespace-nowrap text-white">Finish {Math.round(fight.finishProbability * 100)}%</span>
               ) : null}
             </div>
           </div>
