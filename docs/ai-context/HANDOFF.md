@@ -1,48 +1,76 @@
 # Engineering Handoff - Finish Finder
 
 **Last Updated:** 2025-11-03
-**Session Context:** Web Search Integration for AI Predictions - IN PROGRESS
+**Session Context:** Web Search Integration, Prediction Generation, and Production Fixes
 
 ---
 
-## Session 12: Web Search Integration for AI Predictions (2025-11-03) 🔄
+## Session 12: Web Search Integration & Production Deployment (2025-11-03) ✅
 
-**Goal:** Enrich AI predictions with recent fighter context from web search to provide more accurate and timely predictions.
+**Goal:** Enrich AI predictions with recent fighter context from web search, generate predictions for all upcoming fights, and fix production UI issues.
 
-**Context:** While the Phase 3 AI prediction system provides accurate predictions based on database statistics, it lacks real-time context about fighters. Recent injuries, momentum, training camp updates, or style changes can significantly impact fight outcomes but aren't captured in static statistics.
+**Context:** While the Phase 3 AI prediction system provides accurate predictions based on database statistics, it lacked real-time context about fighters. Additionally, the UI needed predictions generated and several production bugs needed fixing.
 
 **What Was Accomplished:**
 
-### 1. Fighter Context Service
+### 1. Brave Search Integration (Replacing Google Search)
 
-**Created**: `/src/lib/ai/fighterContextService.ts`
+**Created**: `/src/lib/search/braveSearch.ts` (145 lines)
+- Complete Brave Search API integration
+- Freshness filtering (pd=past day, pw=past week, pm=past month, py=past year)
+- Country and language filtering
+- Normalized SearchResult format
+- Free tier: 2,000 queries/month
 
-**Features:**
-- Searches web for recent fighter news, injuries, and training updates
+**Updated**: `/src/lib/ai/webSearchWrapper.ts`
+- Switched from Google Search to Brave Search API
+- No time filtering by default (gets all-time fighter reputation)
+- Returns top 5 results with titles and snippets
+- Graceful error handling with fallback messages
+
+**Updated**: `/src/lib/ai/fighterContextService.ts`
+- **Unbiased Search Query Strategy** (based on Gemini recommendation):
+  - Query: `"{fighterName}" fight analysis statistics tendencies record bonuses`
+  - Uses objective terms: "analysis", "statistics", "tendencies", "record"
+  - "bonuses" = Fight of the Night awards (objective entertainment measure)
+  - Avoids biased terms like "exciting", "fun", "knockout" to prevent confirmation bias
 - In-memory caching (1 hour TTL) to avoid duplicate searches
 - Rate limiting (1 second between searches) to respect API limits
 - Graceful error handling - predictions continue even if search fails
-- Context freshness based on event date (searches for "past week" vs "past month")
 
-**Key Functions:**
-- `getFighterContext(fighterName, eventDate)` - Search for individual fighter
-- `getFightContext(fighter1, fighter2, eventDate)` - Search for both fighters in matchup
-- `clearCache()` - Manual cache clearing for testing
+**Environment Variable:**
+```bash
+BRAVE_SEARCH_API_KEY=BSASieyq2LNQui7yyBvhnqZvvjBxLyi
+```
 
-### 2. Web Search Wrapper
+### 2. Prediction Generation - All Upcoming Fights
 
-**Created**: `/src/lib/ai/webSearchWrapper.ts`
+**Generated 63 predictions across 5 events:**
+- UFC Fight Night: Bonfim vs. Brown (Nov 8) - 13 fights
+- UFC 322: Della Maddalena vs. Makhachev (Nov 15) - 12 fights
+- UFC Fight Night: Tsarukyan vs. Hooker (Nov 22) - 11 fights
+- UFC 323: Dvalishvili vs. Yan 2 (Dec 6) - 13 fights
+- UFC Fight Night: Royval vs. Kape (Dec 13) - 2 fights + 12 more
 
-**Integration:** Uses existing Google Custom Search API (`/src/lib/search/googleSearch.ts`)
+**Prediction Stats:**
+- Average cost: ~$0.0087 per fight
+- Total cost: ~$0.55 for 63 predictions
+- Model: OpenAI GPT-4o
+- All predictions saved to database with active version tracking
 
-**Requirements:**
-- `GOOGLE_SEARCH_API_KEY` - Get from Google Cloud Console
-- `GOOGLE_SEARCH_ENGINE_ID` - Create at programmablesearchengine.google.com
+### 3. Production Bug Fixes
 
-**Features:**
-- Searches recent news (past 2 weeks by default)
-- Returns top 5 results with titles and snippets
-- Graceful error handling with fallback messages
+**Fix #1: Finish Probability Percentage Display** (Commit a05f177)
+- **Problem**: Displaying "0.45%" instead of "45%"
+- **Root Cause**: API returns decimal (0.45 for 45%), UI was appending "%" without converting
+- **Solution**: Multiply by 100 and round in FightList.tsx:217 and page.tsx:220
+- **Files**: `src/components/fight/FightList.tsx`, `src/app/page.tsx`
+
+**Fix #2: React Error #31 - Object Rendering** (Commit 5c7e1a4)
+- **Problem**: `Uncaught Error: Minified React error #31` - trying to render object as JSX
+- **Root Cause**: `aiDescription` was a JSON object `{finalAssessment, defensiveComparison, ...}` instead of string
+- **Solution**: Extract `finalAssessment` field from `finishReasoning` JSON object in API
+- **File**: `src/app/api/db-events/route.ts:118-135`
 
 ### 3. Enhanced Prompt Templates
 
@@ -157,13 +185,31 @@ OPENAI_API_KEY=sk-...
 
 ### Current Status
 
-**IMPLEMENTATION COMPLETE** ✅ - Ready for testing with real Google Search credentials.
+**WEB SEARCH INTEGRATION: COMPLETE** ✅
+**PREDICTION GENERATION: COMPLETE** ✅
+**PRODUCTION BUGS: FIXED** ✅
 
-**Pending:**
-- Google Search API setup (requires user credentials)
-- Production testing with live search results
-- Comparison testing: predictions with/without enrichment
-- Documentation of quality improvements
+**Verified Working:**
+- ✅ Brave Search API integration functional
+- ✅ Unbiased fighter context searches implemented
+- ✅ 63 predictions generated and saved to database
+- ✅ React rendering errors fixed
+- ✅ Percentage display corrected
+- ✅ No application errors on production page
+- ✅ API serving predictions correctly
+
+**Remaining UI Issues** ⚠️
+User reported "some UI issues that need to be worked on" but did not specify details. Page is functional but may have:
+- Layout/styling issues
+- Missing data display
+- Interactive element problems
+- Responsive design issues
+
+**Next Steps:**
+1. Identify and document specific UI issues
+2. Fix UI/UX problems
+3. Test full page functionality across devices
+4. Phase 4: Prediction Evaluation System (track accuracy over time)
 
 ---
 
