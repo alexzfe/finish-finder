@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { motion } from 'framer-motion'
 import { Fight } from '@/types'
 import { FighterAvatar } from '@/components/fighter/FighterAvatar'
 
@@ -10,11 +11,12 @@ interface FightCardProps {
   isPriority?: boolean
 }
 
-export const FightCard = React.memo(function FightCard({
-  fight,
-  onSelect,
-  isPriority = false
-}: FightCardProps) {
+export const FightCard = React.memo(
+  React.forwardRef<HTMLElement, FightCardProps>(function FightCard({
+    fight,
+    onSelect,
+    isPriority = false
+  }, ref) {
   // Fun Score color coding based on implementation plan thresholds
   const getFunScoreColor = (score: number) => {
     if (score >= 80) return 'bg-red-500'
@@ -34,8 +36,16 @@ export const FightCard = React.memo(function FightCard({
   const funScore = fight.predictedFunScore || 0
 
   return (
-    <article
-      className="bg-gray-900 rounded-lg shadow-md overflow-hidden cursor-pointer border border-gray-800 transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] hover:shadow-xl"
+    <motion.article
+      ref={ref}
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+      whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
+      whileTap={{ scale: 0.98 }}
+      className="bg-gray-900 rounded-lg shadow-md overflow-hidden cursor-pointer border border-gray-800"
       onClick={() => onSelect(fight)}
     >
       {/* Tier 1: Always Visible */}
@@ -101,6 +111,9 @@ export const FightCard = React.memo(function FightCard({
           </div>
         </div>
       </div>
-    </article>
+    </motion.article>
   )
-})
+  })
+)
+
+FightCard.displayName = 'FightCard'

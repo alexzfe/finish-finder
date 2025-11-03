@@ -3,6 +3,7 @@
 import { useAppStore } from '@/lib/store'
 import { FightCard } from './FightCard'
 import { useCallback } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { Fight } from '@/types'
 
 export function FightCardGrid() {
@@ -27,14 +28,16 @@ export function FightCardGrid() {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-      {fights.map((fight, index) => (
-        <FightCard
-          key={fight.id}
-          fight={fight}
-          onSelect={handleSelect}
-          isPriority={index < 6}
-        />
-      ))}
+      <AnimatePresence>
+        {fights.map((fight, index) => (
+          <FightCard
+            key={fight.id}
+            fight={fight}
+            onSelect={handleSelect}
+            isPriority={index < 6}
+          />
+        ))}
+      </AnimatePresence>
     </div>
   )
 }
