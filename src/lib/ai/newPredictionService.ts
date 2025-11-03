@@ -74,14 +74,14 @@ export interface FightPrediction {
  * Calculate risk level from AI confidence scores
  *
  * Risk level represents how unpredictable the fight outcome is.
- * Thresholds calibrated to actual confidence distribution for 20-60-20 split:
- * - "low" = High confidence (>= 0.8 avg) → Predictable outcome (top 20%)
- * - "balanced" = Medium confidence (0.7-0.8 avg) → Moderate uncertainty (middle 60%)
- * - "high" = Low confidence (< 0.7 avg) → Unpredictable outcome (bottom 20%)
+ * Thresholds calibrated to actual confidence distribution for ~21-69-11 split:
+ * - "low" = High confidence (>= 0.78 avg) → Very predictable outcome (~11%)
+ * - "balanced" = Medium confidence (0.675-0.78 avg) → Moderate uncertainty (~69%)
+ * - "high" = Low confidence (< 0.675 avg) → Unpredictable outcome (~21%)
  *
- * Based on analysis of 100 predictions:
- * - Min confidence: 0.65, Max: 0.85, Median: 0.75
- * - 20th percentile: 0.70, 80th percentile: 0.80
+ * Based on analysis of 207 predictions:
+ * - Min confidence: 0.40, Max: 0.85, Median: 0.725
+ * - 25th percentile: 0.70, 75th percentile: 0.775
  *
  * @param finishConfidence - Confidence in finish probability prediction (0-1)
  * @param funConfidence - Confidence in fun score prediction (0-1)
@@ -95,13 +95,13 @@ export function calculateRiskLevel(
   const avgConfidence = (finishConfidence + funConfidence) / 2
 
   // Map confidence to risk (inverse relationship)
-  // Thresholds: 0.80 (80th percentile) and 0.70 (20th percentile)
-  if (avgConfidence >= 0.8) {
-    return 'low' // Top 20%: High confidence = predictable = low risk
-  } else if (avgConfidence >= 0.7) {
-    return 'balanced' // Middle 60%: Medium confidence = moderate risk
+  // Thresholds: 0.78 and 0.675 for balanced 21-69-11 distribution
+  if (avgConfidence >= 0.78) {
+    return 'low' // Top ~11%: Very high confidence = predictable = low risk
+  } else if (avgConfidence >= 0.675) {
+    return 'balanced' // Middle ~69%: Medium confidence = moderate risk
   } else {
-    return 'high' // Bottom 20%: Low confidence = unpredictable = high risk
+    return 'high' // Bottom ~21%: Low confidence = unpredictable = high risk
   }
 }
 
