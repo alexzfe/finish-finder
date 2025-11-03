@@ -1,7 +1,213 @@
 # Engineering Handoff - Finish Finder
 
 **Last Updated:** 2025-11-03
-**Session Context:** UI Refinements & Round Calculation Logic
+**Session Context:** UI Overhaul Planning Complete - Ready for Implementation
+
+---
+
+## Session 14: UI Overhaul Planning & Documentation (2025-11-03) ✅
+
+**Goal:** Plan and document comprehensive UI overhaul to transform vertical list into compact grid layout with progressive disclosure.
+
+**Context:** Current vertical list layout requires excessive scrolling (3,300px for 12-15 fights). Research from 25+ platforms (sports betting, fantasy sports, combat sports) identified proven patterns for displaying multiple items with progressive disclosure. Planning session focused on defining implementation strategy, testing approach, and three-tier information architecture.
+
+**What Was Accomplished:**
+
+### 1. Reviewed UI Research Documentation
+
+Analyzed three comprehensive documents in `/UI_docs/`:
+- `research.md` - 25+ platform analysis (PrizePicks, DraftKings, UFC.com, etc.)
+- `enterprise_implementation_plan.md` - 18-week incremental migration strategy
+- `simple_implementation_plan.md` - 6-10 week hobbyist-friendly plan
+
+**Key Findings:**
+- Compact cards (280-320px) in responsive grid reduces scrolling by 70%
+- Three-tier progressive disclosure (Always visible → Expandable → Modal)
+- PrizePicks board model demonstrates engagement-driven ranking works
+- Sports betting platforms successfully display 12-20 items in grids
+- No virtualization needed for 12-15 items (renders in <20ms)
+
+### 2. Made Critical Design Decisions
+
+**Layout Philosophy:**
+- **✅ Hybrid approach selected** - Traditional card order (default) + Fun Score ranking toggle
+- User can switch between "Fight Order" and "Fun Score Ranking" views
+- Default respects UFC card hierarchy (Main Event → Main Card → Prelims)
+- Toggle option surfaces highest Fun Score fights first regardless of position
+
+**Migration Strategy:**
+- **✅ Full replacement on dev branch** - No gradual migration or feature flags needed
+- Direct component replacement for faster implementation
+- Lower risk since working on dev branch, not production
+
+**Data Connection:**
+- **✅ Real Supabase data only** - No mock data or hardcoded values
+- Use existing `/api/db-events` endpoint (no API changes needed)
+- All fighter stats, AI predictions, Fun Scores from production database
+
+**Testing Strategy:**
+- **✅ Deploy to Vercel after high-risk changes** - Manual testing on preview URLs
+- Division of labor: AI tests TypeScript/build, human tests visual/interaction
+- Three test devices available: Desktop, iPhone, Android
+- Low-risk changes batched, high-risk changes tested immediately
+
+### 3. Three-Tier Information Architecture
+
+**TIER 1: Always Visible (Card Face)**
+- Fighter names, avatars (80-100px circular)
+- Fun Score badge (24-32px, color-coded, MOST PROMINENT)
+- Weight class, card position, date
+- Title fight indicator
+- Card size: 280-320px × 180-220px
+- Database: `predictedFunScore`, fighter names, `weightClass`, `cardPosition`
+
+**TIER 2: Progressive Disclosure (Headless UI Disclosure)**
+- Click chevron to expand card in-place
+- Fighter records (W-L-D), finish probability with progress bar
+- Tale of the tape (height, reach, age), scheduled rounds
+- Fun factors as bubble badges
+- 200-300ms smooth animation
+- Database: `finishProbability`, fighter stats, `funFactors[]`
+
+**TIER 3: Full Details Modal (Headless UI Dialog)**
+- Click "Full Details" button opens modal
+- Complete fighter statistics (26+ fields from UFCStats.com)
+- Full AI reasoning text for both predictions
+- Risk level breakdown, physical measurements
+- Desktop: 600-800px modal, Mobile: Full-screen
+- Database: All fighter stats, `finishReasoning`, `funReasoning` JSON
+
+### 4. Implementation Plan Documentation
+
+Created comprehensive plan: `/UI_docs/IMPLEMENTATION_PLAN_FINAL.md` (500+ lines)
+
+**Four Phases:**
+1. **Phase 1: Foundation & Quick Wins** (Weeks 1-2, 8-12 hours)
+   - Install Zustand state management
+   - Build FightCard component (Tier 1)
+   - Implement responsive grid (1/2/3/4 columns)
+   - Add sort toggle (Traditional vs Fun Score)
+   - Replace FightList component
+
+2. **Phase 2: Progressive Disclosure** (Weeks 3-4, 10-14 hours)
+   - Add Headless UI Disclosure (Tier 2)
+   - Enhance FightDetailsModal (Tier 3)
+   - React.memo optimization
+
+3. **Phase 3: Features & Sorting** (Weeks 5-6, 8-12 hours)
+   - Weight class filters
+   - Collapsible Preliminaries accordion
+   - Mobile responsiveness polish
+
+4. **Phase 4: Accessibility & Polish** (Weeks 7-8, 6-10 hours)
+   - Semantic HTML audit
+   - Keyboard navigation
+   - WCAG 2.1 AA compliance
+   - Color contrast validation
+
+**Total Estimate:** 32-48 hours over 6-8 weeks (5-8 hours/week hobbyist pace)
+
+### 5. Testing Checkpoints Defined
+
+**High-Risk Changes (Deploy & Test Immediately):**
+- Phase 1.2: FightCard component
+- Phase 1.3: Responsive grid
+- Phase 1.6: Replace FightList
+- Phase 2.1: Disclosure
+- Phase 2.2: Modal
+- Phase 3.2: Accordion
+- Phase 3.3: Mobile polish
+
+**Low-Risk Changes (Batch Test):**
+- Zustand installation, hover animations, filters, accessibility
+
+**Test Checklists Created:**
+- Visual: Layout, data display, no bugs
+- Functional: Interactions, no errors, smooth performance
+- Responsive: Mobile/tablet/desktop across all 3 devices
+
+### 6. Zustand Store Architecture Designed
+
+```typescript
+interface AppState {
+  events: UFCEvent[]          // From /api/db-events
+  currentEventIndex: number
+  fights: Fight[]             // Current event fights
+  sortBy: 'traditional' | 'funScore'
+  filterWeightClass: string[]
+  selectedFight: Fight | null
+  loading: boolean
+  error: string | null
+}
+```
+
+**Key Features:**
+- Replaces useState in page.tsx
+- Selective subscriptions prevent unnecessary re-renders
+- Computed selector for filtered/sorted fights
+- Persists view preferences (sort, filters)
+
+### Files Created
+
+**Documentation:**
+- `/UI_docs/IMPLEMENTATION_PLAN_FINAL.md` - Complete implementation guide with code examples
+
+**Planning Artifacts:**
+- Three-tier architecture specification
+- Component hierarchy diagram
+- Data flow mapping (Supabase → API → Store → Components)
+- Testing strategy with device matrix
+- Rollback procedures
+
+### Current Status
+
+**PLANNING: COMPLETE** ✅
+
+**Ready for Implementation:**
+- ✅ Design decisions finalized
+- ✅ Three-tier architecture defined
+- ✅ Testing strategy established
+- ✅ Implementation plan documented
+- ✅ Code examples provided
+- ✅ Success criteria defined
+
+**Next Steps:**
+1. Begin Phase 1.1: Install Zustand
+2. Create Zustand store connected to existing API
+3. Build FightCard component (Tier 1)
+4. Deploy and test on Vercel
+5. Continue through 4 phases incrementally
+
+### Context for Next Session
+
+**Key Constraints:**
+- Work on `dev` branch only
+- Use real Supabase data (no mocks)
+- Keep `/api/db-events` endpoint unchanged
+- TypeScript strict mode + no ESLint errors before deploy
+- Test on 3 devices after high-risk changes
+
+**Technology Stack:**
+- Zustand for state management (replacing useState)
+- Headless UI for Disclosure and Dialog components (already installed)
+- Framer Motion for animations (already installed)
+- Tailwind CSS for responsive grid
+- Next.js 15 App Router (existing)
+
+**Database Fields to Map:**
+- `predictedFunScore` → Fun Score badge
+- `finishProbability` → Progress bar in Tier 2
+- `finishReasoning`, `funReasoning` → Full text in modal
+- `funFactors[]` → Bubble badges
+- `cardPosition`, `mainEvent`, `titleFight` → Badges and grouping
+- Fighter stats (26+ fields) → Tier 3 complete stats
+
+**Success Metrics:**
+- 70% reduction in scrolling (12-14 fights visible in 1920×1080)
+- All 3 tiers functional with real data
+- Smooth 60fps animations
+- WCAG 2.1 AA compliant
+- Lighthouse accessibility score >90
 
 ---
 

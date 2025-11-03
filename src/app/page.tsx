@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { EventNavigation } from '@/components/ui/EventNavigation'
-import { FightList } from '@/components/fight/FightList'
+import { FightCardGrid } from '@/components/fight/FightCardGrid'
+import { SortControls } from '@/components/ui/SortControls'
 import { FightDetailsModal } from '@/components/fight/FightDetailsModal'
 import { Header } from '@/components/ui/Header'
+import { useAppStore } from '@/lib/store'
 import { UFCEvent, Fight } from '@/types'
 
 // Utility function to format weight class names
@@ -19,11 +21,19 @@ const formatWeightClass = (weightClass?: string | null): string => {
 }
 
 export default function Home() {
-  const [events, setEvents] = useState<UFCEvent[]>([])
-  const [currentEventIndex, setCurrentEventIndex] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedFight, setSelectedFight] = useState<Fight | null>(null)
+  // Zustand store for global state
+  const setEvents = useAppStore((state) => state.setEvents)
+  const setCurrentEvent = useAppStore((state) => state.setCurrentEvent)
+  const currentEventIndex = useAppStore((state) => state.currentEventIndex)
+  const events = useAppStore((state) => state.events)
+  const selectedFight = useAppStore((state) => state.selectedFight)
+  const setSelectedFight = useAppStore((state) => state.setSelectedFight)
+  const loading = useAppStore((state) => state.loading)
+  const error = useAppStore((state) => state.error)
+  const setLoading = useAppStore((state) => state.setLoading)
+  const setError = useAppStore((state) => state.setError)
+
+  // Local state for mobile modal
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Fetch collected events from the database when available, otherwise fallback to static JSON
@@ -63,7 +73,7 @@ export default function Home() {
             const now = new Date()
             const nearestEventIndex = sortedEvents.findIndex((event: UFCEvent) => event.date >= now)
             const resolvedIndex = nearestEventIndex >= 0 ? nearestEventIndex : 0
-            setCurrentEventIndex(resolvedIndex)
+            setCurrentEvent(resolvedIndex)
 
             // Set selected fight
             const defaultEvent = sortedEvents[resolvedIndex]
@@ -98,7 +108,7 @@ export default function Home() {
           const now = new Date()
           const nearestEventIndex = sortedEvents.findIndex((event: UFCEvent) => event.date >= now)
           const resolvedIndex = nearestEventIndex >= 0 ? nearestEventIndex : 0
-          setCurrentEventIndex(resolvedIndex)
+          setCurrentEvent(resolvedIndex)
           const defaultEvent = sortedEvents[resolvedIndex]
           if (defaultEvent?.fightCard?.length) {
             setSelectedFight((prev) => {
@@ -122,7 +132,7 @@ export default function Home() {
   }, [])
 
   const handleEventChange = (index: number) => {
-    setCurrentEventIndex(index)
+    setCurrentEvent(index)
   }
 
   const handleFightClick = (fight: Fight) => {
@@ -189,10 +199,8 @@ export default function Home() {
 
             <section id="cards" className="flex flex-col gap-6 lg:flex-row lg:items-start">
               <div className="ufc-section rounded-2xl px-4 py-5 lg:flex-[2] lg:px-5">
-                <FightList
-                  event={currentEvent}
-                  onFightClick={handleFightClick}
-                />
+                <SortControls />
+                <FightCardGrid />
               </div>
 
               <aside className="hidden lg:block lg:self-start rounded-2xl border border-white/5 bg-black/70 p-4 sm:p-5 text-white shadow-2xl lg:sticky lg:top-20 lg:flex-[1] lg:max-h-[calc(100vh-160px)] lg:overflow-y-auto xl:top-24">
