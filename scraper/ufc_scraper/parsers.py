@@ -6,8 +6,17 @@ These functions extract structured data from UFCStats.com HTML pages.
 
 from bs4 import BeautifulSoup, element
 from typing import List, Dict, Optional, Any
-from datetime import datetime
+from datetime import datetime, date
 import re
+
+
+# ============================================================================
+# Constants
+# ============================================================================
+
+# UFC changed rules in late 2011 to make non-title main events 5 rounds
+# Using Jan 1, 2012 as a safe cutoff date
+NON_TITLE_MAIN_EVENT_5_ROUNDS_CUTOFF = date(2012, 1, 1)
 
 
 # ============================================================================
@@ -82,20 +91,48 @@ def _parse_int(value: str) -> Optional[int]:
 
 def _parse_float(value: str) -> Optional[float]:
     """
-    Safely parses a string to a float.
+    Safely parses a string to float, returning None on failure.
 
     Examples:
-        >>> _parse_float("4.52")
-        4.52
-        >>> _parse_float("2.1")
-        2.1
+        >>> _parse_float("1.5")
+        1.5
+        >>> _parse_float("invalid")
+        None
     """
-    if not value:
-        return None
     try:
-        return float(value)
-    except (ValueError, TypeError):
+        return float(value.strip())
+    except (ValueError, AttributeError):
         return None
+
+
+def get_scheduled_rounds(is_title_fight: bool, is_main_event: bool, event_date: date) -> int:
+    """
+    Determines the number of scheduled rounds for a UFC fight based on established rules.
+
+    UFC Rules:
+    - Title fights are always 5 rounds (since the beginning)
+    - Non-title main events became 5 rounds starting January 1, 2012
+    - All other fights are 3 rounds
+
+    Args:
+        is_title_fight: True if the fight is for a championship title
+        is_main_event: True if the fight is the main event of the card
+        event_date: The date of the event (used for historical rule changes)
+
+    Returns:
+        Integer representing the number of scheduled rounds (3 or 5)
+    """
+    # Rule 1: Title fights are always 5 rounds (highest priority)
+    if is_title_fight:
+        return 5
+
+    # Rule 2: Non-title main events are 5 rounds, but only after the rule change
+    if is_main_event and event_date >= NON_TITLE_MAIN_EVENT_5_ROUNDS_CUTOFF:
+        return 5
+
+    # Rule 3: All other fights default to 3 rounds
+    # This includes pre-2012 non-title main events and all undercard fights
+    return 3
 
 
 def parse_event_list(soup: BeautifulSoup) -> List[Dict]:
@@ -195,6 +232,7 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
 
     # Extract event metadata from info box
     event_date = None
+    event_date_obj = None  # Store as date object for round calculation
     event_location = None
     event_venue = None
 
@@ -208,10 +246,14 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
                 try:
                     # Parse "November 01, 2025" format
                     parsed_date = datetime.strptime(date_str, "%B %d, %Y")
+                    # Store date object for round calculation
+                    event_date_obj = parsed_date.date()
                     # Add UTC timezone for API validation
                     event_date = parsed_date.isoformat() + 'Z'
                 except ValueError:
                     event_date = date_str
+                    # Fallback: use today's date if parsing fails
+                    event_date_obj = datetime.now().date()
             elif 'Location:' in text:
                 # Format: "Las Vegas, Nevada, USA"
                 location_str = text.replace('Location:', '').strip()
@@ -300,6 +342,16 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
                 # This ensures each fight has a unique sourceUrl for database constraints
                 fight_source_url = f"{event_url}#fight-{fight_id}"
 
+                # Calculate scheduled rounds based on UFC rules
+                # Defaults to 3 rounds if event_date_obj is not available
+                scheduled_rounds = 3
+                if event_date_obj:
+                    scheduled_rounds = get_scheduled_rounds(
+                        is_title_fight=is_title_fight,
+                        is_main_event=is_main_event,
+                        event_date=event_date_obj
+                    )
+
                 # Add fight
                 fight = {
                     'id': fight_id,
@@ -310,6 +362,7 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
                     'titleFight': is_title_fight,
                     'mainEvent': is_main_event,
                     'cardPosition': card_position,
+                    'scheduledRounds': scheduled_rounds,
                     'sourceUrl': fight_source_url
                 }
                 fights.append(fight)
