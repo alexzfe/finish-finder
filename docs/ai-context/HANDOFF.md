@@ -1,7 +1,317 @@
 # Engineering Handoff - Finish Finder
 
-**Last Updated:** 2025-11-01
-**Session Context:** Connected UI to New Database - COMPLETE! 🎉
+**Last Updated:** 2025-11-02
+**Session Context:** AI Prediction System Phase 1 & 2 - COMPLETE! 🎉
+
+---
+
+## Session 10: AI Prediction System - Phases 1 & 2 (2025-11-02) ✅
+
+**Goal:** Rebuild AI prediction system from scratch using advanced prompt engineering with real fighter statistics from UFCStats.com.
+
+**Context:** The existing AI prediction system (`hybridUFCService.ts`) is being deprecated. User provided an "AI model claude response.txt" document with detailed prompt engineering strategies for accurate MMA fight predictions. Implementation plan created and stored in `/docs/AI_PREDICTION_IMPLEMENTATION_PLAN.md` (5-phase roadmap).
+
+**What Was Accomplished:**
+
+### 1. Database Schema Enhancements (Phase 1.1)
+
+**Added 13 new fighter statistics fields** to Prisma schema:
+- **Physical Attributes:** `weightLbs`, `reachInches`, `stance`, `dob`
+- **Striking Statistics:** `significantStrikesLandedPerMinute`, `strikingAccuracyPercentage`, `significantStrikesAbsorbedPerMinute`, `strikingDefensePercentage`
+- **Grappling Statistics:** `takedownAverage`, `takedownAccuracyPercentage`, `takedownDefensePercentage`, `submissionAverage`
+- **Fight Averages:** `averageFightTimeSeconds`
+
+**Created 2 new prediction tracking models:**
+- `PredictionVersion` - Tracks different prompt iterations with accuracy metrics (finishAccuracy, brierScore, funScoreCorrelation)
+- `Prediction` - Stores individual fight predictions with full reasoning (finishProbability, funScore, JSON reasoning, actual outcomes for evaluation)
+
+**Files Modified:**
+- `/prisma/schema.prisma` - Enhanced Fighter model, added PredictionVersion & Prediction models
+- `/prisma/migrations/20251102_add_fighter_stats_and_predictions/migration.sql` - Production-ready PostgreSQL migration (13 ALTER TABLE, 2 CREATE TABLE, proper indexes & foreign keys)
+
+**Migration Applied:** Successfully deployed to Supabase database, Prisma client regenerated
+
+### 2. Enhanced Python Scraper (Phase 1.2)
+
+**Added 5 helper functions** to `/scraper/ufc_scraper/parsers.py`:
+- `_clean_text()` - Safe text extraction from BeautifulSoup elements
+- `_parse_percentage()` - Converts "50%" → 0.5
+- `_parse_time_to_seconds()` - Converts "5:00" → 300 seconds
+- `_parse_int()` / `_parse_float()` - Safe numeric parsing with error handling
+
+**Enhanced `parse_fighter_profile()` function:**
+- Extracts 17 statistics from UFCStats.com fighter profile pages
+- Maps stat labels (e.g., "SLpM:", "TD Acc.:") to schema fields
+- Calculates derived stats: finishRate, koPercentage, submissionPercentage
+- Handles missing data gracefully (defaults to 0 or None)
+- Maintains original height/reach strings for display while also parsing numeric values
+
+**Updated Scrapy Item Schema** (`/scraper/ufc_scraper/items.py`):
+- Added all 20+ new fields to `FighterItem` class
+- Fields match database schema exactly
+
+**Updated Validation Schemas** (`/src/lib/scraper/validation.ts`):
+- Extended `ScrapedFighterSchema` with all new fields
+- Proper Zod validators (percentages 0-1, integers, etc.)
+
+**Updated Ingestion API** (`/src/app/api/internal/ingest/route.ts`):
+- Saves all 17 new fighter stats on create
+- Updates all stats when content hash changes
+- Proper fallback values for missing data
+
+### 3. Production Testing
+
+**Scraper Test Results:**
+- ✅ Successfully scraped 1 event: "UFC Fight Night: Bonfim vs. Brown"
+- ✅ Extracted 26 fighters with **full statistics** (17 fields per fighter)
+- ✅ Created 13 fights
+- ✅ All data saved to production database
+- ✅ API Response: `{'success': True, 'eventsCreated': 1, 'fightsCreated': 13, 'fightersCreated': 26}`
+- ✅ No errors, clean execution in 107 seconds
+
+**Database Architecture Confirmed:**
+- Fighters stored separately in `fighters` table (permanent, indexed by `sourceUrl`)
+- Fights reference fighters via foreign keys (`fighter1Id`, `fighter2Id`)
+- Content hashing prevents redundant updates (only writes if stats changed)
+- `lastScrapedAt` timestamp tracks freshness
+- Future optimization opportunity: Skip fetching recently-scraped fighters (<7 days)
+
+### 4. Documentation Updates
+
+**ARCHITECTURE.md:**
+- Added "Enhanced Fighter Statistics & AI Prediction System" section
+- Documented 17 new fields, helper functions, data flow
+- Explained content hashing and database optimization strategy
+- Referenced complete implementation plan
+
+**ROADMAP.md:**
+- Added Phase 1 completion to "Now" horizon
+- Added Phases 2-5 to "Next" horizon (2-6 weeks):
+  - Phase 2: AI Prompt Templates (Finish Probability + Fun Score)
+  - Phase 3: New Prediction Service (Claude/OpenAI integration)
+  - Phase 4: Prediction Evaluation System (accuracy tracking)
+  - Phase 5: AI Prediction Deployment (production rollout)
+
+**OPERATIONS.md:**
+- Updated scraper description with comprehensive fighter statistics list
+- Added AI prediction foundation status
+
+**Implementation Plan:**
+- Complete 500-line plan stored at `/docs/AI_PREDICTION_IMPLEMENTATION_PLAN.md`
+- Covers all 5 phases with detailed specifications, code examples, timelines
+- Cost estimates: $0.02-0.04 per fight, $1.56-5/month total
+- Success metrics: 55% → 60% → 65% finish accuracy over 6 months
+
+### Database Structure Explanation
+
+**Question:** Is there a separate fighter database?
+
+**Answer:** YES! Fighters are stored in their own table and referenced by fights:
+
+```
+fighters (26 fighters) ← Permanent storage with sourceUrl as unique key
+    ↑
+    │ (foreign keys)
+    │
+fights (13 fights) ← References fighter1Id & fighter2Id
+    ↑
+    │ (belongs to)
+    │
+events (1 event)
+```
+
+**Smart Update Logic:**
+1. Scraper visits fighter profile on UFCStats.com
+2. Extracts all stats, calculates content hash
+3. Database checks if fighter exists (by `sourceUrl`)
+4. If exists AND hash unchanged → Skip (no database write)
+5. If exists AND hash changed → Update (stats changed)
+6. If new → Insert (first time seeing fighter)
+
+**Example Timeline:**
+- Nov 2: Scrape Event A → Creates fighters A, B, C
+- Nov 9: Scrape Event B (has fighters A, B, D) → Finds existing A, B (no create), creates D
+- Nov 16: Scrape Event C (has fighters B, C, E) → Finds existing B, C, creates E
+
+Result: Minimal database writes, efficient scraping, always fresh data
+
+### Key Files Changed
+
+**Database:**
+- `prisma/schema.prisma` - Enhanced schema
+- `prisma/migrations/20251102_add_fighter_stats_and_predictions/migration.sql` - Migration
+
+**Python Scraper:**
+- `scraper/ufc_scraper/parsers.py` - Enhanced parser with helper functions
+- `scraper/ufc_scraper/items.py` - Updated FighterItem schema
+
+**TypeScript/Next.js:**
+- `src/lib/scraper/validation.ts` - Extended validation schemas
+- `src/app/api/internal/ingest/route.ts` - Saves new fighter fields
+
+**Documentation:**
+- `docs/AI_PREDICTION_IMPLEMENTATION_PLAN.md` - **NEW**: Complete 5-phase plan
+- `ARCHITECTURE.md` - Added Phase 1 documentation
+- `ROADMAP.md` - Updated with Phase 1-5 tracking
+- `OPERATIONS.md` - Updated scraper capabilities
+
+### 5. AI Prompt Templates (Phase 2)
+
+**Created comprehensive prompt templates for AI predictions:**
+
+**5.1 Weight Class Base Rates** (`/src/lib/ai/prompts/weightClassRates.ts`):
+- Historical finish rates for all 12 UFC weight classes
+- Men's divisions: Heavyweight (70%) → Flyweight (50%)
+- Women's divisions: Women's Featherweight (45%) → Women's Strawweight (40%)
+- Helper functions: `getWeightClassRates()`, `normalizeWeightClass()`
+
+**5.2 Finish Probability Prompt** (`/src/lib/ai/prompts/finishProbabilityPrompt.ts`):
+- **4-Step Chain-of-Thought Reasoning:**
+  1. Compare defensive metrics (SApM, striking defense %, durability)
+  2. Compare finish rates (historical KO/SUB percentages)
+  3. Adjust for weight class baseline (Heavyweight 70% vs Flyweight 50%)
+  4. Final assessment with style matchup consideration
+- **Input**: Fighter defensive/offensive stats, weight class, optional betting odds
+- **Output**: JSON with finishProbability (0-1), confidence, detailed reasoning
+- **Temperature**: 0.3 for consistency
+
+**5.3 Fun Score Prompt** (`/src/lib/ai/prompts/funScorePrompt.ts`):
+- **Weighted Factor Analysis:**
+  - Primary (40%): Pace (strikes/min) + Finish Rate
+  - Secondary (30%): Strike differential, knockdowns, submission attempts
+  - Style Matchup (20%): Striker vs Striker = high, Wrestler vs Wrestler = low
+  - Context Bonuses (10%): Title fight (+5), main event (+2), rivalry (+3)
+  - Negative Penalties: Low pace (-15), high decision rate (-10), defensive grapplers (-10)
+- **Input**: Fighter stats, weight class, fight context (title/main event/rankings)
+- **Output**: JSON with funScore (0-100), confidence, detailed breakdown
+- **Temperature**: 0.3 for consistency
+
+**5.4 Fighter Style Classification** (`classifyFighterStyle()`):
+- Automatically classifies fighters as: `striker`, `wrestler`, `grappler`, or `balanced`
+- Based on: Strikes/min (>4.5 = striker), Takedowns/15min (>2.0 = wrestler), Subs/15min (>1.0 = grappler)
+
+**5.5 Module Exports** (`/src/lib/ai/prompts/index.ts`):
+- Clean TypeScript interface exports for all types
+- Builder functions for both prompts
+- Helper utilities for weight classes and style classification
+
+**5.6 Example Usage** (`/src/lib/ai/prompts/examples.ts`):
+- Complete examples with real fighter data (Bonfim vs Brown)
+- Database mapper functions: `mapDatabaseFighterToFinishStats()`, `mapDatabaseFighterToFunStats()`
+- Demonstrates full workflow from database to prompts
+
+**TypeScript Validation:**
+- ✅ All prompt files compile without errors
+- ✅ Full type safety with interfaces
+- ✅ No `any` types - strict typing throughout
+
+**Files Created:**
+- `/src/lib/ai/prompts/weightClassRates.ts` - Base rates lookup
+- `/src/lib/ai/prompts/finishProbabilityPrompt.ts` - Finish prediction template
+- `/src/lib/ai/prompts/funScorePrompt.ts` - Entertainment rating template
+- `/src/lib/ai/prompts/index.ts` - Module exports
+- `/src/lib/ai/prompts/examples.ts` - Usage examples and mappers
+
+### Next Steps (Phase 3)
+
+**Build New Prediction Service:**
+1. Create `/src/lib/ai/newPredictionService.ts`:
+   - Claude/OpenAI API integration (configurable via env)
+   - Batch processing (6 fights per API call for efficiency)
+   - Use prompt templates from Phase 2
+   - Error handling with retry logic (3 attempts, exponential backoff)
+   - Token usage and cost tracking
+
+2. Create `/scripts/new-ai-predictions-runner.ts`:
+   - Find fights without predictions
+   - Load fighter stats from database
+   - Call prediction service with batching
+   - Save results with version tracking
+   - Log metrics (tokens, cost, time)
+
+3. Implement prediction version management:
+   - SHA256 hash of prompt templates
+   - Create/retrieve current PredictionVersion
+   - Associate predictions with versions for A/B testing
+
+**Estimated Timeline:** Phase 3: 2 weeks (10-15 hours)
+
+---
+
+## Session 9: Scraper Configuration Refinement (2025-11-01) ✅
+
+**Goal:** Configure scraper to fetch all events from UFCStats.com upcoming page without artificial limits.
+
+**Problem:** Scraper was using the completed events page and filtering for only upcoming events with a default limit of 3. User wanted all events from the upcoming events page without date filtering or default limits.
+
+**What Was Accomplished:**
+
+1. **Updated Scraper Source URL:**
+   - Changed from: `http://ufcstats.com/statistics/events/completed`
+   - Changed to: `http://ufcstats.com/statistics/events/upcoming`
+   - File: `/scraper/ufc_scraper/spiders/ufcstats.py:30`
+
+2. **Removed Date Filtering Logic:**
+   - Eliminated datetime-based filtering for upcoming events
+   - Removed date comparison logic (date >= today)
+   - Removed unused datetime imports
+   - Now scrapes all events from page (past and future)
+   - File: `/scraper/ufc_scraper/spiders/ufcstats.py:37-68`
+
+3. **Removed Default Event Limit:**
+   - Previously: Default limit of 3 upcoming events
+   - Now: Scrapes all events unless `-a limit=N` specified
+   - Simplified parse logic (no hardcoded filtering)
+   - File: `/scraper/ufc_scraper/spiders/ufcstats.py:55-59`
+
+4. **Verified Update Mechanism:**
+   - Confirmed content-hash-based upsert handles event changes
+   - Event name updates work automatically (e.g., when main event changes)
+   - Identified by `sourceUrl`, updated when `contentHash` changes
+   - File: `/src/app/api/internal/ingest/route.ts:151-163`
+
+5. **Tested Production Scraper:**
+   - Triggered workflow run with new configuration
+   - Completed in 7m2s (vs 3m43s for 2 events previously)
+   - Successfully scraped 6 events (Nov 1 - Dec 13, 2025)
+   - Total data: 64 fights, 204 fighters
+   - Run ID: `19003683902`
+
+6. **Updated Documentation:**
+   - Updated `/OPERATIONS.md` with new source URL and default behavior
+   - Updated `/docs/ai-context/project-structure.md` with scraper architecture
+   - Clarified scraping behavior and automatic update capability
+
+**Production Results:**
+
+**Events Scraped:**
+1. UFC Fight Night: Garcia vs. Onama (Nov 1) - 13 fights
+2. UFC Fight Night: Bonfim vs. Brown (Nov 8) - 13 fights
+3. UFC 322: Della Maddalena vs. Makhachev (Nov 15) - 12 fights
+4. UFC Fight Night: Tsarukyan vs. Hooker (Nov 22) - 11 fights
+5. UFC 323: Dvalishvili vs. Yan 2 (Dec 6) - 13 fights
+6. UFC Fight Night: Royval vs. Kape (Dec 13) - 2 fights
+
+**Database Stats:**
+- Events: 6
+- Fights: 64
+- Fighters: 204
+
+**Key Learnings:**
+1. **Source Page Selection**: Using `/events/upcoming` is more direct than `/events/completed` with date filtering
+2. **No Default Limits**: Removing artificial limits allows full data collection by default
+3. **Content Hash Updates**: The existing upsert mechanism automatically handles event changes (names, dates, etc.)
+4. **Past Events**: Keeping past events in the database is acceptable and may be useful for historical analysis
+
+**Commit:**
+- `358c640` - feat(scraper): use upcoming events page and scrape all events by default
+
+**Status:** ✅ COMPLETE - Scraper now fetches all events from upcoming page with automatic updates.
+
+**Next Steps:**
+- Monitor daily scraper runs to ensure consistent data collection
+- Consider implementing event deletion logic if past events should be removed
+- Evaluate if event limit should be added back for performance reasons
 
 ---
 
@@ -69,6 +379,7 @@
 **Status:** ✅ COMPLETE - UI successfully connected to new database and displaying scraped UFC data.
 
 **Next Steps:**
+- ✅ ~~Configure scraper to get all upcoming events~~ (Session 9)
 - Monitor scraper runs to accumulate more events
 - Consider running AI predictions workflow to generate entertainment scores
 - Monitor database performance as data grows

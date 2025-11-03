@@ -26,6 +26,7 @@
     "db:test": "node scripts/test-scraper-simple.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
     "@fontsource-variable/karla": "^5.2.8",
     "@fontsource-variable/roboto-condensed": "^5.2.8",
     "@headlessui/react": "^2.2.8",

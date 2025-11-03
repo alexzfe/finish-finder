@@ -14,19 +14,22 @@
 ## Environment Variables
 | Name | Scope | Description |
 | --- | --- | --- |
-| `DATABASE_URL` | Server / Scraper | PostgreSQL connection string. Use Supabase in production; SQLite only for local dev. |
+| `DATABASE_URL` | Server / Scripts | PostgreSQL connection string. Use Supabase in production; SQLite only for local dev. |
+| `DIRECT_DATABASE_URL` | Migrations | Direct database connection for Prisma migrations (bypasses connection pooling). |
 | `SHADOW_DATABASE_URL` | CI / Migrations | Required for `prisma migrate deploy` on managed Postgres. |
-| `OPENAI_API_KEY` | Scraper / Scripts | Auth for prediction prompts (gpt-4o). |
-| `OPENAI_PREDICTION_CHUNK_SIZE` | Scraper / Scripts | Overrides default batch size (6 fights per OpenAI call). |
-| `SENTRY_DSN` | Server / Scraper | Backend Sentry project. |
+| `INGEST_API_URL` | Python Scraper | Next.js ingestion API endpoint (e.g., `https://finish-finder.vercel.app/api/internal/ingest`). |
+| `INGEST_API_SECRET` | Python Scraper | Bearer token for authenticating scraper API requests. |
+| `ANTHROPIC_API_KEY` | AI Predictions (New) | Auth for Claude 3.5 Sonnet predictions (Phase 3+). Get from https://console.anthropic.com/ |
+| `OPENAI_API_KEY` | AI Predictions | Auth for GPT-4o predictions (legacy + new system fallback). |
+| `AI_PROVIDER` | AI Predictions (New) | AI provider to use: `anthropic` (default) or `openai`. |
+| `OPENAI_PREDICTION_CHUNK_SIZE` | Scripts (Legacy) | Overrides default batch size (6 fights per OpenAI call) in old system. |
+| `SENTRY_DSN` | Server | Backend Sentry project. |
 | `NEXT_PUBLIC_SENTRY_DSN` | Client | Frontend Sentry project. |
 | `SENTRY_TRACES_SAMPLE_RATE` | Server | Trace sample rate (0.0–1.0). |
 | `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` | Client | Client trace sample rate. |
 | `NEXT_PUBLIC_SENTRY_REPLAY_SESSION_SAMPLE_RATE` | Client | Session replay sample rate. |
 | `NEXT_PUBLIC_SENTRY_REPLAY_ON_ERROR_SAMPLE_RATE` | Client | Replay sampling on errors. |
 | `SENTRY_TOKEN` | CI / Operations | Token for Sentry CLI when publishing source maps. |
-| `SCRAPER_CANCEL_THRESHOLD` | Scraper | Number of consecutive misses before cancelling an event (default 3). |
-| `SCRAPER_FIGHT_CANCEL_THRESHOLD` | Scraper | Misses before removing a fight (default 2). |
 | `NEXT_PUBLIC_BASE_PATH` | Client | Base path for static deployments (GitHub Pages). |
 
 Store sensitive values in platform secret managers (Vercel, GitHub Actions, 1Password). Never commit real keys.
@@ -34,9 +37,9 @@ Store sensitive values in platform secret managers (Vercel, GitHub Actions, 1Pas
 ## Runbooks
 
 ### Daily Scraper Job
-**⚠️ AUTOMATED SCRAPING PARTIALLY OPERATIONAL (Tapology-first + enhanced parsing)**
+**✅ AUTOMATED SCRAPING FULLY OPERATIONAL (Python/Scrapy + UFCStats.com)**
 
-The GitHub Actions workflow runs on schedule with enhanced Tapology parsing and comprehensive debugging. Recent improvements include 4-strategy fallback parsing system.
+The Python/Scrapy scraper runs automatically via GitHub Actions, scraping UFC event data from UFCStats.com and posting to the Next.js ingestion API.
 
 **Current Setup:**
 1. **AI Predictions**: `.github/workflows/ai-predictions.yml` runs daily at 1:30 AM UTC
@@ -45,189 +48,141 @@ The GitHub Actions workflow runs on schedule with enhanced Tapology parsing and 
    - Processes events with proper batching and rate limiting
 
 2. **Data Scraping**: `.github/workflows/scraper.yml` runs daily at 2:00 AM UTC
-   - Runs `scripts/automated-scraper.js check`
-   - **New Configuration**: `SCRAPER_SOURCE=tapology`, `SCRAPER_LIMIT=10`
-   - Env flags: `SHERDOG_ENABLED=false`, `TAPOLOGY_ENRICH_RECORDS=true`
-   - **Enhanced Parsing**: Uses 4-strategy fallback system when standard selectors fail
-   - Creates events and fights without AI predictions
+   - Python/Scrapy spider scrapes all upcoming events from UFCStats.com
+   - Source URL: `http://ufcstats.com/statistics/events/upcoming`
+   - Scrapes all events by default (no limit); use `-a limit=N` to restrict
+   - Extracts events, fights, and **comprehensive fighter profiles**:
+     * Basic: wins/losses/draws, record, weight class
+     * Physical: height, weight (lbs), reach (inches), stance, DOB
+     * Striking: sig strikes/min (landed & absorbed), accuracy %, defense %
+     * Grappling: takedown avg, accuracy %, defense %, submission avg
+     * Win Methods: KO count, submission count, decision count
+     * Calculated: finish rate, KO %, submission %, avg fight time
+   - Includes fight enrichment: title fights, card position, main event flags
+   - Posts to `/api/internal/ingest` with Bearer token authentication
+   - Content hash change detection enables automatic event updates and stat refreshes
+   - Creates ScrapeLog audit entries for monitoring
 
-**Recent Improvements (2025-09-23):**
-- Enhanced `TapologyService` with comprehensive debugging and fallback strategies
-- Fixed TypeScript compilation issues preventing CI execution
-- Added extensive logging for HTML structure analysis
-- Implemented aggressive link detection for Tapology event URLs
+**Architecture:**
+```
+Python Scrapy Spider → Next.js Ingestion API → PostgreSQL Database
+        ↑                       ↓
+   UFCStats.com            Transaction-safe
+                           upserts with SHA256
+                           change detection
+```
 
 **Status:**
-- **⚠️ Partially Operational**: Enhanced Tapology parsing implemented but end-to-end workflow needs investigation
-- **✅ Enhanced Parsing**: 4-strategy fallback system finds events when standard selectors fail
-- **✅ Comprehensive Debugging**: Extensive logging for HTML structure analysis and URL extraction
-- **✅ AI Predictions**: Separate workflow generates predictions daily (78 fights updated in last run)
-- **🚫 Sherdog in CI**: Disabled due to IP blocking; can be used locally
-- Manual trigger: **AVAILABLE** via workflow_dispatch for both workflows
-- Local scraping: **UNDER INVESTIGATION** (see Troubleshooting section below)
+- **✅ Production Ready**: Complete end-to-end scraper operational
+- **✅ Comprehensive Fighter Statistics**: 17 stats per fighter including striking, grappling, and win methods
+- **✅ AI Prediction Foundation**: Database schema enhanced with PredictionVersion and Prediction models
+- **✅ Fight Enrichment**: Title fights, card position, main event detection
+- **✅ Content Hash Detection**: SHA256-based change detection for efficiency (skips unchanged fighters)
+- **✅ Audit Trail**: ScrapeLog table tracks every scraper execution
+- **✅ Manual Trigger**: Available via workflow_dispatch with optional event limit
+- **✅ Local Testing**: Full development environment support
+
+**For detailed scraper operations**, see `/scraper/OPERATIONS.md`
 
 ### Manual Scrape & Prediction Replay
-**✅ AVAILABLE FOR TESTING OR EMERGENCY USE**
 
+**Manual Python Scraper Execution:**
 ```bash
-# Ensure DATABASE_URL + OPENAI_API_KEY are exported in your local environment
-export DATABASE_URL="your_postgres_connection_string"
-export OPENAI_API_KEY="your_openai_api_key"
+# Via GitHub Actions (recommended)
+gh workflow run scraper.yml                  # Scrape all upcoming events (default)
+gh workflow run scraper.yml -f limit=1       # Test with 1 event
+gh workflow run scraper.yml -f limit=5       # Test with 5 events
 
-# Run scraper locally (for testing or emergency use)
-node scripts/automated-scraper.js check
+# Local development (requires Python 3.11+)
+cd scraper
+export INGEST_API_URL="https://finish-finder.vercel.app/api/internal/ingest"
+export INGEST_API_SECRET="your-secret-token"
 
-# Generate predictions manually (normally handled by automated workflow)
-node scripts/ai-predictions-runner.js                 # all events missing predictions
+scrapy crawl ufcstats                        # All upcoming events (default)
+scrapy crawl ufcstats -a limit=1             # Limit to 1 event
+scrapy crawl ufcstats -s LOG_LEVEL=DEBUG     # Verbose logging
 ```
 
-**Troubleshooting:**
-- Use `node scripts/automated-scraper.js status` to inspect strike counts.
-- For clean-room reruns, execute `node scripts/clear-predictions.js` followed by `node scripts/verify-predictions-cleared.js` before regenerating.
-- If you get 403 errors locally (e.g., Sherdog), wait 30-60 minutes or test from a different network.
-
-### Scraper Debugging & Troubleshooting
-**⚠️ ENHANCED TROUBLESHOOTING FOR TAPOLOGY PARSING ISSUES**
-
-**Recent Issues (2025-09-23):**
-The automated scraper has been enhanced with comprehensive debugging but may still experience intermittent failures.
-
-#### GitHub Actions Debugging
+**Manual AI Prediction Generation (New System - Phase 3):**
 ```bash
-# Check recent workflow runs
+# Set required environment variables
+export DATABASE_URL="postgresql://user:pass@host:5432/db?pgbouncer=true"
+export ANTHROPIC_API_KEY="sk-ant-..."  # or OPENAI_API_KEY
+export AI_PROVIDER="anthropic"        # or "openai"
+
+# Dry run: Show what would be done without making API calls
+npx ts-node scripts/new-ai-predictions-runner.ts --dry-run
+
+# Generate predictions for all unpredicted fights
+npx ts-node scripts/new-ai-predictions-runner.ts
+
+# Force regenerate all predictions (including existing)
+npx ts-node scripts/new-ai-predictions-runner.ts --force
+
+# Generate predictions for a specific event only
+npx ts-node scripts/new-ai-predictions-runner.ts --event-id=<event-id>
+
+# Cost estimates:
+# - ~$0.02-0.04 per fight (2 API calls: finish + fun)
+# - ~13 fights per event = $0.26-0.52 per event
+# - ~4 events per month = $1-2/month total
+```
+
+**Old AI Prediction System (Legacy - Deprecated):**
+```bash
+# OLD SYSTEM - Will be removed after Phase 5 deployment
+node scripts/ai-predictions-runner.js
+```
+
+**Monitoring:**
+```bash
+# Check recent scraper runs
 gh run list --workflow=scraper.yml --limit=10
 
-# View detailed logs from specific run (replace with actual run ID)
-gh run view 17961992466 --log
+# View specific run logs
+gh run view <run-id> --log
 
-# Trigger manual test run with limited events
-gh workflow run scraper.yml --field events_limit=5
-
-# Monitor real-time execution
-gh run watch $(gh run list --workflow=scraper.yml --limit=1 --json databaseId --jq '.[0].databaseId')
+# Watch live execution
+gh run watch <run-id>
 ```
 
-#### Local Debugging with Enhanced Logging
-```bash
-# Run with comprehensive Tapology debugging
-SCRAPER_SOURCE=tapology TAPOLOGY_ENRICH_RECORDS=true SCRAPER_LIMIT=5 npm run scraper:check
+**For detailed troubleshooting**, see `/scraper/OPERATIONS.md`
 
-# Test specific Tapology functionality
-node scripts/test-tapology-parsing.js
+### Scraper Monitoring
 
-# Verify database connectivity
-node scripts/test-database-connection.js
+**Check ScrapeLog Database Table:**
+```sql
+-- View recent scraper runs
+SELECT
+  "startTime",
+  "endTime",
+  "status",
+  "eventsFound",
+  "fightsAdded",
+  "fightsUpdated",
+  "fightersAdded",
+  "errorMessage"
+FROM "ScrapeLog"
+ORDER BY "startTime" DESC
+LIMIT 10;
+
+-- Check scraper success rate (last 7 days)
+SELECT
+  status,
+  COUNT(*) as count,
+  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage
+FROM "ScrapeLog"
+WHERE "startTime" > NOW() - INTERVAL '7 days'
+GROUP BY status;
 ```
 
-#### Common Issues & Solutions
+**Common Issues:**
+- **0 events scraped**: UFCStats.com HTML structure may have changed - update parsers in `/scraper/ufc_scraper/parsers.py`
+- **API authentication failures**: Verify `INGEST_API_SECRET` matches between GitHub secrets and Vercel
+- **Database connection errors**: Check Supabase database status and connection string
+- **High parsing errors**: Run parser tests with `pytest tests/test_parsers.py -v`
 
-**1. TypeScript Compilation Errors**
-- **Symptom**: `TSError: ⨯ Unable to compile TypeScript` in GitHub Actions
-- **Solution**: Check for RegExpMatchArray vs boolean return type conflicts
-- **Fix**: Use `!!` operator to convert RegExp matches to boolean
-
-**2. Standard CSS Selectors Failing**
-- **Symptom**: "⚠️ Standard selectors found no events, trying alternatives..."
-- **Expected**: System should automatically fall back to 4-strategy parsing
-- **Monitor**: Look for "✅ Using strategy X with Y elements" messages
-
-**3. No Event URLs Found**
-- **Symptom**: "⚠️ Found UFC event but no link - skipping"
-- **Debug**: Check logs for "🎯 Potential event link" messages
-- **Investigation**: Examine HTML structure in debug logs
-
-**4. Zero Events Processed**
-- **Symptom**: "✅ Successfully scraped 0 upcoming UFC events"
-- **Likely Cause**: Website structure changed or parsing strategies need refinement
-- **Action**: Review HTML debug output and enhance parsing strategies
-
-#### Enhanced Tapology Parsing System
-The system now includes 4 progressive strategies when standard selectors fail:
-
-1. **Strategy 1**: Elements with UFC + year content
-2. **Strategy 2**: Elements with UFC links
-3. **Strategy 3**: Table/list structures with UFC content
-4. **Strategy 4**: Broad search with size constraints
-
-Each strategy includes extensive debugging output showing:
-- Number of elements found
-- HTML structure samples (first 3 elements)
-- Potential event links discovered
-- URL extraction success/failure reasons
-
-#### Environment Variables for Debugging
-```bash
-# Enhanced debugging mode
-export SCRAPER_SOURCE=tapology
-export TAPOLOGY_ENRICH_RECORDS=true
-export SCRAPER_LIMIT=5
-
-# Local testing with debug output
-export DEBUG=scraper:*
-export NODE_ENV=development
-```
-
-### Duplicate Event Management
-**✅ ENHANCED DEDUPLICATION SYSTEM**
-
-The system now includes comprehensive duplicate detection and cleanup capabilities to handle multi-source data conflicts.
-
-**Database Cleanup (One-time):**
-```bash
-# Check for existing duplicates
-DATABASE_URL="your_connection_string" node check-database-duplicates.js
-
-# Clean up identified duplicates
-DATABASE_URL="your_connection_string" npx prisma db execute --file cleanup-duplicates.sql
-
-# Verify cleanup success
-DATABASE_URL="your_connection_string" npx prisma db execute --file verify-cleanup.sql
-```
-
-**Enhanced Deduplication Algorithm:**
-The scraper now includes improved duplicate detection that handles:
-- UFC Fight Night naming variations (`UFC Fight Night: Fighter vs Fighter` ↔ `UFC Fight Night ### - Fighter vs Fighter`)
-- Cross-source name differences between Wikipedia and Tapology
-- String similarity matching (90%+ threshold for normalized names)
-- Fighter name extraction and matching for same-date events
-- Levenshtein distance calculation for typo detection
-
-**Test Deduplication Logic:**
-```bash
-# Test the deduplication algorithm
-node test-deduplication.js
-```
-
-**Monitoring for Duplicates:**
-- The automated scraper now prevents duplicate creation during regular runs
-- Use `fresh-duplicate-check.js` to analyze potential duplicates in production
-- Check scraper logs for deduplication actions during automated runs
-
-### AI Predictions Management
-**✅ SEPARATED WORKFLOW SYSTEM**
-
-AI predictions are now handled by a dedicated daily workflow separate from data scraping for improved reliability.
-
-**Manual AI Predictions:**
-```bash
-# Generate predictions for all events missing them
-OPENAI_API_KEY="your_key" DATABASE_URL="your_url" \
-node scripts/ai-predictions-runner.js
-
-# Force regenerate all predictions (including existing ones)
-OPENAI_API_KEY="your_key" DATABASE_URL="your_url" \
-FORCE_REGENERATE_PREDICTIONS=true node scripts/ai-predictions-runner.js
-
-# Generate for specific event only
-OPENAI_API_KEY="your_key" DATABASE_URL="your_url" \
-node scripts/generate-event-predictions.js --name "UFC Event Name"
-```
-
-**AI Workflow Monitoring:**
-- Check `.github/workflows/ai-predictions.yml` runs for daily execution status
-- Review `logs/ai-predictions.log` for detailed prediction generation logs
-- Manual trigger available via GitHub Actions workflow_dispatch
-- Configurable batch size and force regeneration options
+**Detailed troubleshooting guide**: See `/scraper/OPERATIONS.md`
 
 ### Static Export Refresh
 ```bash
@@ -255,27 +210,31 @@ This writes:
 
 ## Observability
 - **Sentry**
-  - Client: `sentry.client.config.ts` configured via `NEXT_PUBLIC_SENTRY_*`.
-  - Server & Edge: `sentry.server.config.ts`, `sentry.edge.config.ts` use `SENTRY_DSN`.
-  - Scraper: Initialised inside automation scripts when env vars are present (TODO in ROADMAP to wire fully).
+  - Client: `sentry.client.config.ts` configured via `NEXT_PUBLIC_SENTRY_*`
+  - Server & Edge: `sentry.server.config.ts`, `sentry.edge.config.ts` use `SENTRY_DSN`
+- **Database Monitoring**
+  - `ScrapeLog` table: Audit trail of all scraper executions with metrics
+  - Admin dashboard: `/admin` (password: "admin123" in dev) for database performance
+  - Health check: `/api/health` endpoint for system status
+  - Performance metrics: `/api/performance` endpoint for query analysis
 - **Logs**
-  - `logs/scraper.log` – append-only log with timestamps.
-  - `logs/missing-events.json` / `logs/missing-fights.json` – track absence counts.
-  - `src/lib/monitoring/logger.ts` – use `scraperLogger`, `apiLogger`, etc. for structured console output.
-- **Metrics** – Not yet implemented. ROADMAP recommends adding basic scrape duration and OpenAI usage metrics.
+  - Python scraper: Scrapy logs with configurable `LOG_LEVEL` (INFO, DEBUG, WARNING)
+  - GitHub Actions: Workflow logs retained for 7 days as artifacts
+  - `src/lib/monitoring/logger.ts` – use `apiLogger`, etc. for structured console output
+- **Metrics** – ROADMAP recommends adding scrape duration and OpenAI usage metrics
 
 ## Incident Response
 | Symptom | Checks | Remediation |
 | --- | --- | --- |
-| **No events in UI** | `/api/db-events` returns 500 or empty. Check Postgres availability and scrape logs. | Run manual scrape. If API parsing fails, inspect `Sentry` breadcrumb and `logs/scraper.log`. Static fallback available at `public/data/events.json`. |
-| **Event removed unexpectedly** | Strike ledger counts may have crossed threshold. | Lower thresholds or reset counters by deleting entry in `logs/missing-events.json`. Confirm Sherdog still lists event before reinstating manually. |
-| **Sherdog 403 blocks scraper** | Scraper logs warning with code `SHERDOG_BLOCKED`. GH Actions IPs are commonly blocked. | In CI, Sherdog is disabled (`SHERDOG_ENABLED=false`). Use local scraping to test Sherdog or keep relying on Wikipedia + Tapology. |
-| **OpenAI failures** | Look for rate-limit or auth errors in scraper log. | Back off for a few minutes. Verify key validity. Switch to smaller batch size by setting `OPENAI_PREDICTION_CHUNK_SIZE=3`. |
-| **Fighter images missing** | `fighter-image` route currently returns placeholder. | No action required. Feature gated until rate-limiting strategy is in place. |
-| **Duplicate events in UI** | Multiple events with same fighters/date visible on frontend. Check database for actual duplicates. | Run `fresh-duplicate-check.js` to identify duplicates, then use `cleanup-duplicates.sql` to remove. Enhanced deduplication should prevent new ones. |
-| **Deduplication not working** | New duplicates appearing despite algorithm improvements. | Test deduplication logic with `test-deduplication.js`. Check scraper logs for algorithm execution. May need to adjust similarity thresholds. |
+| **No events in UI** | `/api/db-events` returns 500 or empty. Check Postgres availability and `ScrapeLog` table. | Run manual scrape via `gh workflow run scraper.yml -f limit=1`. Check Sentry for API errors. Static fallback available at `public/data/events.json`. |
+| **Scraper returns 0 events** | Check `ScrapeLog.errorMessage` and GitHub Actions logs. | UFCStats.com HTML may have changed. Update parsers in `/scraper/ufc_scraper/parsers.py`. Run tests: `pytest tests/test_parsers.py -v`. |
+| **API authentication failures** | Scraper logs show 401/403 errors. | Verify `INGEST_API_SECRET` matches in GitHub secrets and Vercel environment variables. Rotate secret if compromised. |
+| **Database connection errors** | Scraper logs show "Can't reach database server". | Check Supabase database status. Verify `DATABASE_URL` in Vercel. Test connection: `node -e "require('@prisma/client').PrismaClient().$connect()"` |
+| **OpenAI prediction failures** | Look for rate-limit or auth errors in AI prediction logs. | Back off for a few minutes. Verify `OPENAI_API_KEY` validity. Switch to smaller batch size: `OPENAI_PREDICTION_CHUNK_SIZE=3`. |
+| **Fighter images missing** | `fighter-image` route returns placeholder. | Expected behavior. Feature disabled until rate-limiting strategy implemented. |
+| **Duplicate fights in database** | Same fight appears multiple times with different `sourceUrl`. | Check `Fight.sourceUrl` uniqueness. Should be `{event_url}#fight-{fight_id}`. See `/scraper/OPERATIONS.md` for duplicate detection queries. |
 
 ## Backups & Data Retention
 - **Database** – Rely on managed Postgres backups (Supabase PITR or provider snapshots). Schedule nightly exports at minimum.
 - **Static Data** – `public/data/events.json` can be archived per release tag for forensic comparisons.
-- **Logs** – Ship `logs/*.json` and `logs/*.log` to long-term storage (S3, CloudWatch) before rotation if you need historical strike ledger context.
+- **Scrape Logs** – GitHub Actions artifacts retained for 7 days. ScrapeLog database table provides long-term audit trail. Consider archiving old ScrapeLog entries (>90 days) for historical analysis.
