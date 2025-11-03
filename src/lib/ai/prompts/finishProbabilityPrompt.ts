@@ -111,7 +111,16 @@ ${fighter2.recentContext || 'No recent context available.'}
 Note: Consider recent injuries, momentum, training camp reports, and style changes when analyzing this matchup.`
       : ''
 
-  return `You are an expert MMA analyst specializing in predicting fight finishes. Analyze this fight and predict the probability it ends in a finish (KO/TKO/Submission) rather than a decision.
+  return `You are an expert MMA analyst specializing in predicting fight finishes.
+
+INSTRUCTIONS:
+1. Perform a detailed analysis of the fight, considering all relevant factors
+2. Populate the 'reasoning' object with your step-by-step analysis
+3. After writing your 'finalAssessment', review it carefully and identify the 1-2 most critical concepts that determine your prediction
+4. Summarize these concepts into concise 1-2 word labels for the 'keyFactors' array
+5. Construct the final JSON object, ensuring all fields are populated
+
+Analyze this fight and predict the probability it ends in a finish (KO/TKO/Submission) rather than a decision.
 
 EVENT: ${context.eventName}
 WEIGHT CLASS: ${context.weightClass}
@@ -169,28 +178,20 @@ Step 4 - Final Assessment:
 - Account for style matchup (striker vs wrestler, etc.)
 - Consider if betting odds suggest a mismatch (blowouts often end early)
 
-ANALYSIS STEPS - FOLLOW THIS ORDER:
-1. First, identify the 4-5 most critical factors driving the finish probability (1-2 words each)
-2. Use these factors as the foundation for your detailed reasoning
-3. Calculate the finish probability and confidence based on your reasoning
-4. Format your complete analysis as JSON
-
 OUTPUT (JSON only, no markdown):
 {
-  "keyFactors": [
-    "<1-2 word factor>",
-    "<1-2 word factor>",
-    "<1-2 word factor>",
-    "<1-2 word factor>"
-  ],
   "finishProbability": <float between 0 and 1>,
   "confidence": <float between 0 and 1>,
   "reasoning": {
-    "defensiveComparison": "<2-3 sentences comparing defensive metrics, informed by your key factors>",
-    "finishRateComparison": "<2-3 sentences comparing offensive finish ability, informed by your key factors>",
-    "weightClassAdjustment": "<2-3 sentences explaining how this matchup compares to baseline, informed by your key factors>",
-    "finalAssessment": "<2-3 sentences with final probability that references your key factors>"
-  }
+    "defensiveComparison": "<2-3 sentences>",
+    "finishRateComparison": "<2-3 sentences>",
+    "weightClassAdjustment": "<2-3 sentences>",
+    "finalAssessment": "<2-3 sentences>"
+  },
+  "keyFactors": [
+    "<A concise, 1-2 word summary of the most important factor from the reasoning>",
+    "<A concise, 1-2 word summary of the second most important factor>"
+  ]
 }
 
 IMPORTANT - ANALYSIS STYLE:

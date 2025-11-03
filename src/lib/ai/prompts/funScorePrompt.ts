@@ -183,7 +183,16 @@ ${fighter2.recentContext || 'No recent context available.'}
 Note: Consider recent momentum, injuries, or stylistic changes that could affect entertainment value.`
       : ''
 
-  return `You are an MMA entertainment analyst. Rate this fight's excitement potential on a 0-100 scale using weighted factor analysis.
+  return `You are an MMA entertainment analyst.
+
+INSTRUCTIONS:
+1. Perform a detailed analysis of the fight's entertainment potential using weighted factor analysis
+2. Populate the 'breakdown' object with your scoring and reasoning
+3. After writing your 'reasoning', review it carefully and identify the 2-3 most critical concepts that drive the fun score
+4. Summarize these concepts into concise 1-2 word labels for the 'keyFactors' array
+5. Construct the final JSON object, ensuring all fields are populated
+
+Rate this fight's excitement potential on a 0-100 scale using weighted factor analysis.
 
 EVENT: ${context.eventName}
 WEIGHT CLASS: ${context.weightClass}
@@ -264,20 +273,8 @@ CALCULATE:
 5. Apply penalties = Penalties (negative)
 6. Final Score = Primary + Secondary + Style + Context + Penalties (capped at 0-100)
 
-ANALYSIS STEPS - FOLLOW THIS ORDER:
-1. First, identify the 4-5 most critical entertainment factors (1-2 words each)
-2. Use these factors as the foundation for your detailed breakdown and reasoning
-3. Calculate the fun score and confidence based on your reasoning
-4. Format your complete analysis as JSON
-
 OUTPUT (JSON only, no markdown):
 {
-  "keyFactors": [
-    "<1-2 word factor>",
-    "<1-2 word factor>",
-    "<1-2 word factor>",
-    "<1-2 word factor>"
-  ],
   "funScore": <integer 0-100>,
   "confidence": <float 0-1>,
   "breakdown": {
@@ -287,8 +284,13 @@ OUTPUT (JSON only, no markdown):
     "styleMatchupScore": <float 0-20>,
     "contextBonus": <float 0-10>,
     "penalties": <float, negative or 0>,
-    "reasoning": "<3-4 sentences explaining the score, informed by your key factors>"
-  }
+    "reasoning": "<3-4 sentences>"
+  },
+  "keyFactors": [
+    "<A concise, 1-2 word summary of the most important factor from the reasoning>",
+    "<A concise, 1-2 word summary of the second most important factor>",
+    "<A concise, 1-2 word summary of the third most important factor>"
+  ]
 }
 
 IMPORTANT - ANALYSIS STYLE:
