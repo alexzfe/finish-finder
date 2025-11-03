@@ -36,16 +36,33 @@ export async function GET() {
               } : undefined,
               take: 1
             }
-          },
-          orderBy: {
-            fightNumber: 'asc'
           }
+          // Note: No orderBy here - we'll sort in memory to handle custom cardPosition order
         }
       },
       orderBy: {
         date: 'asc'
       },
       take: 50 // Limit results for performance
+    })
+
+    // Define card position order (Main Event first, Early Prelims last)
+    const cardPositionOrder: Record<string, number> = {
+      'Main Event': 1,
+      'Co-Main Event': 2,
+      'Main Card': 3,
+      'Prelims': 4,
+      'Early Prelims': 5,
+      'preliminary': 6 // fallback default value
+    }
+
+    // Sort fights within each event by card position
+    events.forEach(event => {
+      event.fights.sort((a, b) => {
+        const orderA = cardPositionOrder[a.cardPosition] ?? 999
+        const orderB = cardPositionOrder[b.cardPosition] ?? 999
+        return orderA - orderB
+      })
     })
 
     // Transform the data to match the expected format
