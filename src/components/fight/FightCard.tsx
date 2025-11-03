@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import { motion } from 'framer-motion'
 import { Fight } from '@/types'
 import { FighterAvatar } from '@/components/fighter/FighterAvatar'
 
@@ -35,10 +34,8 @@ export const FightCard = React.memo(function FightCard({
   const funScore = fight.predictedFunScore || 0
 
   return (
-    <motion.article
-      className="bg-gray-900 rounded-lg shadow-md overflow-hidden cursor-pointer border border-gray-800"
-      whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
-      whileTap={{ scale: 0.98 }}
+    <article
+      className="bg-gray-900 rounded-lg shadow-md overflow-hidden cursor-pointer border border-gray-800 transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] hover:shadow-xl"
       onClick={() => onSelect(fight)}
     >
       {/* Tier 1: Always Visible */}
@@ -104,6 +101,6 @@ export const FightCard = React.memo(function FightCard({
           </div>
         </div>
       </div>
-    </motion.article>
+    </article>
   )
 })
