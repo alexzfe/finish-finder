@@ -48,6 +48,9 @@ export interface FighterFunStats {
   // Calculated
   totalWins: number                    // For calculating decision rate
   primaryStyle: FighterStyle           // Derived from stats
+
+  // Optional: Recent context from web search
+  recentContext?: string               // Recent news, injuries, training camp updates
 }
 
 /**
@@ -164,6 +167,21 @@ CONTEXT BONUSES:
 - Rivalry/Rematch: ${context.rivalry || context.rematch ? 'YES (+3 points)' : 'NO'}
 ${rankingsSection}`
 
+  // Recent context section if available
+  const recentContextSection =
+    fighter1.recentContext || fighter2.recentContext
+      ? `
+RECENT CONTEXT (From Web Search):
+
+${fighter1.name}:
+${fighter1.recentContext || 'No recent context available.'}
+
+${fighter2.name}:
+${fighter2.recentContext || 'No recent context available.'}
+
+Note: Consider recent momentum, injuries, or stylistic changes that could affect entertainment value.`
+      : ''
+
   return `You are an MMA entertainment analyst. Rate this fight's excitement potential on a 0-100 scale using weighted factor analysis.
 
 EVENT: ${context.eventName}
@@ -197,6 +215,7 @@ Style Indicators:
 - Takedowns per 15min: ${fighter2.takedownAverage.toFixed(2)}
 - Submission Attempts per 15min: ${fighter2.submissionAverage.toFixed(2)}
 ${contextSection}
+${recentContextSection}
 
 SCORING FRAMEWORK:
 

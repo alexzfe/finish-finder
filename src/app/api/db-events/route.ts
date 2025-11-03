@@ -11,7 +11,13 @@ export async function GET() {
     if (!process.env.DATABASE_URL || !prisma) {
       throw new Error('DATABASE_URL not configured')
     }
-    // Get events with their fights and fighters
+    // Get the active prediction version
+    const activePredictionVersion = await prisma.predictionVersion.findFirst({
+      where: { active: true },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    // Get events with their fights, fighters, and predictions
     const events = await prisma.event.findMany({
       where: {
         // Show events that have fights (indicating they're not just placeholders)
@@ -23,7 +29,13 @@ export async function GET() {
         fights: {
           include: {
             fighter1: true,
-            fighter2: true
+            fighter2: true,
+            predictions: {
+              where: activePredictionVersion ? {
+                versionId: activePredictionVersion.id
+              } : undefined,
+              take: 1
+            }
           },
           orderBy: {
             fightNumber: 'asc'
@@ -75,7 +87,14 @@ export async function GET() {
         cardPosition: fight.cardPosition,
         scheduledRounds: fight.scheduledRounds,
         fightNumber: fight.fightNumber,
+        // Use new predictions table data if available, fallback to old fields
         predictedFunScore: (() => {
+          const prediction = fight.predictions[0]
+          if (prediction && typeof prediction.funScore === 'number') {
+            return Math.min(100, Math.max(0, Math.round(prediction.funScore)))
+          }
+
+          // Fallback to old fields for backward compatibility
           const rawScore = fight.predictedFunScore
           if (typeof rawScore === 'number') {
             const scaled = rawScore <= 10 ? Math.round(rawScore * 10) : Math.round(rawScore)
@@ -89,10 +108,36 @@ export async function GET() {
 
           return 0
         })(),
-        funFactors: parseJsonArray(fight.keyFactors ?? fight.funFactors),
-        aiDescription: fight.aiDescription || fight.entertainmentReason,
+        finishProbability: (() => {
+          const prediction = fight.predictions[0]
+          if (prediction && typeof prediction.finishProbability === 'number') {
+            return prediction.finishProbability
+          }
+          return fight.finishProbability || 0
+        })(),
+        aiDescription: (() => {
+          const prediction = fight.predictions[0]
+          if (prediction?.finishReasoning) {
+            return prediction.finishReasoning
+          }
+          return fight.aiDescription || fight.entertainmentReason || null
+        })(),
+        funFactors: (() => {
+          const prediction = fight.predictions[0]
+          if (prediction?.funBreakdown) {
+            // Extract breakdown reasoning from new predictions
+            try {
+              const breakdown = typeof prediction.funBreakdown === 'string'
+                ? JSON.parse(prediction.funBreakdown)
+                : prediction.funBreakdown
+              return [breakdown.reasoning || 'AI analysis available']
+            } catch {
+              return parseJsonArray(fight.keyFactors ?? fight.funFactors)
+            }
+          }
+          return parseJsonArray(fight.keyFactors ?? fight.funFactors)
+        })(),
         funFactor: fight.funFactor,
-        finishProbability: fight.finishProbability,
         riskLevel: fight.riskLevel,
         fightPrediction: fight.fightPrediction,
         completed: fight.completed,

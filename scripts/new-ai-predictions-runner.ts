@@ -11,13 +11,19 @@
  * - Error handling: Continues on individual fight failures, logs errors
  *
  * Usage:
- *   npx ts-node scripts/new-ai-predictions-runner.ts [--dry-run] [--force] [--event-id=<id>] [--limit=<n>]
+ *   npx ts-node scripts/new-ai-predictions-runner.ts [options]
  *
  * Options:
- *   --dry-run     Show what would be done without making API calls
- *   --force       Regenerate predictions even if they already exist
- *   --event-id    Only process fights for a specific event
- *   --limit       Limit number of fights to process (useful for testing)
+ *   --dry-run         Show what would be done without making API calls
+ *   --force           Regenerate predictions even if they already exist
+ *   --event-id=<id>   Only process fights for a specific event
+ *   --limit=<n>       Limit number of fights to process (useful for testing)
+ *   --no-web-search   Disable web search enrichment (faster, but less context)
+ *
+ * Environment Variables:
+ *   AI_PROVIDER               'anthropic' or 'openai' (default: anthropic)
+ *   GOOGLE_SEARCH_API_KEY     Required for web search enrichment
+ *   GOOGLE_SEARCH_ENGINE_ID   Required for web search enrichment
  */
 
 // Load environment variables from .env.local
@@ -34,6 +40,8 @@ import { join } from 'path'
 import { prisma } from '../src/lib/database/prisma'
 import { NewPredictionService } from '../src/lib/ai/newPredictionService'
 import { classifyFighterStyle } from '../src/lib/ai/prompts'
+import { FighterContextService } from '../src/lib/ai/fighterContextService'
+import { getDefaultSearchFunction } from '../src/lib/ai/webSearchWrapper'
 import type { Fighter, Fight, Event } from '@prisma/client'
 
 /**
@@ -59,6 +67,7 @@ interface Args {
   force: boolean
   eventId?: string
   limit?: number
+  noWebSearch?: boolean  // Flag to disable web search enrichment
 }
 
 /**
@@ -78,6 +87,7 @@ function parseArgs(): Args {
   return {
     dryRun: args.includes('--dry-run'),
     force: args.includes('--force'),
+    noWebSearch: args.includes('--no-web-search'),
     eventId: args.find((arg) => arg.startsWith('--event-id='))?.split('=')[1],
     limit: parseInt(args.find((arg) => arg.startsWith('--limit='))?.split('=')[1] || '0') || undefined,
   }
@@ -218,7 +228,8 @@ async function findFightsNeedingPredictions(
 async function generatePrediction(
   fight: FightWithRelations,
   versionId: string,
-  service: NewPredictionService
+  service: NewPredictionService,
+  contextService?: FighterContextService
 ): Promise<{
   success: boolean
   tokensUsed: number
@@ -227,6 +238,26 @@ async function generatePrediction(
 }> {
   try {
     const { fighter1, fighter2, event } = fight
+
+    // Fetch recent context for both fighters if context service provided
+    let fighter1Context: string | undefined
+    let fighter2Context: string | undefined
+
+    if (contextService) {
+      try {
+        console.log('  🔍 Fetching fighter context...')
+        const [context1, context2] = await contextService.getFightContext(
+          fighter1.name,
+          fighter2.name,
+          event.date
+        )
+        fighter1Context = context1.searchSuccessful ? context1.recentNews : undefined
+        fighter2Context = context2.searchSuccessful ? context2.recentNews : undefined
+      } catch (error) {
+        console.warn(`  ⚠ Context fetch failed: ${error instanceof Error ? error.message : String(error)}`)
+        // Continue without context (graceful degradation)
+      }
+    }
 
     // Build finish probability input
     const finishInput = {
@@ -243,6 +274,7 @@ async function generatePrediction(
         significantStrikesLandedPerMinute:
           fighter1.significantStrikesLandedPerMinute,
         submissionAverage: fighter1.submissionAverage,
+        recentContext: fighter1Context, // Add web search context
       },
       fighter2: {
         name: fighter2.name,
@@ -257,6 +289,7 @@ async function generatePrediction(
         significantStrikesLandedPerMinute:
           fighter2.significantStrikesLandedPerMinute,
         submissionAverage: fighter2.submissionAverage,
+        recentContext: fighter2Context, // Add web search context
       },
       context: {
         eventName: event.name,
@@ -289,6 +322,7 @@ async function generatePrediction(
           takedownAverage: fighter1.takedownAverage,
           submissionAverage: fighter1.submissionAverage,
         }),
+        recentContext: fighter1Context, // Add web search context
       },
       fighter2: {
         name: fighter2.name,
@@ -313,6 +347,7 @@ async function generatePrediction(
           takedownAverage: fighter2.takedownAverage,
           submissionAverage: fighter2.submissionAverage,
         }),
+        recentContext: fighter2Context, // Add web search context
       },
       context: {
         eventName: event.name,
@@ -385,6 +420,7 @@ async function main() {
   console.log(`Provider: ${CONFIG.provider}`)
   console.log(`Dry run: ${args.dryRun}`)
   console.log(`Force regenerate: ${args.force}`)
+  console.log(`Web search enrichment: ${args.noWebSearch ? 'DISABLED' : 'ENABLED'}`)
   if (args.eventId) {
     console.log(`Event filter: ${args.eventId}`)
   }
@@ -425,9 +461,25 @@ async function main() {
     return
   }
 
-  // Step 3: Initialize prediction service
+  // Step 3: Initialize services
   console.log('🚀 Generating predictions...')
   const service = new NewPredictionService(CONFIG.provider)
+
+  // Initialize context service if web search is enabled
+  let contextService: FighterContextService | undefined
+  if (!args.noWebSearch) {
+    try {
+      const searchFunction = getDefaultSearchFunction()
+      contextService = new FighterContextService(searchFunction)
+      console.log('✓ Fighter context service initialized with Google Search')
+    } catch (error) {
+      console.warn(`⚠ Could not initialize web search: ${error instanceof Error ? error.message : String(error)}`)
+      console.warn('  Predictions will run without recent context enrichment.')
+    }
+  } else {
+    console.log('ℹ Web search disabled via --no-web-search flag')
+  }
+  console.log('')
 
   // Step 4: Process each fight
   let totalTokens = 0
@@ -442,7 +494,7 @@ async function main() {
 
     console.log(`\n[${i + 1}/${fights.length}] ${fightLabel}`)
 
-    const result = await generatePrediction(fight, version.id, service)
+    const result = await generatePrediction(fight, version.id, service, contextService)
 
     if (result.success) {
       successCount++

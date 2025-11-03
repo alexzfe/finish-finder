@@ -31,6 +31,9 @@ export interface FighterFinishStats {
 
   // Optional: Recent form (if available)
   last3Finishes?: number                       // Number of finishes in last 3 fights
+
+  // Optional: Recent context from web search
+  recentContext?: string                       // Recent news, injuries, training camp updates
 }
 
 /**
@@ -92,6 +95,21 @@ BETTING ODDS (Optional Context):
 - The betting favorite typically has an edge, but fighter-specific finish rates should still be weighted heavily`
     : ''
 
+  // Build recent context section if available
+  const recentContextSection =
+    fighter1.recentContext || fighter2.recentContext
+      ? `
+RECENT CONTEXT (From Web Search):
+
+${fighter1.name}:
+${fighter1.recentContext || 'No recent context available.'}
+
+${fighter2.name}:
+${fighter2.recentContext || 'No recent context available.'}
+
+Note: Consider recent injuries, momentum, training camp reports, and style changes when analyzing this matchup.`
+      : ''
+
   return `You are an expert MMA analyst specializing in predicting fight finishes. Analyze this fight and predict the probability it ends in a finish (KO/TKO/Submission) rather than a decision.
 
 EVENT: ${context.eventName}
@@ -126,6 +144,7 @@ Offensive Finish Metrics:
 - Submission Attempts per 15 min: ${fighter2.submissionAverage.toFixed(2)}
 ${fighter2.last3Finishes !== undefined ? `- Last 3 Fights: ${fighter2.last3Finishes} finishes` : ''}
 ${bettingOddsSection}
+${recentContextSection}
 
 ANALYSIS FRAMEWORK (4 Steps):
 
