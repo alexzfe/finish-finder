@@ -41,7 +41,7 @@ export const FightCard = React.memo(
   return (
     <motion.article
       ref={ref}
-      layout
+      layoutId={fight.id}
       initial={{ opacity: 0, y: 20 }}
       animate={{
         opacity: 1,
@@ -50,7 +50,7 @@ export const FightCard = React.memo(
         scale: isTapped ? 0.98 : isHovered ? 1.03 : 1,
       }}
       exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.2 }}
+      transition={{ type: 'spring', stiffness: 350, damping: 35 }}
       // Use Framer Motion's stable event handlers instead of whileHover/whileTap
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
