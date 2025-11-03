@@ -347,6 +347,66 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
     }
 
 
+def _parse_fight_history(soup: BeautifulSoup) -> Dict[str, int]:
+    """
+    Parse fighter's UFC fight history to calculate win methods.
+
+    Examines the fight history table on UFCStats.com to count wins by method type.
+    IMPORTANT: Only counts WINS - losses with specific methods are ignored.
+
+    Args:
+        soup: BeautifulSoup object of the fighter profile page
+
+    Returns:
+        Dictionary with winsByKO, winsBySubmission, winsByDecision counts
+    """
+    wins_by_ko = 0
+    wins_by_sub = 0
+    wins_by_dec = 0
+
+    # Find the fight history table
+    table = soup.find('tbody', class_='b-fight-details__table-body')
+    if not table:
+        return {'winsByKO': 0, 'winsBySubmission': 0, 'winsByDecision': 0}
+
+    rows = table.find_all('tr', class_='b-fight-details__table-row')
+
+    for row in rows:
+        cols = row.find_all('td')
+        if len(cols) < 8:  # Need at least 8 columns for result and method
+            continue
+
+        # Column 0: Result flag
+        flag = cols[0].find('i', class_='b-flag__text')
+        if not flag:
+            continue
+
+        result = flag.text.strip().lower()
+
+        # Skip upcoming fights and non-wins
+        if result not in ['win', 'w']:
+            continue
+
+        # Column 7: Method (KO/TKO, Submission, Decision, etc.)
+        method_text = cols[7].get_text(strip=True)
+
+        # Categorize win method
+        method_upper = method_text.upper()
+        if 'KO' in method_upper or 'TKO' in method_upper:
+            wins_by_ko += 1
+        elif 'SUB' in method_upper or 'SUBMISSION' in method_upper:
+            wins_by_sub += 1
+        elif 'DEC' in method_upper or 'DECISION' in method_upper:
+            wins_by_dec += 1
+        # Note: Edge cases like DQ, CNC are not counted as any specific method
+
+    return {
+        'winsByKO': wins_by_ko,
+        'winsBySubmission': wins_by_sub,
+        'winsByDecision': wins_by_dec
+    }
+
+
 def parse_fighter_profile(soup: BeautifulSoup, fighter_url: str) -> Dict[str, Any]:
     """
     Parses a fighter's profile page on UFCStats.com to extract a comprehensive
@@ -401,11 +461,14 @@ def parse_fighter_profile(soup: BeautifulSoup, fighter_url: str) -> Dict[str, An
         # 'Wins by Decision:': ('winsByDecision', _parse_int),
     }
 
-    # Set defaults for fields not available on profile page
+    # Parse fight history to calculate win methods
+    fight_history = _parse_fight_history(soup)
+    fighter['winsByKO'] = fight_history['winsByKO']
+    fighter['winsBySubmission'] = fight_history['winsBySubmission']
+    fighter['winsByDecision'] = fight_history['winsByDecision']
+
+    # Set default for average fight time (not available on profile page)
     fighter.setdefault('averageFightTimeSeconds', 0)
-    fighter.setdefault('winsByKO', 0)
-    fighter.setdefault('winsBySubmission', 0)
-    fighter.setdefault('winsByDecision', 0)
 
     for item in info_box_elements:
         label_element = item.find('i', class_='b-list__box-item-title')

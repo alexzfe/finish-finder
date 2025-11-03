@@ -298,7 +298,7 @@ class TestParseFighterProfile:
             assert 0 <= fighter['takedownAccuracyPercentage'] <= 1
 
     def test_win_methods_extraction(self, fighter_profile_html):
-        """Should extract win method statistics"""
+        """Should extract win method statistics from fight history table"""
         soup = BeautifulSoup(fighter_profile_html, 'html.parser')
         fighter = parsers.parse_fighter_profile(soup, "http://ufcstats.com/fighter-details/0232cabbc30a2372")
 
@@ -307,10 +307,15 @@ class TestParseFighterProfile:
         assert 'winsBySubmission' in fighter
         assert 'winsByDecision' in fighter
 
-        # If values exist, they should be integers
-        if fighter.get('winsByKO') is not None:
-            assert isinstance(fighter['winsByKO'], int)
-            assert fighter['winsByKO'] >= 0
+        # Adrian Yanez's UFC record shows: 6 KO/TKO wins, 0 submission wins, 1 decision win
+        assert isinstance(fighter['winsByKO'], int)
+        assert isinstance(fighter['winsBySubmission'], int)
+        assert isinstance(fighter['winsByDecision'], int)
+
+        # Verify actual counts from Adrian Yanez's fight history
+        assert fighter['winsByKO'] == 6, f"Expected 6 KO/TKO wins, got {fighter['winsByKO']}"
+        assert fighter['winsBySubmission'] == 0, f"Expected 0 submission wins, got {fighter['winsBySubmission']}"
+        assert fighter['winsByDecision'] == 1, f"Expected 1 decision win, got {fighter['winsByDecision']}"
 
     def test_calculated_statistics(self, fighter_profile_html):
         """Should calculate finish rate, KO percentage, submission percentage"""
