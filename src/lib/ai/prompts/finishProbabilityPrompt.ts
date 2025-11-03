@@ -72,6 +72,7 @@ export interface FinishProbabilityOutput {
     weightClassAdjustment: string    // Step 3: Adjust for weight class baseline
     finalAssessment: string          // Step 4: Final probability and reasoning
   }
+  keyFactors: string[]       // 4-5 concise factors (1-2 words each) like "High Volume", "Weak Chin"
 }
 
 /**
@@ -168,19 +169,53 @@ Step 4 - Final Assessment:
 - Account for style matchup (striker vs wrestler, etc.)
 - Consider if betting odds suggest a mismatch (blowouts often end early)
 
+ANALYSIS STEPS - FOLLOW THIS ORDER:
+1. First, identify the 4-5 most critical factors driving the finish probability (1-2 words each)
+2. Use these factors as the foundation for your detailed reasoning
+3. Calculate the finish probability and confidence based on your reasoning
+4. Format your complete analysis as JSON
+
 OUTPUT (JSON only, no markdown):
 {
+  "keyFactors": [
+    "<1-2 word factor>",
+    "<1-2 word factor>",
+    "<1-2 word factor>",
+    "<1-2 word factor>"
+  ],
   "finishProbability": <float between 0 and 1>,
-  "confidence": <float between 0 and 1 indicating how confident you are>,
+  "confidence": <float between 0 and 1>,
   "reasoning": {
-    "defensiveComparison": "<2-3 sentences comparing defensive metrics and vulnerability>",
-    "finishRateComparison": "<2-3 sentences comparing offensive finish ability>",
-    "weightClassAdjustment": "<2-3 sentences explaining how this matchup compares to weight class baseline>",
-    "finalAssessment": "<2-3 sentences with final probability and key factors driving it>"
+    "defensiveComparison": "<2-3 sentences comparing defensive metrics, informed by your key factors>",
+    "finishRateComparison": "<2-3 sentences comparing offensive finish ability, informed by your key factors>",
+    "weightClassAdjustment": "<2-3 sentences explaining how this matchup compares to baseline, informed by your key factors>",
+    "finalAssessment": "<2-3 sentences with final probability that references your key factors>"
   }
 }
 
-IMPORTANT:
+IMPORTANT - ANALYSIS STYLE:
+- Write conversationally with some personality, but stay professional
+- Reference stats naturally in your analysis: "With 5.2 strikes absorbed per minute and only 52% defense, he's vulnerable"
+- Be engaging but credible: Blend data with readable insights
+- Examples of good phrasing:
+  - "Absorbing 5+ strikes per minute with just 52% defense makes him a finish candidate"
+  - "Both fighters favor offense over defense, which tends to produce exciting exchanges"
+  - "The 65% baseline finish rate will likely be exceeded given both fighters finish over 75% of their wins"
+
+IMPORTANT - KEY FACTORS:
+- Generate 4-5 concise factors (1-2 words each) that drove your finish prediction
+- Focus on the MOST IMPORTANT factors only (durability, finish rate, volume, etc.)
+- Examples of good key factors:
+  - "High Volume"
+  - "Weak Chin"
+  - "Finish Rate"
+  - "Aggressive Style"
+  - "Power Puncher"
+  - "Submission Threat"
+  - "Durability Edge"
+  - "Striker vs Striker"
+
+IMPORTANT - TECHNICAL ACCURACY:
 - Be realistic: Most fights end in decisions, so probabilities >0.7 should be rare
 - Weight defensive metrics heavily: A durable fighter reduces finish probability significantly
 - Consider matchup dynamics: Two defensive wrestlers = low finish rate, two aggressive strikers = high finish rate

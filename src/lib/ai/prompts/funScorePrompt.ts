@@ -102,6 +102,7 @@ export interface FunScoreOutput {
   funScore: number               // 0-100 (sum of all factors)
   confidence: number             // 0-1
   breakdown: FunScoreBreakdown
+  keyFactors: string[]           // 4-5 concise factors (1-2 words each) like "Brawler Style", "High Pace"
 }
 
 /**
@@ -263,8 +264,20 @@ CALCULATE:
 5. Apply penalties = Penalties (negative)
 6. Final Score = Primary + Secondary + Style + Context + Penalties (capped at 0-100)
 
+ANALYSIS STEPS - FOLLOW THIS ORDER:
+1. First, identify the 4-5 most critical entertainment factors (1-2 words each)
+2. Use these factors as the foundation for your detailed breakdown and reasoning
+3. Calculate the fun score and confidence based on your reasoning
+4. Format your complete analysis as JSON
+
 OUTPUT (JSON only, no markdown):
 {
+  "keyFactors": [
+    "<1-2 word factor>",
+    "<1-2 word factor>",
+    "<1-2 word factor>",
+    "<1-2 word factor>"
+  ],
   "funScore": <integer 0-100>,
   "confidence": <float 0-1>,
   "breakdown": {
@@ -274,11 +287,34 @@ OUTPUT (JSON only, no markdown):
     "styleMatchupScore": <float 0-20>,
     "contextBonus": <float 0-10>,
     "penalties": <float, negative or 0>,
-    "reasoning": "<3-4 sentences explaining the score, mentioning key factors and any penalties>"
+    "reasoning": "<3-4 sentences explaining the score, informed by your key factors>"
   }
 }
 
-IMPORTANT:
+IMPORTANT - ANALYSIS STYLE:
+- Write conversationally with some personality, but stay professional
+- Reference stats naturally in your analysis: "Both fighters average 6+ strikes per minute, which should produce a high-paced fight"
+- Be engaging but credible: Blend data with readable insights
+- Examples of good phrasing:
+  - "Two strikers averaging 6+ significant strikes per minute suggests a high-action fight"
+  - "With 70% finish rates on both sides, this fight is unlikely to go the distance"
+  - "The striker vs striker matchup typically produces more consistent action than grappling-heavy fights"
+
+IMPORTANT - KEY FACTORS:
+- Generate 4-5 concise factors (1-2 words each) that drove your fun score
+- Focus on the MOST IMPORTANT entertainment factors only
+- Examples of good key factors:
+  - "High Pace"
+  - "Brawler Style"
+  - "Finish Threat"
+  - "Title Fight"
+  - "Striker Battle"
+  - "No Defense"
+  - "Quick Finishes"
+  - "Action-Packed"
+  - "Main Event"
+
+IMPORTANT - TECHNICAL ACCURACY:
 - Be realistic: Scores >80 should be rare (reserved for guaranteed bangers)
 - Weight finish probability heavily: Decisions are less exciting
 - Style matchups matter: Striker vs Striker = fireworks

@@ -135,13 +135,26 @@ export async function GET() {
         })(),
         funFactors: (() => {
           const prediction = fight.predictions[0]
-          if (prediction?.funBreakdown) {
-            // Extract breakdown reasoning from new predictions
+          if (prediction?.finishReasoning && prediction?.funBreakdown) {
+            // Extract key factors from both finish and fun predictions
             try {
-              const breakdown = typeof prediction.funBreakdown === 'string'
+              const finishReasoning = typeof prediction.finishReasoning === 'string'
+                ? JSON.parse(prediction.finishReasoning)
+                : prediction.finishReasoning
+              const funBreakdown = typeof prediction.funBreakdown === 'string'
                 ? JSON.parse(prediction.funBreakdown)
                 : prediction.funBreakdown
-              return [breakdown.reasoning || 'AI analysis available']
+
+              // Combine key factors from both predictions (deduplicate)
+              const finishFactors = Array.isArray(finishReasoning.keyFactors) ? finishReasoning.keyFactors : []
+              const funFactors = Array.isArray(funBreakdown.keyFactors) ? funBreakdown.keyFactors : []
+              const allFactors = [...finishFactors, ...funFactors]
+
+              // Deduplicate by converting to Set and back
+              const uniqueFactors = Array.from(new Set(allFactors))
+
+              // Return unique factors if we have any, otherwise return empty array
+              return uniqueFactors.length > 0 ? uniqueFactors : []
             } catch {
               return parseJsonArray(fight.keyFactors ?? fight.funFactors)
             }
