@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Fight } from '@/types'
 import { FighterAvatar } from '@/components/fighter/FighterAvatar'
@@ -17,6 +17,9 @@ export const FightCard = React.memo(
     onSelect,
     isPriority = false
   }, ref) {
+  // Manual state control for hover/tap to avoid React 19 compatibility issues
+  const [isHovered, setIsHovered] = useState(false)
+  const [isTapped, setIsTapped] = useState(false)
   // Fun Score color coding based on implementation plan thresholds
   const getFunScoreColor = (score: number) => {
     if (score >= 80) return 'bg-red-500'
@@ -40,13 +43,23 @@ export const FightCard = React.memo(
       ref={ref}
       layout
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        // Manual scale control based on state (avoids whileHover/whileTap React 19 bug)
+        scale: isTapped ? 0.98 : isHovered ? 1.03 : 1,
+      }}
       exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3 }}
-      whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
-      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.2 }}
+      // Use Framer Motion's stable event handlers instead of whileHover/whileTap
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      onTapStart={() => setIsTapped(true)}
+      onTap={() => {
+        setIsTapped(false)
+        onSelect(fight)
+      }}
       className="bg-gray-900 rounded-lg shadow-md overflow-hidden cursor-pointer border border-gray-800"
-      onClick={() => onSelect(fight)}
     >
       {/* Tier 1: Always Visible */}
       <div className="relative">
