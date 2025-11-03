@@ -118,7 +118,18 @@ export async function GET() {
         aiDescription: (() => {
           const prediction = fight.predictions[0]
           if (prediction?.finishReasoning) {
-            return prediction.finishReasoning
+            // finishReasoning is a JSON object with breakdown, extract the finalAssessment
+            try {
+              const reasoning = typeof prediction.finishReasoning === 'string'
+                ? JSON.parse(prediction.finishReasoning)
+                : prediction.finishReasoning
+              return reasoning.finalAssessment || null
+            } catch {
+              // If parsing fails, return the raw value if it's a string
+              return typeof prediction.finishReasoning === 'string'
+                ? prediction.finishReasoning
+                : null
+            }
           }
           return fight.aiDescription || fight.entertainmentReason || null
         })(),
