@@ -42,6 +42,7 @@ export interface Fight {
   predictedFunScore: number; // 0-100
   funFactors: Array<FunFactor | string>;
   aiDescription: string;
+  funReasoning?: string; // Fun score analysis text from AI
   funFactor?: number; // Raw 1-10 scale from AI predictions
   finishProbability?: number;
   riskLevel?: 'high' | 'medium' | 'low' | null;

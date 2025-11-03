@@ -150,6 +150,21 @@ export async function GET() {
           }
           return fight.aiDescription || fight.entertainmentReason || null
         })(),
+        funReasoning: (() => {
+          const prediction = fight.predictions[0]
+          if (prediction?.funBreakdown) {
+            // funBreakdown is a JSON object with reasoning text
+            try {
+              const breakdown = typeof prediction.funBreakdown === 'string'
+                ? JSON.parse(prediction.funBreakdown)
+                : prediction.funBreakdown
+              return breakdown.reasoning || null
+            } catch {
+              return null
+            }
+          }
+          return null
+        })(),
         funFactors: (() => {
           const prediction = fight.predictions[0]
           if (prediction?.finishReasoning && prediction?.funBreakdown) {

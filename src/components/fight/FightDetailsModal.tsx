@@ -103,22 +103,38 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                 </div>
 
                 {/* AI Analysis */}
-                {fight.aiDescription && (
+                {(fight.aiDescription || fight.funReasoning) && (
                   <div className="mb-5 space-y-3">
-                    <div>
-                      <p className="ufc-condensed text-xs text-white/70 mb-2">Finish Probability Analysis</p>
-                      <p className="text-sm leading-relaxed text-white/80">
-                        {fight.aiDescription}
-                      </p>
-                    </div>
-                    {Array.isArray(fight.funFactors) && fight.funFactors.length > 0 && (
+                    {/* Finish Probability Analysis */}
+                    {fight.aiDescription && (
+                      <div>
+                        <p className="ufc-condensed text-xs text-white/70 mb-2">Finish Probability Analysis</p>
+                        <p className="text-sm leading-relaxed text-white/80">
+                          {fight.aiDescription}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Fun Score Analysis */}
+                    {fight.funReasoning && (
                       <div>
                         <p className="ufc-condensed text-xs text-white/70 mb-2">Fun Score Analysis</p>
-                        <p className="text-sm leading-relaxed text-white/80">
-                          {fight.funFactors.map((factor, idx) => (
-                            <span key={idx}>{typeof factor === 'string' ? factor : factor.type}</span>
-                          ))}
+                        <p className="text-sm leading-relaxed text-white/80 mb-3">
+                          {fight.funReasoning}
                         </p>
+                        {/* Key Factors as Bubbles */}
+                        {Array.isArray(fight.funFactors) && fight.funFactors.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {fight.funFactors.map((factor, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-block rounded-full bg-[var(--ufc-red)]/20 px-3 py-1 text-xs font-medium text-white/90 border border-[var(--ufc-red)]/30"
+                              >
+                                {typeof factor === 'string' ? factor : factor.type}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
