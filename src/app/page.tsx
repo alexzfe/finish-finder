@@ -163,7 +163,7 @@ export default function Home() {
             <div className="mb-6 text-6xl">⏳</div>
             <h2 className="ufc-condensed text-4xl text-white">Loading Events</h2>
             <p className="mt-4 max-w-xl text-sm uppercase tracking-[0.4em] text-white/60">
-              Fetching the latest fight cards direct from Sherdog and prepping entertainment analytics
+              Fetching the latest fight cards from UFCStats.com and prepping AI-powered predictions
             </p>
           </div>
         ) : error ? (
