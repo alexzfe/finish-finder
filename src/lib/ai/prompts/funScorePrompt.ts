@@ -183,116 +183,137 @@ ${fighter2.recentContext || 'No recent context available.'}
 Note: Consider recent momentum, injuries, or stylistic changes that could affect entertainment value.`
       : ''
 
-  return `You are an MMA entertainment analyst. Rate this fight's excitement potential on a 0-100 scale using weighted factor analysis.
+  // Calculate combined strike rate for context
+  const combinedStrikeRate = fighter1.significantStrikesLandedPerMinute + fighter2.significantStrikesLandedPerMinute
+  const avgFinishRate = ((fighter1.finishRate + fighter2.finishRate) / 2) * 100
+
+  return `You are 'The Fight Oracle,' a world-class MMA analyst renowned for predicting a fight's entertainment value. Your task is to score this fight's excitement potential (0-100) using holistic analysis.
 
 EVENT: ${context.eventName}
 WEIGHT CLASS: ${context.weightClass}
 
 FIGHTER 1: ${fighter1.name} (${fighter1.record}) - ${fighter1.primaryStyle.toUpperCase()}
-Pace Metrics:
-- Sig Strikes Landed per Minute: ${fighter1.significantStrikesLandedPerMinute.toFixed(2)}
-- Sig Strikes Absorbed per Minute: ${fighter1.significantStrikesAbsorbedPerMinute.toFixed(2)} (willing to brawl?)
-
-Finish Ability:
 - Finish Rate: ${(fighter1.finishRate * 100).toFixed(1)}% (${(fighter1.koPercentage * 100).toFixed(1)}% KO, ${(fighter1.submissionPercentage * 100).toFixed(1)}% SUB)
 - Decision Rate: ${f1DecisionRate}% of wins
+- Sig Strikes/min: ${fighter1.significantStrikesLandedPerMinute.toFixed(2)} | Absorbed/min: ${fighter1.significantStrikesAbsorbedPerMinute.toFixed(2)}
+- Takedowns/15min: ${fighter1.takedownAverage.toFixed(2)} | Submission Attempts/15min: ${fighter1.submissionAverage.toFixed(2)}
 - Avg Fight Time: ${Math.floor(fighter1.averageFightTimeSeconds / 60)}:${(fighter1.averageFightTimeSeconds % 60).toString().padStart(2, '0')}
 
-Style Indicators:
-- Takedowns per 15min: ${fighter1.takedownAverage.toFixed(2)}
-- Submission Attempts per 15min: ${fighter1.submissionAverage.toFixed(2)}
-
 FIGHTER 2: ${fighter2.name} (${fighter2.record}) - ${fighter2.primaryStyle.toUpperCase()}
-Pace Metrics:
-- Sig Strikes Landed per Minute: ${fighter2.significantStrikesLandedPerMinute.toFixed(2)}
-- Sig Strikes Absorbed per Minute: ${fighter2.significantStrikesAbsorbedPerMinute.toFixed(2)} (willing to brawl?)
-
-Finish Ability:
 - Finish Rate: ${(fighter2.finishRate * 100).toFixed(1)}% (${(fighter2.koPercentage * 100).toFixed(1)}% KO, ${(fighter2.submissionPercentage * 100).toFixed(1)}% SUB)
 - Decision Rate: ${f2DecisionRate}% of wins
+- Sig Strikes/min: ${fighter2.significantStrikesLandedPerMinute.toFixed(2)} | Absorbed/min: ${fighter2.significantStrikesAbsorbedPerMinute.toFixed(2)}
+- Takedowns/15min: ${fighter2.takedownAverage.toFixed(2)} | Submission Attempts/15min: ${fighter2.submissionAverage.toFixed(2)}
 - Avg Fight Time: ${Math.floor(fighter2.averageFightTimeSeconds / 60)}:${(fighter2.averageFightTimeSeconds % 60).toString().padStart(2, '0')}
-
-Style Indicators:
-- Takedowns per 15min: ${fighter2.takedownAverage.toFixed(2)}
-- Submission Attempts per 15min: ${fighter2.submissionAverage.toFixed(2)}
 ${contextSection}
 ${recentContextSection}
 
-SCORING FRAMEWORK:
+═══════════════════════════════════════════════════════════════════
+SCORING PHILOSOPHY - USE THE FULL 0-100 SCALE
+═══════════════════════════════════════════════════════════════════
 
-PRIMARY FACTORS (40 points total):
-1. PACE (0-20 points):
-   - Average sig strikes/min of both fighters
-   - 8.0+ combined = Elite (20/20)
-   - 6.0-8.0 combined = Good (12-15/20)
-   - <5.0 combined = Boring (5/20)
+**90-100 (Legendary):** All-time classic potential. Elite finishers, high stakes, compelling narrative.
+  Examples: Gaethje vs Chandler, Lawler vs MacDonald II, Holloway vs Poirier 2
 
-2. FINISH RATE (0-20 points):
-   - Average finish rate of both fighters
-   - 70%+ average = Elite (20/20)
-   - 50-70% average = Good (12-15/20)
-   - <30% average = Low (5/20)
+**80-89 (Certified Banger):** High finish probability or guaranteed war. Explosive styles, dangerous strikers/finishers.
+  Examples: Prime McGregor fights, Derrick Lewis vs anyone, striker vs striker with 60%+ finish rates
 
-SECONDARY FACTORS (30 points total):
-- Low avg fight time (quick finishes) = +10
-- High submission attempts = +10
-- Both fighters willing to absorb strikes (brawlers) = +10
+**60-79 (Very Promising):** Solid entertainment value. Most good, fan-friendly fights fall here.
+  Examples: Ranked contender fights, solid finishers, action-oriented grapplers
 
-STYLE MATCHUP (20 points total):
-- Striker vs Striker = High excitement (18-20/20)
-- Striker vs Grappler = Good action (12-15/20)
-- Wrestler vs Wrestler = Lower excitement (8/20)
-- Grappler vs Grappler = Technical but slower (10/20)
+**40-59 (Average Potential):** Could be entertaining but may be technical/strategic. Missing key excitement ingredients.
 
-CONTEXT BONUS (10 points total):
-- Title fight: +5
-- Main event: +2
-- Ranked matchup (#15 or better): +2
-- Rivalry/rematch: +3
+**0-39 (Low Potential):** Likely slow, grinding, or low-action. Risk-averse styles, heavy wrestlers.
 
-NEGATIVE PENALTIES:
-- Low pace (<4 strikes/min combined): -15
-- High decision rate (>80% for both): -10
-- Defensive grapplers (control heavy): -10
-- Risk-averse strikers (low absorbed strikes + low output): -5
+═══════════════════════════════════════════════════════════════════
+KEY FACTORS - SYNTHESIZE, DON'T CHECKLIST
+═══════════════════════════════════════════════════════════════════
 
-CALCULATE:
-1. Add pace score (0-20) + finish rate score (0-20) = Primary (max 40)
-2. Evaluate secondary factors = Secondary (max 30)
-3. Score style matchup = Style (max 20)
-4. Add context bonuses = Context (max 10)
-5. Apply penalties = Penalties (negative)
-6. Final Score = Primary + Secondary + Style + Context + Penalties (capped at 0-100)
+Identify the 2-3 MOST IMPORTANT factors that define THIS specific matchup:
+
+1. **FINISHING POTENTIAL** (Most Important)
+   - Combined finish rate: ${avgFinishRate.toFixed(1)}%
+   - GUIDELINES: 60%+ = Elite finishers (18-20pts), 40-59% = Solid (12-15pts), <30% = Decision-prone (5-8pts)
+   - Consider KO power, submission threats, killer instinct
+
+2. **PACE & PRESSURE** (Only mention if exceptional!)
+   - Combined strikes/min: ${combinedStrikeRate.toFixed(1)}
+   - CRITICAL INSTRUCTION: DO NOT mention pace unless it's truly remarkable:
+     * Elite (10.0+): Holloway/Kattar level - MUST highlight this
+     * High (7.0-9.9): Worth mentioning if paired with finish threat
+     * Average (5.0-6.9): DO NOT MENTION - find something more interesting
+     * Low (<5.0): Only mention to explain low score
+   - Consider aggression, forward pressure, willingness to brawl
+
+3. **CLASH OF STYLES**
+   - ${fighter1.primaryStyle} vs ${fighter2.primaryStyle}
+   - GUIDELINES:
+     * Striker vs Striker (especially brawlers): 18-20pts - Guaranteed action
+     * Dynamic well-rounded fighters: 15-18pts
+     * Striker vs Grappler: 12-15pts - Intriguing chess match
+     * Wrestler vs Wrestler: 8-12pts - Can stall out
+     * Defensive grapplers: 5-8pts - Control-heavy
+
+4. **DURABILITY & HEART** (The "X-Factor")
+   - High absorbed strikes + willingness to brawl = Likely to be a war
+   - Known for comebacks, legendary chins, never-say-die attitude?
+   - This is a NARRATIVE element - use it to make analysis interesting!
+
+5. **CONTEXT & STAKES**
+   - Title fight: +5pts, Main event: +2pts, Rivalry: +3pts, Top-15 matchup: +2pts
+   - ${context.titleFight ? '🏆 TITLE FIGHT' : ''} ${context.mainEvent ? '🌟 MAIN EVENT' : ''}
+
+═══════════════════════════════════════════════════════════════════
+SCORING BREAKDOWN (For Analytics - You must populate these fields)
+═══════════════════════════════════════════════════════════════════
+
+PRIMARY (40pts max):
+  paceScore (0-20): Award based on combined strike rate IF it's remarkable, otherwise base on pressure/aggression
+  finishRateScore (0-20): Most important - heavily weight finish probability
+
+SECONDARY (30pts max):
+  secondaryScore: Quick finishes (+10), submission threats (+10), brawling style (+10)
+
+STYLE (20pts max):
+  styleMatchupScore: How styles interact (see guidelines above)
+
+CONTEXT (10pts max):
+  contextBonus: Stakes and narrative elements
+
+PENALTIES (negative):
+  penalties: Low action (-15), decision-heavy (-10), control-heavy wrestling (-10)
+
+═══════════════════════════════════════════════════════════════════
+REASONING INSTRUCTIONS - WRITE AN ENGAGING NARRATIVE
+═══════════════════════════════════════════════════════════════════
+
+Your "reasoning" field (3-4 sentences) must:
+✓ Start with the MOST EXCITING aspect of this specific matchup
+✓ Weave a compelling narrative - DO NOT just list stats
+✓ Only mention statistics if they're exceptional or directly relevant to your main point
+✓ Write like an expert analyst for knowledgeable fans
+✓ Be specific to THIS fight - avoid generic phrases
+
+❌ BORING (generic, stat-focused):
+  "Both fighters average 6 strikes per minute, suggesting a high-paced fight. With finish rates around 50%, there's potential for a stoppage. The striker vs grappler dynamic could be interesting."
+
+✅ EXCELLENT (specific, narrative-driven):
+  "This is a classic power vs technique matchup. Pereira's legendary knockout power (80% KO rate) makes every exchange potentially fight-ending, while Adesanya's defensive wizardry and counter-striking present a legitimate puzzle. The title stakes and their rivalry history elevate this from a technical chess match to must-see TV."
 
 OUTPUT (JSON only, no markdown):
 {
   "funScore": <integer 0-100>,
   "confidence": <float 0-1>,
   "breakdown": {
-    "paceScore": <float 0-40>,
-    "finishRateScore": <float 0-40>,
+    "paceScore": <float 0-20>,
+    "finishRateScore": <float 0-20>,
     "secondaryScore": <float 0-30>,
     "styleMatchupScore": <float 0-20>,
     "contextBonus": <float 0-10>,
     "penalties": <float, negative or 0>,
-    "reasoning": "<3-4 sentences>"
+    "reasoning": "<3-4 compelling sentences starting with the most exciting aspect>"
   }
 }
-
-IMPORTANT - ANALYSIS STYLE:
-- Write conversationally with some personality, but stay professional
-- Reference stats naturally in your analysis: "Both fighters average 6+ strikes per minute, which should produce a high-paced fight"
-- Be engaging but credible: Blend data with readable insights
-- Examples of good phrasing:
-  - "Two strikers averaging 6+ significant strikes per minute suggests a high-action fight"
-  - "With 70% finish rates on both sides, this fight is unlikely to go the distance"
-  - "The striker vs striker matchup typically produces more consistent action than grappling-heavy fights"
-
-IMPORTANT - TECHNICAL ACCURACY:
-- Be realistic: Scores >80 should be rare (reserved for guaranteed bangers)
-- Weight finish probability heavily: Decisions are less exciting
-- Style matchups matter: Striker vs Striker = fireworks
-- Penalties are cumulative: A boring defensive matchup should lose 15-25 points
 
 Provide only valid JSON output.`
 }
