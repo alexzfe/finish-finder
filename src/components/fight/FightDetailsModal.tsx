@@ -102,29 +102,25 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                   </div>
                 </div>
 
-                {/* AI Description */}
+                {/* AI Analysis */}
                 {fight.aiDescription && (
-                  <div className="mb-5">
-                    <p className="text-sm leading-relaxed text-white/80">
-                      {fight.aiDescription}
-                    </p>
-                  </div>
-                )}
-
-                {/* Fun Factors */}
-                {Array.isArray(fight.funFactors) && fight.funFactors.length > 0 && (
-                  <div className="mb-5">
-                    <p className="ufc-condensed text-xs text-white/70 mb-3">Key Factors</p>
-                    <div className="flex flex-wrap gap-2">
-                      {fight.funFactors.map((factor, idx) => (
-                        <span
-                          key={idx}
-                          className="rounded-full border border-white/15 bg-white/15 px-3 py-1 text-[0.7rem] uppercase tracking-[0.28em] text-white"
-                        >
-                          {typeof factor === 'string' ? factor : factor.type}
-                        </span>
-                      ))}
+                  <div className="mb-5 space-y-3">
+                    <div>
+                      <p className="ufc-condensed text-xs text-white/70 mb-2">Finish Probability Analysis</p>
+                      <p className="text-sm leading-relaxed text-white/80">
+                        {fight.aiDescription}
+                      </p>
                     </div>
+                    {Array.isArray(fight.funFactors) && fight.funFactors.length > 0 && (
+                      <div>
+                        <p className="ufc-condensed text-xs text-white/70 mb-2">Fun Score Analysis</p>
+                        <p className="text-sm leading-relaxed text-white/80">
+                          {fight.funFactors.map((factor, idx) => (
+                            <span key={idx}>{typeof factor === 'string' ? factor : factor.type}</span>
+                          ))}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 

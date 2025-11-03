@@ -226,24 +226,23 @@ export default function Home() {
                     </div>
 
                     {selectedFight.aiDescription && (
-                      <p className="text-sm leading-relaxed text-white/80">
-                        {selectedFight.aiDescription}
-                      </p>
-                    )}
-
-                    {Array.isArray(selectedFight.funFactors) && selectedFight.funFactors.length > 0 && (
-                      <div>
-                        <p className="ufc-condensed text-xs text-white/70">Key Factors</p>
-                        <ul className="mt-3 flex flex-wrap gap-2">
-                          {selectedFight.funFactors.map((factor, idx) => (
-                            <li
-                              key={idx}
-                              className="rounded-full border border-white/15 bg-white/15 px-3 py-1 text-[0.7rem] uppercase tracking-[0.28em] text-white"
-                            >
-                              {typeof factor === 'string' ? factor : factor.type}
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="ufc-condensed text-xs text-white/70 mb-2">Finish Probability Analysis</p>
+                          <p className="text-sm leading-relaxed text-white/80">
+                            {selectedFight.aiDescription}
+                          </p>
+                        </div>
+                        {Array.isArray(selectedFight.funFactors) && selectedFight.funFactors.length > 0 && (
+                          <div>
+                            <p className="ufc-condensed text-xs text-white/70 mb-2">Fun Score Analysis</p>
+                            <p className="text-sm leading-relaxed text-white/80">
+                              {selectedFight.funFactors.map((factor, idx) => (
+                                <span key={idx}>{typeof factor === 'string' ? factor : factor.type}</span>
+                              ))}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
 
