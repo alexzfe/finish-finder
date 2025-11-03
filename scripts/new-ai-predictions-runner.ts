@@ -11,13 +11,22 @@
  * - Error handling: Continues on individual fight failures, logs errors
  *
  * Usage:
- *   npx ts-node scripts/new-ai-predictions-runner.ts [--dry-run] [--force] [--event-id=<id>]
+ *   npx ts-node scripts/new-ai-predictions-runner.ts [--dry-run] [--force] [--event-id=<id>] [--limit=<n>]
  *
  * Options:
  *   --dry-run     Show what would be done without making API calls
  *   --force       Regenerate predictions even if they already exist
  *   --event-id    Only process fights for a specific event
+ *   --limit       Limit number of fights to process (useful for testing)
  */
+
+// Load environment variables from .env.local
+import { config } from 'dotenv'
+import { existsSync } from 'fs'
+const envPath = '.env.local'
+if (existsSync(envPath)) {
+  config({ path: envPath })
+}
 
 import { createHash } from 'crypto'
 import { readFileSync } from 'fs'
@@ -49,6 +58,7 @@ interface Args {
   dryRun: boolean
   force: boolean
   eventId?: string
+  limit?: number
 }
 
 /**
@@ -69,6 +79,7 @@ function parseArgs(): Args {
     dryRun: args.includes('--dry-run'),
     force: args.includes('--force'),
     eventId: args.find((arg) => arg.startsWith('--event-id='))?.split('=')[1],
+    limit: parseInt(args.find((arg) => arg.startsWith('--limit='))?.split('=')[1] || '0') || undefined,
   }
 }
 
@@ -377,6 +388,9 @@ async function main() {
   if (args.eventId) {
     console.log(`Event filter: ${args.eventId}`)
   }
+  if (args.limit) {
+    console.log(`Limit: ${args.limit} fight(s)`)
+  }
   console.log('')
 
   // Step 1: Get or create prediction version
@@ -385,14 +399,20 @@ async function main() {
 
   // Step 2: Find fights needing predictions
   console.log('🔍 Finding fights needing predictions...')
-  const fights = await findFightsNeedingPredictions(version.id, args)
+  let fights = await findFightsNeedingPredictions(version.id, args)
+
+  // Apply limit if specified
+  if (args.limit && fights.length > args.limit) {
+    console.log(`Limiting to first ${args.limit} fight(s) (found ${fights.length} total)`)
+    fights = fights.slice(0, args.limit)
+  }
 
   if (fights.length === 0) {
     console.log('✓ No fights need predictions. All done!')
     return
   }
 
-  console.log(`Found ${fights.length} fights needing predictions:`)
+  console.log(`Found ${fights.length} fight(s) needing predictions:`)
   for (const fight of fights) {
     console.log(
       `  - ${fight.event.name}: ${fight.fighter1.name} vs ${fight.fighter2.name}`
