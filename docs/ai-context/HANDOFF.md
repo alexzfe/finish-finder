@@ -1,7 +1,100 @@
 # Engineering Handoff - Finish Finder
 
 **Last Updated:** 2025-11-03
-**Session Context:** Web Search Integration, Prediction Generation, and Production Fixes
+**Session Context:** UI Refinements & Round Calculation Logic
+
+---
+
+## Session 13: UI Refinements & Round Calculation Implementation (2025-11-03) ✅
+
+**Goal:** Fix UI issues, implement UFC round calculation logic, and update database for accurate fight round counts.
+
+**Context:** User reported UI issues with outdated loading messages and incorrect fun score display. Additionally, all fights were showing 3 rounds when title fights and main events should be 5 rounds. UFCStats.com doesn't provide scheduledRounds data, so we needed to implement UFC business rules.
+
+**What Was Accomplished:**
+
+### 1. UI Refinements
+
+**Fixed Loading Message** (`src/app/page.tsx:166`)
+- Changed: "Fetching from Sherdog" → "Fetching from UFCStats.com"
+- Updated messaging to reflect AI-powered predictions
+- Commit: `54373e1`
+
+**Restructured AI Analysis Display** (`src/app/page.tsx`, `src/components/fight/FightDetailsModal.tsx`)
+- Removed "Key Factors" bubble display (was showing fun score text incorrectly)
+- Added section headers:
+  - "Finish Probability Analysis" - Shows AI finish prediction reasoning
+  - "Fun Score Analysis" - Shows fun score explanation as text
+- Updated both desktop sidebar and mobile modal
+- Prepares for future implementation of actual key factor bubbles (e.g., "High Volume", "Strong Finish Rate")
+- Commit: `6958fdc`
+
+### 2. UFC Round Calculation Logic
+
+**Problem:** All fights defaulting to 3 rounds, but UFC has specific rules:
+- Title fights: Always 5 rounds
+- Non-title main events: 5 rounds (after Jan 1, 2012), 3 rounds (before)
+- All other fights: 3 rounds
+
+**Consulted Gemini** for best practices (Session: a335b2eb-136e-42d8-a94c-a45ccba1dc87)
+- Recommendation: Implement business rule logic using event date
+- UFC changed rules in late 2011 to make non-title main events 5 rounds
+
+**Implementation** (`scraper/ufc_scraper/parsers.py`)
+- Added constant: `NON_TITLE_MAIN_EVENT_5_ROUNDS_CUTOFF = date(2012, 1, 1)`
+- Created function: `get_scheduled_rounds(is_title_fight, is_main_event, event_date) -> int`
+- Parse event date as both ISO string (API) and date object (calculation)
+- Added `scheduledRounds` field to fight data
+- All 26 parser tests passed
+- Commit: `bcee09d`
+
+### 3. Database Migration
+
+**Created Migration Script** (`scripts/migrate-scheduled-rounds.ts`)
+- Applied UFC round rules to all existing fights in database
+- Processed 64 fights total
+- **Results:**
+  - ✅ Updated: 8 fights (3 → 5 rounds)
+    - 5 main events (UFC Fight Nights)
+    - 3 title fights (UFC 322, UFC 323)
+  - ⏭️ Unchanged: 56 fights (already correct at 3 rounds)
+  - ❌ Errors: 0 fights
+
+**Verified:**
+- Title fights show 5 rounds ✓
+- Main events (post-2012) show 5 rounds ✓
+- Regular fights show 3 rounds ✓
+- Commit: `d943ddb`
+
+**Example Fixed Fights:**
+- Brandon Royval vs Manel Kape (Main Event): 5 rounds ✓
+- Merab Dvalishvili vs Petr Yan (Title Fight): 5 rounds ✓
+- Alexandre Pantoja vs Joshua Van (Title Fight): 5 rounds ✓
+
+### Files Modified
+
+**UI Changes:**
+- `src/app/page.tsx` - Loading message + AI analysis restructuring
+- `src/components/fight/FightDetailsModal.tsx` - Mobile modal AI analysis
+- `.gitignore` - Added temporary test files
+
+**Scraper Changes:**
+- `scraper/ufc_scraper/parsers.py` - Round calculation logic
+
+**Migration:**
+- `scripts/migrate-scheduled-rounds.ts` - Database update script
+
+### Deployment Status
+
+**Production:** ✅ Live
+- UI changes deployed via Vercel
+- Database migration completed successfully
+- All fights now display correct round counts
+
+**Next Steps:**
+1. Implement actual key factor bubbles (concise tags like "High Volume", "Finish Rate")
+2. Phase 4: Prediction Evaluation System
+3. Monitor scheduled scraper runs to ensure round logic works for new events
 
 ---
 
