@@ -3,7 +3,7 @@
 import { useAppStore } from '@/lib/store'
 import { FightCard } from './FightCard'
 import { useCallback } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { Reorder } from 'framer-motion'
 import { Fight } from '@/types'
 
 export function FightCardGrid() {
@@ -13,6 +13,9 @@ export function FightCardGrid() {
   const handleSelect = useCallback((fight: Fight) => {
     setSelectedFight(fight)
   }, [setSelectedFight])
+
+  // Dummy handler - sorting is controlled by Zustand store
+  const handleReorder = () => {}
 
   if (fights.length === 0) {
     return (
@@ -27,17 +30,21 @@ export function FightCardGrid() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-      <AnimatePresence>
-        {fights.map((fight, index) => (
-          <FightCard
-            key={fight.id}
-            fight={fight}
-            onSelect={handleSelect}
-            isPriority={index < 6}
-          />
-        ))}
-      </AnimatePresence>
-    </div>
+    <Reorder.Group
+      as="div"
+      axis="y"
+      values={fights}
+      onReorder={handleReorder}
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4"
+    >
+      {fights.map((fight, index) => (
+        <FightCard
+          key={fight.id}
+          fight={fight}
+          onSelect={handleSelect}
+          isPriority={index < 6}
+        />
+      ))}
+    </Reorder.Group>
   )
 }

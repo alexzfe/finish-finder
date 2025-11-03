@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { motion } from 'framer-motion'
+import { Reorder } from 'framer-motion'
 import { Fight } from '@/types'
 import { FighterAvatar } from '@/components/fighter/FighterAvatar'
 
@@ -39,9 +39,10 @@ export const FightCard = React.memo(
   const funScore = fight.predictedFunScore || 0
 
   return (
-    <motion.article
-      ref={ref}
-      layoutId={fight.id}
+    <Reorder.Item
+      value={fight}
+      id={fight.id}
+      as="article"
       initial={{ opacity: 0, y: 20 }}
       animate={{
         opacity: 1,
@@ -124,7 +125,7 @@ export const FightCard = React.memo(
           </div>
         </div>
       </div>
-    </motion.article>
+    </Reorder.Item>
   )
   })
 )
