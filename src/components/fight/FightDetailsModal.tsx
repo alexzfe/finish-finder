@@ -66,6 +66,11 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                   </button>
                 </div>
 
+                {/* Accessibility Description */}
+                <Dialog.Description className="sr-only">
+                  Fight details for {fight.fighter1?.name || 'TBD'} vs {fight.fighter2?.name || 'TBD'}
+                </Dialog.Description>
+
                 {/* Fight Header */}
                 <div className="border-l-4 border-[var(--ufc-red)] pl-4 mb-6">
                   <h3 className="ufc-condensed text-xl text-white leading-tight">

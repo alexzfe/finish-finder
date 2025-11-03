@@ -72,21 +72,29 @@ export const useAppStore = create<AppState>((set, get) => ({
   getFilteredSortedFights: () => {
     const { fights, sortBy, filterWeightClass } = get()
 
+    // Defensive: ensure fights is always an array
+    if (!fights || !Array.isArray(fights)) {
+      return []
+    }
+
     let filtered = fights
 
     // Apply weight class filter
     if (filterWeightClass.length > 0) {
       filtered = filtered.filter(f =>
-        filterWeightClass.includes(f.weightClass || '')
+        f && filterWeightClass.includes(f.weightClass || '')
       )
     }
 
     // Apply sorting
     if (sortBy === 'funScore') {
       // Sort by Fun Score (highest first)
-      return [...filtered].sort((a, b) =>
-        (b.predictedFunScore || 0) - (a.predictedFunScore || 0)
-      )
+      // Create new array to avoid mutating original
+      return [...filtered].sort((a, b) => {
+        const scoreA = (a && typeof a.predictedFunScore === 'number') ? a.predictedFunScore : 0
+        const scoreB = (b && typeof b.predictedFunScore === 'number') ? b.predictedFunScore : 0
+        return scoreB - scoreA
+      })
     }
 
     // Traditional order (already sorted by fightNumber from API)
