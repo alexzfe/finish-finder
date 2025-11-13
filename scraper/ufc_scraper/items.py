@@ -83,6 +83,11 @@ class FighterItem(scrapy.Item):
     winsBySubmission = scrapy.Field()
     winsByDecision = scrapy.Field()
 
+    # Loss methods (computed from fight history)
+    lossesByKO = scrapy.Field()
+    lossesBySubmission = scrapy.Field()
+    lossesByDecision = scrapy.Field()
+
     # Calculated statistics (computed by parser)
     finishRate = scrapy.Field()
     koPercentage = scrapy.Field()
