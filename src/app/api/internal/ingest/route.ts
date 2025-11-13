@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       scrapeLogId: scrapeLog.id,
       eventsCreated: data.events.length,
       fightsCreated: data.fights.length,
+      fightsCancelled: scrapeLog.fightsCancelled,
       fightersCreated: data.fighters.length,
     })
   } catch (error) {
@@ -81,6 +82,7 @@ async function upsertScrapedData(data: any) {
   const startTime = new Date()
   let fightsAdded = 0
   let fightsUpdated = 0
+  let fightsCancelled = 0
   let fightersAdded = 0
 
   try {
@@ -314,6 +316,7 @@ async function upsertScrapedData(data: any) {
               scheduledRounds: fight.scheduledRounds ?? 3,
               // Fight outcome fields (for completed events)
               completed: fight.completed ?? false,
+              isCancelled: false,  // Always false for scraped fights (handles re-booking)
               winnerId: normalizedWinnerId,  // Normalized winner ID
               method: fight.method,
               round: fight.round,
@@ -336,6 +339,7 @@ async function upsertScrapedData(data: any) {
               scheduledRounds: fight.scheduledRounds ?? existing.scheduledRounds,
               // Update outcome when fight completes (use normalized winner ID)
               completed: fight.completed ?? existing.completed,
+              isCancelled: false,  // Reset to false if fight reappears (re-booked)
               winnerId: normalizedWinnerId ?? existing.winnerId,
               method: fight.method ?? existing.method,
               round: fight.round ?? existing.round,
@@ -346,6 +350,87 @@ async function upsertScrapedData(data: any) {
           })
           fightsUpdated++
         }
+      }
+
+      // SCOPED RECONCILIATION: Mark cancelled fights
+      // Only check events that were explicitly scraped in this run
+      const scrapedEventUrls = data.scrapedEventUrls || []
+
+      if (scrapedEventUrls.length > 0) {
+        console.log(`Reconciling fights for ${scrapedEventUrls.length} scraped events`)
+
+        for (const eventUrl of scrapedEventUrls) {
+          // Find the event in database by sourceUrl
+          const event = await tx.event.findUnique({
+            where: { sourceUrl: eventUrl },
+          })
+
+          if (!event) {
+            console.warn(`Event not found for URL: ${eventUrl}`)
+            continue
+          }
+
+          // Build set of scraped fight keys for this event
+          const scrapedFightKeys = new Set<string>()
+
+          for (const fight of data.fights) {
+            // Find the event sourceUrl for this fight
+            const fightEvent = data.events.find((e: any) => e.id === fight.eventId)
+            if (!fightEvent || fightEvent.sourceUrl !== eventUrl) {
+              continue // This fight belongs to a different event
+            }
+
+            // Find fighter IDs by sourceUrl
+            const fighter1SourceUrl = data.fighters.find((f: any) => f.id === fight.fighter1Id)?.sourceUrl
+            const fighter2SourceUrl = data.fighters.find((f: any) => f.id === fight.fighter2Id)?.sourceUrl
+
+            if (!fighter1SourceUrl || !fighter2SourceUrl) {
+              continue
+            }
+
+            const fighter1 = await tx.fighter.findUnique({
+              where: { sourceUrl: fighter1SourceUrl },
+            })
+            const fighter2 = await tx.fighter.findUnique({
+              where: { sourceUrl: fighter2SourceUrl },
+            })
+
+            if (!fighter1 || !fighter2) {
+              continue
+            }
+
+            // Create normalized key
+            const [normalizedFighter1Id, normalizedFighter2Id] = [fighter1.id, fighter2.id].sort()
+            const fightKey = `${event.id}:${normalizedFighter1Id}:${normalizedFighter2Id}`
+            scrapedFightKeys.add(fightKey)
+          }
+
+          // Find all active (not completed, not cancelled) fights in DB for this event
+          const dbFights = await tx.fight.findMany({
+            where: {
+              eventId: event.id,
+              completed: false,
+              isCancelled: false,
+            },
+            select: { id: true, eventId: true, fighter1Id: true, fighter2Id: true },
+          })
+
+          // Mark fights as cancelled if they're in DB but not in scraped data
+          for (const dbFight of dbFights) {
+            const dbFightKey = `${dbFight.eventId}:${dbFight.fighter1Id}:${dbFight.fighter2Id}`
+
+            if (!scrapedFightKeys.has(dbFightKey)) {
+              await tx.fight.update({
+                where: { id: dbFight.id },
+                data: { isCancelled: true, lastScrapedAt: new Date() },
+              })
+              fightsCancelled++
+              console.log(`Marked fight as cancelled: ${dbFightKey}`)
+            }
+          }
+        }
+
+        console.log(`Reconciliation complete: ${fightsCancelled} fights cancelled`)
       }
     })
 
@@ -359,6 +444,7 @@ async function upsertScrapedData(data: any) {
         eventsFound: data.events.length,
         fightsAdded,
         fightsUpdated,
+        fightsCancelled,
         fightersAdded,
       },
     })
@@ -375,6 +461,7 @@ async function upsertScrapedData(data: any) {
         eventsFound: data.events.length,
         fightsAdded,
         fightsUpdated,
+        fightsCancelled,
         fightersAdded,
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
       },

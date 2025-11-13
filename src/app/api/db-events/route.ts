@@ -22,11 +22,16 @@ export async function GET() {
       where: {
         // Show events that have fights (indicating they're not just placeholders)
         fights: {
-          some: {}
+          some: {
+            isCancelled: false  // Only show events with active fights
+          }
         }
       },
       include: {
         fights: {
+          where: {
+            isCancelled: false  // Only show non-cancelled fights
+          },
           include: {
             fighter1: true,
             fighter2: true,

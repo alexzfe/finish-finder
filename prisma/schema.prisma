@@ -135,6 +135,7 @@ model Fight {
 
   // Fight outcome data
   completed           Boolean  @default(false)
+  isCancelled         Boolean  @default(false)
   actualFunScore      Float?
   winnerId            String?
   method              String?  // KO, TKO, SUB, DEC
@@ -223,16 +224,17 @@ model QueryMetric {
 }
 
 model ScrapeLog {
-  id            String   @id @default(cuid())
-  startTime     DateTime
-  endTime       DateTime?
-  status        String   // "SUCCESS" | "FAILURE" | "IN_PROGRESS"
-  eventsFound   Int      @default(0)
-  fightsAdded   Int      @default(0)
-  fightsUpdated Int      @default(0)
-  fightersAdded Int      @default(0)
-  errorMessage  String?  @db.Text
-  createdAt     DateTime @default(now())
+  id               String   @id @default(cuid())
+  startTime        DateTime
+  endTime          DateTime?
+  status           String   // "SUCCESS" | "FAILURE" | "IN_PROGRESS"
+  eventsFound      Int      @default(0)
+  fightsAdded      Int      @default(0)
+  fightsUpdated    Int      @default(0)
+  fightsCancelled  Int      @default(0)
+  fightersAdded    Int      @default(0)
+  errorMessage     String?  @db.Text
+  createdAt        DateTime @default(now())
 
   @@index([startTime])
   @@index([status])

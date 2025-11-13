@@ -34,6 +34,7 @@ class APIIngestionPipeline:
         self.events = []
         self.fights = []
         self.fighters = []
+        self.scraped_event_urls = set()  # Track which events were processed
 
     def open_spider(self, spider: Spider):
         """Called when spider opens"""
@@ -49,7 +50,11 @@ class APIIngestionPipeline:
         item_type = type(item).__name__
 
         if item_type == 'EventItem':
-            self.events.append(dict(item))
+            event_dict = dict(item)
+            self.events.append(event_dict)
+            # Track the event URL for reconciliation
+            if 'sourceUrl' in event_dict:
+                self.scraped_event_urls.add(event_dict['sourceUrl'])
         elif item_type == 'FightItem':
             self.fights.append(dict(item))
         elif item_type == 'FighterItem':
@@ -88,7 +93,8 @@ class APIIngestionPipeline:
         payload = {
             'events': self.events,
             'fights': self.fights,
-            'fighters': self.fighters
+            'fighters': self.fighters,
+            'scrapedEventUrls': list(self.scraped_event_urls)  # Include for reconciliation
         }
 
         headers = {
@@ -96,7 +102,7 @@ class APIIngestionPipeline:
             'Content-Type': 'application/json'
         }
 
-        logger.info(f"Posting to API: {len(self.events)} events")
+        logger.info(f"Posting to API: {len(self.events)} events, {len(self.scraped_event_urls)} scraped event URLs")
 
         try:
             response = requests.post(

@@ -115,6 +115,7 @@ export const ScrapedDataSchema = z.object({
   events: z.array(ScrapedEventSchema),
   fights: z.array(ScrapedFightSchema),
   fighters: z.array(ScrapedFighterSchema),
+  scrapedEventUrls: z.array(z.string().url()).optional().default([]),
 })
 
 export type ScrapedFighter = z.infer<typeof ScrapedFighterSchema>
