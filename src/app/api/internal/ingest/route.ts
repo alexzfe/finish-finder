@@ -270,23 +270,42 @@ async function upsertScrapedData(data: any) {
           continue
         }
 
-        // Use composite unique key to find existing fight
+        // Normalize fighter order (alphabetically by ID) to prevent reversed duplicates
+        // This ensures Fighter A vs Fighter B is always stored the same way
+        const [normalizedFighter1Id, normalizedFighter2Id] =
+          [fighter1.id, fighter2.id].sort();
+
+        // Track if we swapped fighters (to swap winner ID too)
+        const swapped = normalizedFighter1Id !== fighter1.id;
+
+        // Use composite unique key to find existing fight (with normalized order)
         const existing = await tx.fight.findUnique({
           where: {
             eventId_fighter1Id_fighter2Id: {
               eventId: event.id,
-              fighter1Id: fighter1.id,
-              fighter2Id: fighter2.id,
+              fighter1Id: normalizedFighter1Id,
+              fighter2Id: normalizedFighter2Id,
             },
           },
         })
 
+        // Normalize winnerId if we swapped fighters
+        let normalizedWinnerId = fight.winnerId;
+        if (swapped && fight.winnerId) {
+          // Winner was originally fighter1 but now it's fighter2, or vice versa
+          if (fight.winnerId === fight.fighter1Id) {
+            normalizedWinnerId = fighter2.id;
+          } else if (fight.winnerId === fight.fighter2Id) {
+            normalizedWinnerId = fighter1.id;
+          }
+        }
+
         if (!existing) {
-          // Create new fight
+          // Create new fight with normalized fighter order
           await tx.fight.create({
             data: {
-              fighter1Id: fighter1.id,
-              fighter2Id: fighter2.id,
+              fighter1Id: normalizedFighter1Id,
+              fighter2Id: normalizedFighter2Id,
               eventId: event.id,
               weightClass: fight.weightClass ?? 'Unknown',
               titleFight: fight.titleFight ?? false,
@@ -295,7 +314,7 @@ async function upsertScrapedData(data: any) {
               scheduledRounds: fight.scheduledRounds ?? 3,
               // Fight outcome fields (for completed events)
               completed: fight.completed ?? false,
-              winnerId: fight.winnerId,  // Can be null for NC/Draw/upcoming
+              winnerId: normalizedWinnerId,  // Normalized winner ID
               method: fight.method,
               round: fight.round,
               time: fight.time,
@@ -315,9 +334,9 @@ async function upsertScrapedData(data: any) {
               mainEvent: fight.mainEvent ?? existing.mainEvent,
               cardPosition: fight.cardPosition ?? existing.cardPosition,
               scheduledRounds: fight.scheduledRounds ?? existing.scheduledRounds,
-              // Update outcome when fight completes
+              // Update outcome when fight completes (use normalized winner ID)
               completed: fight.completed ?? existing.completed,
-              winnerId: fight.winnerId ?? existing.winnerId,
+              winnerId: normalizedWinnerId ?? existing.winnerId,
               method: fight.method ?? existing.method,
               round: fight.round ?? existing.round,
               time: fight.time ?? existing.time,
