@@ -92,3 +92,8 @@ class FighterItem(scrapy.Item):
     finishRate = scrapy.Field()
     koPercentage = scrapy.Field()
     submissionPercentage = scrapy.Field()
+
+    # Defensive statistics (computed from loss methods)
+    lossFinishRate = scrapy.Field()
+    koLossPercentage = scrapy.Field()
+    submissionLossPercentage = scrapy.Field()
