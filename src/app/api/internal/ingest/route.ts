@@ -257,30 +257,19 @@ async function upsertScrapedData(data: any) {
       for (const fight of data.fights) {
         const contentHash = calculateContentHash(fight)
 
-        // Find fighter source URLs from scraped data
-        const fighter1Source = data.fighters.find((f: any) => f.id === fight.fighter1Id)?.sourceUrl
-        const fighter2Source = data.fighters.find((f: any) => f.id === fight.fighter2Id)?.sourceUrl
-        const eventSource = data.events.find((e: any) => e.id === fight.eventId)?.sourceUrl
-
-        // Skip if any source URLs are missing
-        if (!fighter1Source || !fighter2Source || !eventSource) {
-          console.warn(`Skipping fight ${fight.id}: missing source URLs in scraped data`)
-          continue
-        }
-
         // Find fighter IDs by sourceUrl
         const fighter1 = await tx.fighter.findUnique({
-          where: { sourceUrl: fighter1Source },
+          where: { sourceUrl: data.fighters.find((f: any) => f.id === fight.fighter1Id)?.sourceUrl },
         })
         const fighter2 = await tx.fighter.findUnique({
-          where: { sourceUrl: fighter2Source },
+          where: { sourceUrl: data.fighters.find((f: any) => f.id === fight.fighter2Id)?.sourceUrl },
         })
         const event = await tx.event.findUnique({
-          where: { sourceUrl: eventSource },
+          where: { sourceUrl: data.events.find((e: any) => e.id === fight.eventId)?.sourceUrl },
         })
 
         if (!fighter1 || !fighter2 || !event) {
-          console.warn(`Skipping fight ${fight.id}: missing related records in database`)
+          console.warn(`Skipping fight ${fight.id}: missing related records`)
           continue
         }
 
@@ -292,8 +281,8 @@ async function upsertScrapedData(data: any) {
         // Track if we swapped fighters (to swap winner ID too)
         const swapped = normalizedFighter1Id !== fighter1.id;
 
-        // Try to find existing fight by composite unique key (with normalized order)
-        let existing = await tx.fight.findUnique({
+        // Use composite unique key to find existing fight (with normalized order)
+        const existing = await tx.fight.findUnique({
           where: {
             eventId_fighter1Id_fighter2Id: {
               eventId: event.id,
@@ -302,13 +291,6 @@ async function upsertScrapedData(data: any) {
             },
           },
         })
-
-        // If not found by composite key, try finding by sourceUrl as fallback
-        if (!existing && fight.sourceUrl) {
-          existing = await tx.fight.findUnique({
-            where: { sourceUrl: fight.sourceUrl },
-          })
-        }
 
         // Normalize winnerId if we swapped fighters
         let normalizedWinnerId = fight.winnerId;
@@ -402,22 +384,12 @@ async function upsertScrapedData(data: any) {
           // Only process fights for this event
           if (fight.eventId !== eventData.id) continue
 
-          // Find fighter source URLs from scraped data
-          const fighter1Source = data.fighters.find((f: any) => f.id === fight.fighter1Id)?.sourceUrl
-          const fighter2Source = data.fighters.find((f: any) => f.id === fight.fighter2Id)?.sourceUrl
-
-          // Skip if fighters not found in scraped data
-          if (!fighter1Source || !fighter2Source) {
-            console.warn(`Skipping fight in reconciliation: fighters not found in scraped data`)
-            continue
-          }
-
           // Find fighter database IDs
           const fighter1 = await tx.fighter.findUnique({
-            where: { sourceUrl: fighter1Source },
+            where: { sourceUrl: data.fighters.find((f: any) => f.id === fight.fighter1Id)?.sourceUrl },
           })
           const fighter2 = await tx.fighter.findUnique({
-            where: { sourceUrl: fighter2Source },
+            where: { sourceUrl: data.fighters.find((f: any) => f.id === fight.fighter2Id)?.sourceUrl },
           })
 
           if (fighter1 && fighter2) {
