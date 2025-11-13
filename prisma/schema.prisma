@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  // Force regeneration for loss statistics fields (Nov 13, 2025)
 }
 
 datasource db {
@@ -50,10 +51,20 @@ model Fighter {
   averageFightTime           Int   @default(0) // Legacy field (kept for compatibility)
   averageFightTimeSeconds    Int   @default(0) // Avg fight time in seconds (MM:SS converted)
 
+  // Loss Methods (from UFCStats.com fight history)
+  lossesByKO                 Int   @default(0) // Losses by KO/TKO
+  lossesBySubmission         Int   @default(0) // Losses by Submission
+  lossesByDecision           Int   @default(0) // Losses by Decision
+
   // Calculated Statistics (derived from win methods)
   finishRate                 Float @default(0) // (KO + Sub) / Total Wins
   koPercentage               Float @default(0) // KO / Total Wins
   submissionPercentage       Float @default(0) // Sub / Total Wins
+
+  // Calculated Loss Statistics (derived from loss methods)
+  lossFinishRate             Float @default(0) // (KO losses + Sub losses) / Total Losses
+  koLossPercentage           Float @default(0) // KO losses / Total Losses
+  submissionLossPercentage   Float @default(0) // Sub losses / Total Losses
 
   // Legacy fields (to be deprecated eventually)
   currentStreak              String?
