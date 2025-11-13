@@ -29,7 +29,11 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
   }
 
   return (
-    <div className="relative rounded-xl border border-white/5 bg-black/55 px-6 pb-6 pt-6 text-white sm:px-10 md:px-12">
+    <div className={`relative rounded-xl border px-6 pb-6 pt-6 text-white sm:px-10 md:px-12 transition-all ${
+      currentEvent.completed
+        ? 'border-white/10 bg-black/40 opacity-75'
+        : 'border-white/5 bg-black/55'
+    }`}>
       <button
         onClick={goToPrevEvent}
         disabled={currentEventIndex === 0}
@@ -57,9 +61,19 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
       </button>
 
       <div className="text-center">
-        <h1 className="ufc-condensed text-2xl text-white md:text-3xl">
-          {currentEvent.name}
-        </h1>
+        <div className="flex items-center justify-center gap-3">
+          <h1 className="ufc-condensed text-2xl text-white md:text-3xl">
+            {currentEvent.name}
+          </h1>
+          {currentEvent.completed && (
+            <span
+              className="ufc-condensed rounded-full bg-white/10 px-3 py-1 text-[0.65rem] uppercase tracking-[0.2em] text-white/70 border border-white/20"
+              style={{ fontVariantNumeric: 'tabular-nums' }}
+            >
+              Completed
+            </span>
+          )}
+        </div>
 
         <p className="ufc-condensed mt-2 text-xs text-[var(--ufc-red)] md:text-sm">
           {(() => {
@@ -82,16 +96,18 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
         </p>
 
         <div className="mt-4 flex items-center justify-center gap-2">
-          {events.map((_, index) => (
+          {events.map((event, index) => (
             <button
               key={index}
               onClick={() => onEventChange(index)}
               className={`h-3 rounded-full transition-all duration-200 ${
                 index === currentEventIndex
                   ? 'w-8 bg-[var(--ufc-red)]'
+                  : event.completed
+                  ? 'w-3 bg-white/10 hover:bg-white/20'
                   : 'w-3 bg-white/20 hover:bg-white/40'
               }`}
-              aria-label={`Go to event ${index + 1}`}
+              aria-label={`Go to event ${index + 1}${event.completed ? ' (completed)' : ''}`}
             />
           ))}
         </div>

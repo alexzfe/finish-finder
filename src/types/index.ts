@@ -61,6 +61,7 @@ export interface UFCEvent {
   date: Date;
   location: string;
   venue: string;
+  completed: boolean;
   fightCard: Fight[];
   mainCard: Fight[];
   prelimCard: Fight[];

@@ -72,6 +72,7 @@ export async function GET() {
       date: event.date,
       location: event.location,
       venue: event.venue,
+      completed: event.completed,
       fightCard: event.fights.map(fight => ({
         id: fight.id,
         fighter1: {
