@@ -198,7 +198,12 @@ export async function GET() {
         riskLevel: fight.riskLevel,
         fightPrediction: fight.fightPrediction,
         completed: fight.completed,
-        bookingDate: fight.bookingDate
+        bookingDate: fight.bookingDate,
+        // Fight outcome fields
+        winnerId: fight.winnerId,
+        method: fight.method,
+        round: fight.round,
+        time: fight.time
       })),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mainCard: [] as any[],

@@ -53,6 +53,11 @@ export interface Fight {
   bookingDate: Date;
   completed: boolean;
   actualFunScore?: number; // Post-fight rating
+  // Fight outcome fields (for completed fights)
+  winnerId?: string;
+  method?: string; // KO, TKO, SUB, DEC, etc.
+  round?: number;
+  time?: string; // e.g. "4:32"
 }
 
 export interface UFCEvent {

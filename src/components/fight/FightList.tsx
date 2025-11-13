@@ -177,8 +177,15 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
                 size="md"
               />
               <div className="min-w-0 flex-1">
-                <div className="ufc-condensed truncate text-sm text-white sm:text-base md:text-lg" style={getFunScoreStyle(funScore)}>
+                <div className={`ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center gap-1.5 ${
+                  fight.completed && fight.winnerId === fight.fighter1?.id
+                    ? 'text-[var(--ufc-red)] font-bold'
+                    : 'text-white'
+                }`} style={!fight.completed || fight.winnerId !== fight.fighter1?.id ? getFunScoreStyle(funScore) : undefined}>
                   {fight.fighter1?.name || 'TBD'}
+                  {fight.completed && fight.winnerId === fight.fighter1?.id && (
+                    <span className="text-[var(--ufc-red)]">✓</span>
+                  )}
                 </div>
                 <div className="text-[0.65rem] uppercase tracking-[0.22em] text-white/70">
                   {formatRecord(fight.fighter1?.record)}
@@ -194,7 +201,14 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
             {/* Fighter 2 */}
             <div className="flex flex-1 items-center justify-end space-x-2 sm:space-x-3">
               <div className="min-w-0 flex-1 text-right">
-                <div className="ufc-condensed truncate text-sm text-white sm:text-base md:text-lg" style={getFunScoreStyle(funScore)}>
+                <div className={`ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center justify-end gap-1.5 ${
+                  fight.completed && fight.winnerId === fight.fighter2?.id
+                    ? 'text-[var(--ufc-red)] font-bold'
+                    : 'text-white'
+                }`} style={!fight.completed || fight.winnerId !== fight.fighter2?.id ? getFunScoreStyle(funScore) : undefined}>
+                  {fight.completed && fight.winnerId === fight.fighter2?.id && (
+                    <span className="text-[var(--ufc-red)]">✓</span>
+                  )}
                   {fight.fighter2?.name || 'TBD'}
                 </div>
                 <div className="text-[0.65rem] uppercase tracking-[0.22em] text-white/70">
@@ -210,13 +224,31 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
 
           {/* Fight Details */}
           <div className="mt-3 border-t border-white/10 pt-2.5">
-            <div className="flex flex-wrap items-center justify-between gap-1 text-[0.65rem] uppercase tracking-[0.24em] text-white/75 sm:flex-nowrap sm:gap-0">
-              <span className="truncate">{fight.weightClass}</span>
-              <span className="whitespace-nowrap">{fight.scheduledRounds || 3} Rounds</span>
-              {fight.finishProbability ? (
-                <span className="whitespace-nowrap text-white">Finish {Math.round(fight.finishProbability * 100)}%</span>
-              ) : null}
-            </div>
+            {fight.completed && fight.winnerId ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-[0.24em]">
+                  <span className="text-white/60">Result</span>
+                  <span className="text-[var(--ufc-red)] font-medium">
+                    {fight.winnerId === fight.fighter1?.id ? fight.fighter1?.name : fight.fighter2?.name}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-1 text-[0.65rem] uppercase tracking-[0.24em] text-white/75">
+                  <span className="truncate">{fight.weightClass}</span>
+                  {fight.method && <span className="whitespace-nowrap text-white">via {fight.method}</span>}
+                  {fight.round && fight.time && (
+                    <span className="whitespace-nowrap">R{fight.round} {fight.time}</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-1 text-[0.65rem] uppercase tracking-[0.24em] text-white/75 sm:flex-nowrap sm:gap-0">
+                <span className="truncate">{fight.weightClass}</span>
+                <span className="whitespace-nowrap">{fight.scheduledRounds || 3} Rounds</span>
+                {fight.finishProbability ? (
+                  <span className="whitespace-nowrap text-white">Finish {Math.round(fight.finishProbability * 100)}%</span>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
       </div>
