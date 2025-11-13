@@ -257,19 +257,30 @@ async function upsertScrapedData(data: any) {
       for (const fight of data.fights) {
         const contentHash = calculateContentHash(fight)
 
+        // Find fighter source URLs from scraped data
+        const fighter1Source = data.fighters.find((f: any) => f.id === fight.fighter1Id)?.sourceUrl
+        const fighter2Source = data.fighters.find((f: any) => f.id === fight.fighter2Id)?.sourceUrl
+        const eventSource = data.events.find((e: any) => e.id === fight.eventId)?.sourceUrl
+
+        // Skip if any source URLs are missing
+        if (!fighter1Source || !fighter2Source || !eventSource) {
+          console.warn(`Skipping fight ${fight.id}: missing source URLs in scraped data`)
+          continue
+        }
+
         // Find fighter IDs by sourceUrl
         const fighter1 = await tx.fighter.findUnique({
-          where: { sourceUrl: data.fighters.find((f: any) => f.id === fight.fighter1Id)?.sourceUrl },
+          where: { sourceUrl: fighter1Source },
         })
         const fighter2 = await tx.fighter.findUnique({
-          where: { sourceUrl: data.fighters.find((f: any) => f.id === fight.fighter2Id)?.sourceUrl },
+          where: { sourceUrl: fighter2Source },
         })
         const event = await tx.event.findUnique({
-          where: { sourceUrl: data.events.find((e: any) => e.id === fight.eventId)?.sourceUrl },
+          where: { sourceUrl: eventSource },
         })
 
         if (!fighter1 || !fighter2 || !event) {
-          console.warn(`Skipping fight ${fight.id}: missing related records`)
+          console.warn(`Skipping fight ${fight.id}: missing related records in database`)
           continue
         }
 
