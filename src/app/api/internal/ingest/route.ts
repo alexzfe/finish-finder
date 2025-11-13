@@ -384,12 +384,22 @@ async function upsertScrapedData(data: any) {
           // Only process fights for this event
           if (fight.eventId !== eventData.id) continue
 
+          // Find fighter source URLs from scraped data
+          const fighter1Source = data.fighters.find((f: any) => f.id === fight.fighter1Id)?.sourceUrl
+          const fighter2Source = data.fighters.find((f: any) => f.id === fight.fighter2Id)?.sourceUrl
+
+          // Skip if fighters not found in scraped data
+          if (!fighter1Source || !fighter2Source) {
+            console.warn(`Skipping fight in reconciliation: fighters not found in scraped data`)
+            continue
+          }
+
           // Find fighter database IDs
           const fighter1 = await tx.fighter.findUnique({
-            where: { sourceUrl: data.fighters.find((f: any) => f.id === fight.fighter1Id)?.sourceUrl },
+            where: { sourceUrl: fighter1Source },
           })
           const fighter2 = await tx.fighter.findUnique({
-            where: { sourceUrl: data.fighters.find((f: any) => f.id === fight.fighter2Id)?.sourceUrl },
+            where: { sourceUrl: fighter2Source },
           })
 
           if (fighter1 && fighter2) {
