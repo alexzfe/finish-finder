@@ -15,23 +15,57 @@ class UFCStatsSpider(scrapy.Spider):
     """
     Spider for crawling UFCStats.com
 
-    Start URL: http://ufcstats.com/statistics/events/upcoming
+    Start URLs:
+        - http://ufcstats.com/statistics/events/upcoming (always scraped)
+        - http://ufcstats.com/statistics/events/completed (optional, limited to 3 most recent)
 
-    Scrapes all upcoming UFC events from UFCStats.com.
+    Scrapes UFC events from UFCStats.com with full fight outcome data.
 
     Spider arguments:
-        limit (int): Limit number of events to scrape (optional, defaults to all events)
+        limit (int): Limit number of UPCOMING events to scrape (optional, defaults to all upcoming)
                      Usage: scrapy crawl ufcstats -a limit=5
+        include_completed (str): Also scrape 3 most recent completed events with outcomes
+                                 Values: 'true', '1', 'yes'
+                                 Usage: scrapy crawl ufcstats -a include_completed=true
+
+    Note:
+        Completed events are ALWAYS limited to 3 most recent to avoid excessive scraping.
+        The 'limit' parameter only applies to upcoming events.
     """
 
     name = "ufcstats"
     allowed_domains = ["ufcstats.com"]
-    start_urls = ["http://ufcstats.com/statistics/events/upcoming"]
 
-    def __init__(self, limit=None, *args, **kwargs):
+    def __init__(self, limit=None, include_completed=None, *args, **kwargs):
         super(UFCStatsSpider, self).__init__(*args, **kwargs)
         self.limit = int(limit) if limit else None
+        # Parse include_completed as boolean
+        self.include_completed = include_completed in ['true', '1', 'yes', 'True', 'Yes']
         self.events_scraped = 0
+
+    def start_requests(self):
+        """
+        Generate initial requests for event list pages.
+
+        Yields:
+            scrapy.Request: Requests to event list pages
+        """
+        # Always scrape upcoming events
+        self.logger.info("Scraping upcoming events")
+        yield scrapy.Request(
+            url="http://ufcstats.com/statistics/events/upcoming",
+            callback=self.parse,
+            meta={'event_type': 'upcoming'}
+        )
+
+        # Optionally scrape completed events
+        if self.include_completed:
+            self.logger.info("Also scraping completed events (outcomes enabled)")
+            yield scrapy.Request(
+                url="http://ufcstats.com/statistics/events/completed",
+                callback=self.parse,
+                meta={'event_type': 'completed'}
+            )
 
     def parse(self, response):
         """
@@ -40,22 +74,33 @@ class UFCStatsSpider(scrapy.Spider):
         Yields:
             scrapy.Request: Requests to event detail pages
         """
-        self.logger.info(f"Parsing events list from {response.url}")
+        event_type = response.meta.get('event_type', 'unknown')
+        self.logger.info(f"Parsing {event_type} events list from {response.url}")
 
         soup = BeautifulSoup(response.text, 'html.parser')
         events = parsers.parse_event_list(soup)
 
-        self.logger.info(f"Found {len(events)} total events")
+        self.logger.info(f"Found {len(events)} total {event_type} events")
 
-        # Sort by date ascending (nearest events first)
-        events.sort(key=lambda x: x['date'])
+        # Sort by date
+        if event_type == 'completed':
+            # For completed events: sort descending (most recent first)
+            events.sort(key=lambda x: x['date'], reverse=True)
+        else:
+            # For upcoming events: sort ascending (nearest first)
+            events.sort(key=lambda x: x['date'])
 
-        # Apply limit if specified
-        if self.limit:
-            self.logger.info(f"Limiting to {self.limit} events")
+        # Apply limits
+        if event_type == 'completed':
+            # Always limit completed events to 3 most recent
+            events = events[:3]
+            self.logger.info(f"Limiting completed events to 3 most recent")
+        elif self.limit:
+            # Apply user-specified limit to upcoming events
+            self.logger.info(f"Limiting upcoming events to {self.limit}")
             events = events[:self.limit]
         else:
-            self.logger.info(f"No limit specified, scraping all {len(events)} events")
+            self.logger.info(f"No limit specified, scraping all {len(events)} {event_type} events")
 
         for event in events:
             self.logger.info(f"Will scrape: {event['name']} ({event['date']})")

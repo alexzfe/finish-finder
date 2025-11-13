@@ -5,7 +5,7 @@ on:
   schedule:
     - cron: '0 2 * * *'
 
-  # Allow manual triggering with optional event limit
+  # Allow manual triggering with optional event limit and completed events
   workflow_dispatch:
     inputs:
       limit:
@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: ''
+      include_completed:
+        description: 'Also scrape 3 most recent completed events with outcomes (true/false)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   scrape-ufcstats:
@@ -44,13 +49,25 @@ jobs:
           INGEST_API_URL: ${{ secrets.INGEST_API_URL }}
           INGEST_API_SECRET: ${{ secrets.INGEST_API_SECRET }}
         run: |
+          # Build scraper command with optional parameters
+          CMD="scrapy crawl ufcstats -s LOG_LEVEL=INFO"
+
           if [ -n "${{ github.event.inputs.limit }}" ]; then
-            echo "🥊 Running UFC scraper with limit: ${{ github.event.inputs.limit }} events"
-            scrapy crawl ufcstats -a limit=${{ github.event.inputs.limit }} -s LOG_LEVEL=INFO
+            CMD="$CMD -a limit=${{ github.event.inputs.limit }}"
+            echo "🥊 Limit: ${{ github.event.inputs.limit }} events"
           else
-            echo "🥊 Running UFC scraper for all events"
-            scrapy crawl ufcstats -s LOG_LEVEL=INFO
+            echo "🥊 No limit (scraping all events)"
           fi
+
+          if [ "${{ github.event.inputs.include_completed }}" = "true" ]; then
+            CMD="$CMD -a include_completed=true"
+            echo "📊 Including 3 most recent completed events with outcomes"
+          else
+            echo "⏰ Upcoming events only"
+          fi
+
+          echo "Running: $CMD"
+          $CMD
 
       - name: Upload scraper logs
         if: always()

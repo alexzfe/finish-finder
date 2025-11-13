@@ -268,6 +268,12 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
     if not event_id:
         event_id = normalize_event_name(event_name)
 
+    # Determine if event is completed based on date
+    # Events in the past are completed (outcomes available)
+    event_completed = False
+    if event_date_obj:
+        event_completed = event_date_obj < datetime.now().date()
+
     # Build event dictionary
     event = {
         'id': event_id,
@@ -275,7 +281,9 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
         'date': event_date,
         'venue': event_venue,
         'location': event_location,
-        'sourceUrl': event_url
+        'sourceUrl': event_url,
+        'completed': event_completed,  # Based on date comparison
+        'cancelled': False  # TODO: Detect cancelled events from HTML if needed
     }
 
     # Extract fights from the table
@@ -352,6 +360,9 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
                         event_date=event_date_obj
                     )
 
+                # Parse fight outcome data (if event is completed)
+                outcome = parse_fight_outcome(row, fighter1_id, fighter2_id)
+
                 # Add fight
                 fight = {
                     'id': fight_id,
@@ -363,7 +374,13 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
                     'mainEvent': is_main_event,
                     'cardPosition': card_position,
                     'scheduledRounds': scheduled_rounds,
-                    'sourceUrl': fight_source_url
+                    'sourceUrl': fight_source_url,
+                    # Outcome fields (populated for completed events)
+                    'completed': outcome['completed'],
+                    'winnerId': outcome['winnerId'],
+                    'method': outcome['method'],
+                    'round': outcome['round'],
+                    'time': outcome['time']
                 }
                 fights.append(fight)
 
@@ -402,25 +419,32 @@ def parse_event_detail(soup: BeautifulSoup, event_url: str) -> Dict:
 
 def _parse_fight_history(soup: BeautifulSoup) -> Dict[str, int]:
     """
-    Parse fighter's UFC fight history to calculate win methods.
+    Parse fighter's UFC fight history to calculate win and loss methods.
 
-    Examines the fight history table on UFCStats.com to count wins by method type.
-    IMPORTANT: Only counts WINS - losses with specific methods are ignored.
+    Examines the fight history table on UFCStats.com to count wins and losses by method type.
+    This provides critical defensive metrics like loss finish rate for AI predictions.
 
     Args:
         soup: BeautifulSoup object of the fighter profile page
 
     Returns:
-        Dictionary with winsByKO, winsBySubmission, winsByDecision counts
+        Dictionary with winsByKO, winsBySubmission, winsByDecision,
+        lossesByKO, lossesBySubmission, lossesByDecision counts
     """
     wins_by_ko = 0
     wins_by_sub = 0
     wins_by_dec = 0
+    losses_by_ko = 0
+    losses_by_sub = 0
+    losses_by_dec = 0
 
     # Find the fight history table
     table = soup.find('tbody', class_='b-fight-details__table-body')
     if not table:
-        return {'winsByKO': 0, 'winsBySubmission': 0, 'winsByDecision': 0}
+        return {
+            'winsByKO': 0, 'winsBySubmission': 0, 'winsByDecision': 0,
+            'lossesByKO': 0, 'lossesBySubmission': 0, 'lossesByDecision': 0
+        }
 
     rows = table.find_all('tr', class_='b-fight-details__table-row')
 
@@ -436,27 +460,46 @@ def _parse_fight_history(soup: BeautifulSoup) -> Dict[str, int]:
 
         result = flag.text.strip().lower()
 
-        # Skip upcoming fights and non-wins
-        if result not in ['win', 'w']:
+        # Skip upcoming fights and draws
+        if result not in ['win', 'w', 'loss', 'l']:
             continue
 
         # Column 7: Method (KO/TKO, Submission, Decision, etc.)
         method_text = cols[7].get_text(strip=True)
-
-        # Categorize win method
         method_upper = method_text.upper()
-        if 'KO' in method_upper or 'TKO' in method_upper:
-            wins_by_ko += 1
-        elif 'SUB' in method_upper or 'SUBMISSION' in method_upper:
-            wins_by_sub += 1
-        elif 'DEC' in method_upper or 'DECISION' in method_upper:
-            wins_by_dec += 1
-        # Note: Edge cases like DQ, CNC are not counted as any specific method
+
+        # Categorize method by type
+        is_ko = 'KO' in method_upper or 'TKO' in method_upper
+        is_sub = 'SUB' in method_upper or 'SUBMISSION' in method_upper
+        is_dec = 'DEC' in method_upper or 'DECISION' in method_upper
+
+        # Count wins
+        if result in ['win', 'w']:
+            if is_ko:
+                wins_by_ko += 1
+            elif is_sub:
+                wins_by_sub += 1
+            elif is_dec:
+                wins_by_dec += 1
+            # Note: Edge cases like DQ, CNC are not counted as any specific method
+
+        # Count losses
+        elif result in ['loss', 'l']:
+            if is_ko:
+                losses_by_ko += 1
+            elif is_sub:
+                losses_by_sub += 1
+            elif is_dec:
+                losses_by_dec += 1
+            # Note: Edge cases like DQ, CNC are not counted as any specific method
 
     return {
         'winsByKO': wins_by_ko,
         'winsBySubmission': wins_by_sub,
-        'winsByDecision': wins_by_dec
+        'winsByDecision': wins_by_dec,
+        'lossesByKO': losses_by_ko,
+        'lossesBySubmission': losses_by_sub,
+        'lossesByDecision': losses_by_dec
     }
 
 
@@ -514,11 +557,14 @@ def parse_fighter_profile(soup: BeautifulSoup, fighter_url: str) -> Dict[str, An
         # 'Wins by Decision:': ('winsByDecision', _parse_int),
     }
 
-    # Parse fight history to calculate win methods
+    # Parse fight history to calculate win and loss methods
     fight_history = _parse_fight_history(soup)
     fighter['winsByKO'] = fight_history['winsByKO']
     fighter['winsBySubmission'] = fight_history['winsBySubmission']
     fighter['winsByDecision'] = fight_history['winsByDecision']
+    fighter['lossesByKO'] = fight_history['lossesByKO']
+    fighter['lossesBySubmission'] = fight_history['lossesBySubmission']
+    fighter['lossesByDecision'] = fight_history['lossesByDecision']
 
     # Set default for average fight time (not available on profile page)
     fighter.setdefault('averageFightTimeSeconds', 0)
@@ -564,7 +610,183 @@ def parse_fighter_profile(soup: BeautifulSoup, fighter_url: str) -> Dict[str, An
         fighter['koPercentage'] = 0.0
         fighter['submissionPercentage'] = 0.0
 
+    # Calculate loss finish rates (defensive metrics)
+    losses_by_ko = fighter.get('lossesByKO', 0)
+    losses_by_sub = fighter.get('lossesBySubmission', 0)
+    losses_by_decision = fighter.get('lossesByDecision', 0)
+    ufc_losses = losses_by_ko + losses_by_sub + losses_by_decision
+
+    if ufc_losses and ufc_losses > 0 and losses_by_ko is not None and losses_by_sub is not None:
+        loss_finish_rate = (losses_by_ko + losses_by_sub) / ufc_losses
+        fighter['lossFinishRate'] = round(loss_finish_rate, 3)
+        fighter['koLossPercentage'] = round(losses_by_ko / ufc_losses, 3)
+        fighter['submissionLossPercentage'] = round(losses_by_sub / ufc_losses, 3)
+    else:
+        # Set defaults for fighters with no UFC losses or missing data
+        fighter['lossFinishRate'] = 0.0
+        fighter['koLossPercentage'] = 0.0
+        fighter['submissionLossPercentage'] = 0.0
+
     return fighter
+
+
+def normalize_method(method: str) -> str:
+    """
+    Normalize method strings to standard codes.
+
+    Handles various fight outcome formats from UFCStats.com:
+    - Decision types: U-DEC, S-DEC, M-DEC → DEC
+    - Knockouts: KO, TKO, KO/TKO → KO/TKO
+    - Submissions: SUB, Submission → SUB
+    - Special cases: DQ, NC, DRAW
+
+    Args:
+        method: Raw method string from UFCStats.com
+
+    Returns:
+        Normalized method code
+
+    Examples:
+        >>> normalize_method("U-DEC")
+        'DEC'
+        >>> normalize_method("KO/TKO")
+        'KO/TKO'
+        >>> normalize_method("No Contest")
+        'NC'
+    """
+    if not method:
+        return 'N/A'
+
+    method_upper = method.upper()
+
+    # Decision variations
+    if 'U-DEC' in method_upper or 'S-DEC' in method_upper or 'M-DEC' in method_upper:
+        return 'DEC'
+
+    # Knockout variations (catches KO, TKO, KO/TKO)
+    if 'KO' in method_upper:
+        return 'KO/TKO'
+
+    # Submission variations
+    if 'SUB' in method_upper:
+        return 'SUB'
+
+    # Disqualification
+    if 'DQ' in method_upper:
+        return 'DQ'
+
+    # No Contest
+    if 'NC' in method_upper or 'NO CONTEST' in method_upper:
+        return 'NC'
+
+    # Draw (majority draw shows as M-DEC sometimes)
+    if 'DRAW' in method_upper:
+        return 'DRAW'
+
+    # Return standardized uppercase version if no specific rule matches
+    return method_upper
+
+
+def parse_fight_outcome(row: element.Tag, fighter1_id: str, fighter2_id: str) -> Dict[str, Any]:
+    """
+    Extract complete fight outcome data from a completed event table row.
+
+    This function handles all edge cases including:
+    - Standard wins/losses
+    - No contests (NC) → winnerId = null
+    - Draws → winnerId = null
+    - Disqualifications (DQ) → winner determined by W/L flag
+    - Malformed data (missing columns, invalid round numbers)
+
+    Args:
+        row: BeautifulSoup table row element from completed event
+        fighter1_id: ID of first fighter (appears first in table)
+        fighter2_id: ID of second fighter (appears second in table)
+
+    Returns:
+        Dictionary with outcome fields:
+        - completed: bool (True for completed fights)
+        - winnerId: str | None (None for NC/Draw or upcoming)
+        - method: str | None (normalized method code)
+        - round: int | None (1-5, None if invalid)
+        - time: str | None (format: "M:SS")
+
+    Examples:
+        >>> # Win by KO in round 3 at 2:45
+        >>> parse_fight_outcome(row, "fighter-1", "fighter-2")
+        {
+            'completed': True,
+            'winnerId': 'fighter-1',
+            'method': 'KO/TKO',
+            'round': 3,
+            'time': '2:45'
+        }
+
+        >>> # No Contest
+        >>> parse_fight_outcome(row, "fighter-1", "fighter-2")
+        {
+            'completed': True,
+            'winnerId': None,  # No winner for NC
+            'method': 'NC',
+            'round': 1,
+            'time': '0:35'
+        }
+    """
+    cols = row.find_all('td')
+
+    # Defensive check: if outcome columns are missing, it's an upcoming fight
+    # Upcoming fights have empty cells for Method (col 7), Round (col 8), Time (col 9)
+    if len(cols) < 10 or not cols[7].get_text(strip=True):
+        return {
+            'completed': False,
+            'winnerId': None,
+            'method': None,
+            'round': None,
+            'time': None
+        }
+
+    outcome: Dict[str, Any] = {'completed': True}
+
+    # 1. Extract Method, Round, Time from table columns
+    # IMPORTANT: Use .p to get only the FIRST <p> tag text
+    # Some method cells have two <p> tags: <p>KO/TKO</p><p>Elbows</p>
+    # We only want the primary method, not the detail
+    method_elem = cols[7].find('p', class_='b-fight-details__table-text')
+    method_text = method_elem.get_text(strip=True) if method_elem else ''
+
+    round_text = cols[8].get_text(strip=True)
+    time_text = cols[9].get_text(strip=True)
+
+    outcome['method'] = normalize_method(method_text)
+
+    # Safe round parsing (handle malformed data like "-" or empty)
+    try:
+        outcome['round'] = int(round_text)
+    except (ValueError, TypeError):
+        outcome['round'] = None
+
+    outcome['time'] = time_text or None
+
+    # 2. Determine winner from W/L flag
+    # Column 0 contains <i class="b-flag__text">win</i> or <i class="b-flag__text">loss</i>
+    winner_id = None
+    wl_flag = cols[0].find('i', class_='b-flag__text')
+
+    if wl_flag:
+        result = wl_flag.get_text(strip=True).lower()
+        if result == 'win':
+            winner_id = fighter1_id
+        elif result == 'loss':
+            winner_id = fighter2_id
+
+    # 3. Handle edge cases: No Contest and Draw have no winner
+    # Override winnerId regardless of W/L flag
+    if outcome['method'] in ['NC', 'DRAW']:
+        winner_id = None
+
+    outcome['winnerId'] = winner_id
+
+    return outcome
 
 
 def parse_record(record_str: str) -> Optional[Dict[str, int]]:

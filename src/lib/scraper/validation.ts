@@ -47,10 +47,20 @@ export const ScrapedFighterSchema = z.object({
   winsBySubmission: z.number().int().nullable().optional(),
   winsByDecision: z.number().int().nullable().optional(),
 
+  // Loss methods (from UFCStats.com fight history)
+  lossesByKO: z.number().int().nullable().optional(),
+  lossesBySubmission: z.number().int().nullable().optional(),
+  lossesByDecision: z.number().int().nullable().optional(),
+
   // Calculated statistics (computed by scraper)
   finishRate: z.number().min(0).max(1).nullable().optional(),
   koPercentage: z.number().min(0).max(1).nullable().optional(),
   submissionPercentage: z.number().min(0).max(1).nullable().optional(),
+
+  // Calculated loss statistics (computed by scraper)
+  lossFinishRate: z.number().min(0).max(1).nullable().optional(),
+  koLossPercentage: z.number().min(0).max(1).nullable().optional(),
+  submissionLossPercentage: z.number().min(0).max(1).nullable().optional(),
 })
 
 /**
@@ -65,10 +75,21 @@ export const ScrapedFightSchema = z.object({
   titleFight: z.boolean().optional().default(false),
   mainEvent: z.boolean().optional().default(false),
   cardPosition: z.string().optional(),
+  scheduledRounds: z.number().int().min(3).max(5).optional().default(3),
   sourceUrl: z.string().url(),
+
+  // Fight outcome fields (for completed events)
+  completed: z.boolean().optional().default(false),
+  winnerId: z.string().nullable().optional(),  // Null for NC, Draw, or upcoming
+  method: z.string().nullable().optional(),     // KO/TKO, SUB, DEC, DQ, NC
+  round: z.number().int().min(1).max(5).nullable().optional(),
+  time: z.string().regex(/^\d{1,2}:\d{2}$/).nullable().optional(),  // Format: M:SS or MM:SS
 }).refine(
   (data) => data.fighter1Id !== data.fighter2Id,
   { message: 'fighter1Id and fighter2Id must be different' }
+).refine(
+  (data) => !data.completed || (data.completed && data.method !== null),
+  { message: 'Completed fights must have a method' }
 )
 
 /**
@@ -81,6 +102,10 @@ export const ScrapedEventSchema = z.object({
   venue: z.string().optional(),
   location: z.string().optional(),
   sourceUrl: z.string().url(),
+
+  // Event status fields
+  completed: z.boolean().optional().default(false),
+  cancelled: z.boolean().optional().default(false),
 })
 
 /**

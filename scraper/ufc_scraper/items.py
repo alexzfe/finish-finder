@@ -19,6 +19,8 @@ class EventItem(scrapy.Item):
     venue = scrapy.Field()
     location = scrapy.Field()
     sourceUrl = scrapy.Field()  # UFCStats.com URL
+    completed = scrapy.Field()  # Boolean: True if event has concluded
+    cancelled = scrapy.Field()  # Boolean: True if event was cancelled
     fights = scrapy.Field()  # List of FightItem
 
 
@@ -32,7 +34,15 @@ class FightItem(scrapy.Item):
     titleFight = scrapy.Field()  # Boolean: True if championship bout
     mainEvent = scrapy.Field()  # Boolean: True if main event
     cardPosition = scrapy.Field()  # "Main Event", "Co-Main Event", "Main Card", "Prelims", "Early Prelims"
+    scheduledRounds = scrapy.Field()  # 3 or 5 rounds
     sourceUrl = scrapy.Field()
+
+    # Fight outcome fields (populated for completed events)
+    completed = scrapy.Field()  # Boolean: True if fight has concluded
+    winnerId = scrapy.Field()  # String: ID of winning fighter (None for NC/Draw)
+    method = scrapy.Field()  # String: KO/TKO, SUB, DEC, DQ, NC
+    round = scrapy.Field()  # Int: Round in which fight ended (1-5)
+    time = scrapy.Field()  # String: Time in format "M:SS"
 
 
 class FighterItem(scrapy.Item):

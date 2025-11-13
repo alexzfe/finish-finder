@@ -134,10 +134,20 @@ async function upsertScrapedData(data: any) {
               winsBySubmission: fighter.winsBySubmission ?? 0,
               winsByDecision: fighter.winsByDecision ?? 0,
 
+              // Loss methods
+              lossesByKO: fighter.lossesByKO ?? 0,
+              lossesBySubmission: fighter.lossesBySubmission ?? 0,
+              lossesByDecision: fighter.lossesByDecision ?? 0,
+
               // Calculated statistics
               finishRate: fighter.finishRate ?? 0,
               koPercentage: fighter.koPercentage ?? 0,
               submissionPercentage: fighter.submissionPercentage ?? 0,
+
+              // Calculated loss statistics
+              lossFinishRate: fighter.lossFinishRate ?? 0,
+              koLossPercentage: fighter.koLossPercentage ?? 0,
+              submissionLossPercentage: fighter.submissionLossPercentage ?? 0,
             },
           })
           fightersAdded++
@@ -180,10 +190,20 @@ async function upsertScrapedData(data: any) {
               winsBySubmission: fighter.winsBySubmission ?? existing.winsBySubmission,
               winsByDecision: fighter.winsByDecision ?? existing.winsByDecision,
 
+              // Loss methods
+              lossesByKO: fighter.lossesByKO ?? existing.lossesByKO,
+              lossesBySubmission: fighter.lossesBySubmission ?? existing.lossesBySubmission,
+              lossesByDecision: fighter.lossesByDecision ?? existing.lossesByDecision,
+
               // Calculated statistics
               finishRate: fighter.finishRate ?? existing.finishRate,
               koPercentage: fighter.koPercentage ?? existing.koPercentage,
               submissionPercentage: fighter.submissionPercentage ?? existing.submissionPercentage,
+
+              // Calculated loss statistics
+              lossFinishRate: fighter.lossFinishRate ?? existing.lossFinishRate,
+              koLossPercentage: fighter.koLossPercentage ?? existing.koLossPercentage,
+              submissionLossPercentage: fighter.submissionLossPercentage ?? existing.submissionLossPercentage,
             },
           })
         }
@@ -205,6 +225,8 @@ async function upsertScrapedData(data: any) {
               date: new Date(event.date),
               venue: event.venue ?? 'TBA',
               location: event.location ?? 'TBA',
+              completed: event.completed ?? false,
+              cancelled: event.cancelled ?? false,
               sourceUrl: event.sourceUrl,
               lastScrapedAt: new Date(),
               contentHash,
@@ -219,6 +241,8 @@ async function upsertScrapedData(data: any) {
               date: new Date(event.date),
               venue: event.venue ?? existing.venue,
               location: event.location ?? existing.location,
+              completed: event.completed ?? existing.completed,
+              cancelled: event.cancelled ?? existing.cancelled,
               lastScrapedAt: new Date(),
               contentHash,
             },
@@ -261,6 +285,13 @@ async function upsertScrapedData(data: any) {
               titleFight: fight.titleFight ?? false,
               mainEvent: fight.mainEvent ?? false,
               cardPosition: fight.cardPosition ?? 'preliminary',
+              scheduledRounds: fight.scheduledRounds ?? 3,
+              // Fight outcome fields (for completed events)
+              completed: fight.completed ?? false,
+              winnerId: fight.winnerId,  // Can be null for NC/Draw/upcoming
+              method: fight.method,
+              round: fight.round,
+              time: fight.time,
               sourceUrl: fight.sourceUrl,
               lastScrapedAt: new Date(),
               contentHash,
@@ -268,7 +299,7 @@ async function upsertScrapedData(data: any) {
           })
           fightsAdded++
         } else if (existing.contentHash !== contentHash) {
-          // Update existing fight
+          // Update existing fight (including outcome data when fight completes)
           await tx.fight.update({
             where: { sourceUrl: fight.sourceUrl },
             data: {
@@ -276,6 +307,13 @@ async function upsertScrapedData(data: any) {
               titleFight: fight.titleFight ?? existing.titleFight,
               mainEvent: fight.mainEvent ?? existing.mainEvent,
               cardPosition: fight.cardPosition ?? existing.cardPosition,
+              scheduledRounds: fight.scheduledRounds ?? existing.scheduledRounds,
+              // Update outcome when fight completes
+              completed: fight.completed ?? existing.completed,
+              winnerId: fight.winnerId ?? existing.winnerId,
+              method: fight.method ?? existing.method,
+              round: fight.round ?? existing.round,
+              time: fight.time ?? existing.time,
               lastScrapedAt: new Date(),
               contentHash,
             },
@@ -322,6 +360,11 @@ async function upsertScrapedData(data: any) {
 
 /**
  * Calculate SHA256 hash of data for change detection
+ *
+ * IMPORTANT: This function hashes ALL fields in the data object,
+ * including outcome fields (completed, winnerId, method, round, time).
+ * When a fight completes, these fields change, causing the hash to change,
+ * which triggers a database update. This is critical for outcome tracking!
  */
 function calculateContentHash(data: any): string {
   // Sort keys for consistent hashing
