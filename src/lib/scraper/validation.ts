@@ -80,7 +80,6 @@ export const ScrapedFightSchema = z.object({
 
   // Fight outcome fields (for completed events)
   completed: z.boolean().optional().default(false),
-  cancelled: z.boolean().optional().default(false),
   winnerId: z.string().nullable().optional(),  // Null for NC, Draw, or upcoming
   method: z.string().nullable().optional(),     // KO/TKO, SUB, DEC, DQ, NC
   round: z.number().int().min(1).max(5).nullable().optional(),

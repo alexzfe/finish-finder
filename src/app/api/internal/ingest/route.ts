@@ -57,11 +57,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       scrapeLogId: scrapeLog.id,
-      eventsFound: scrapeLog.eventsFound,
-      fightsAdded: scrapeLog.fightsAdded,
-      fightsUpdated: scrapeLog.fightsUpdated,
-      fightsCancelled: scrapeLog.fightsCancelled,
-      fightersAdded: scrapeLog.fightersAdded,
+      eventsCreated: data.events.length,
+      fightsCreated: data.fights.length,
+      fightersCreated: data.fighters.length,
     })
   } catch (error) {
     console.error('Ingestion error:', error)
@@ -83,7 +81,6 @@ async function upsertScrapedData(data: any) {
   const startTime = new Date()
   let fightsAdded = 0
   let fightsUpdated = 0
-  let fightsCancelled = 0
   let fightersAdded = 0
 
   try {
@@ -350,74 +347,6 @@ async function upsertScrapedData(data: any) {
           fightsUpdated++
         }
       }
-
-      // Reconcile fights: mark as cancelled if they exist in DB but not in scraped data
-      // Build a map of event sourceUrls to their database IDs
-      const eventSourceUrlToIdMap = new Map<string, string>()
-      for (const eventData of data.events) {
-        const event = await tx.event.findUnique({
-          where: { sourceUrl: eventData.sourceUrl },
-        })
-        if (event) {
-          eventSourceUrlToIdMap.set(eventData.sourceUrl, event.id)
-        }
-      }
-
-      // For each event in the scraped data, reconcile its fights
-      for (const eventData of data.events) {
-        const eventId = eventSourceUrlToIdMap.get(eventData.sourceUrl)
-        if (!eventId) continue
-
-        // Get all existing non-cancelled fights for this event
-        const existingFights = await tx.fight.findMany({
-          where: {
-            eventId,
-            cancelled: false,
-          },
-        })
-
-        // Build a set of scraped fight composite keys (normalized fighter order)
-        // Key format: "eventId:fighter1Id:fighter2Id" (with fighters alphabetically sorted)
-        const scrapedFightKeys = new Set<string>()
-
-        for (const fight of data.fights) {
-          // Only process fights for this event
-          if (fight.eventId !== eventData.id) continue
-
-          // Find fighter database IDs
-          const fighter1 = await tx.fighter.findUnique({
-            where: { sourceUrl: data.fighters.find((f: any) => f.id === fight.fighter1Id)?.sourceUrl },
-          })
-          const fighter2 = await tx.fighter.findUnique({
-            where: { sourceUrl: data.fighters.find((f: any) => f.id === fight.fighter2Id)?.sourceUrl },
-          })
-
-          if (fighter1 && fighter2) {
-            // Normalize fighter order (alphabetically) to match how fights are stored
-            const [normalizedFighter1Id, normalizedFighter2Id] = [fighter1.id, fighter2.id].sort()
-            const key = `${eventId}:${normalizedFighter1Id}:${normalizedFighter2Id}`
-            scrapedFightKeys.add(key)
-          }
-        }
-
-        // Mark fights as cancelled if they're not in the scraped data
-        for (const existingFight of existingFights) {
-          const key = `${existingFight.eventId}:${existingFight.fighter1Id}:${existingFight.fighter2Id}`
-
-          if (!scrapedFightKeys.has(key)) {
-            // Fight exists in DB but not in scraped data = cancelled
-            await tx.fight.update({
-              where: { id: existingFight.id },
-              data: {
-                cancelled: true,
-                lastScrapedAt: new Date(),
-              },
-            })
-            fightsCancelled++
-            console.log(`Marked fight as cancelled: ${existingFight.id}`)
-          }
-        }
-      }
     })
 
     // Create scrape log
@@ -430,7 +359,6 @@ async function upsertScrapedData(data: any) {
         eventsFound: data.events.length,
         fightsAdded,
         fightsUpdated,
-        fightsCancelled,
         fightersAdded,
       },
     })
@@ -447,7 +375,6 @@ async function upsertScrapedData(data: any) {
         eventsFound: data.events.length,
         fightsAdded,
         fightsUpdated,
-        fightsCancelled,
         fightersAdded,
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
       },

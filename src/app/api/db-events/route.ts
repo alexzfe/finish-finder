@@ -27,9 +27,6 @@ export async function GET() {
       },
       include: {
         fights: {
-          where: {
-            cancelled: false  // Exclude cancelled fights
-          },
           include: {
             fighter1: true,
             fighter2: true,
