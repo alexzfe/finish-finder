@@ -155,6 +155,8 @@ model Fight {
   fighter2            Fighter     @relation("Fighter2", fields: [fighter2Id], references: [id])
   predictions         Prediction[] // New AI prediction system
 
+  // Prevent duplicate fights for same event and fighter pairing
+  @@unique([eventId, fighter1Id, fighter2Id])
   @@map("fights")
 }
 

@@ -270,8 +270,15 @@ async function upsertScrapedData(data: any) {
           continue
         }
 
+        // Use composite unique key to find existing fight
         const existing = await tx.fight.findUnique({
-          where: { sourceUrl: fight.sourceUrl },
+          where: {
+            eventId_fighter1Id_fighter2Id: {
+              eventId: event.id,
+              fighter1Id: fighter1.id,
+              fighter2Id: fighter2.id,
+            },
+          },
         })
 
         if (!existing) {
@@ -301,7 +308,7 @@ async function upsertScrapedData(data: any) {
         } else if (existing.contentHash !== contentHash) {
           // Update existing fight (including outcome data when fight completes)
           await tx.fight.update({
-            where: { sourceUrl: fight.sourceUrl },
+            where: { id: existing.id },
             data: {
               weightClass: fight.weightClass ?? existing.weightClass,
               titleFight: fight.titleFight ?? existing.titleFight,
