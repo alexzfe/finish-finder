@@ -185,7 +185,9 @@ async function findFightsNeedingPredictions(
   versionId: string,
   args: Args
 ): Promise<FightWithRelations[]> {
-  const whereConditions: Record<string, unknown> = {}
+  const whereConditions: Record<string, unknown> = {
+    cancelled: false,  // Exclude cancelled fights
+  }
 
   // Filter by event ID if specified, otherwise filter by upcoming events
   if (args.eventId) {
