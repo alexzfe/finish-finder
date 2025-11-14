@@ -51,10 +51,18 @@ if ufc_losses > 0:
 
 Example: Fighter with 5 career losses but only 3 UFC losses (2 KO, 1 SUB) → 100% loss finish rate (highly vulnerable).
 
+## Scraper Behavior
+
+The scraper (`ufc_scraper/spiders/ufcstats.py`) scrapes both upcoming and completed events:
+- **Upcoming events**: All events (or limited by `limit` parameter)
+- **Completed events**: 2 most recent events (enabled by default via `include_completed=true`)
+
+Completed events provide fight outcome data for cancelled fight detection and reconciliation.
+
 ## Integration Points
 
-- **Ingestion API**: `/api/internal/ingest` validates and stores scraped data
-- **GitHub Actions**: `.github/workflows/scraper.yml` runs daily at 2 AM UTC
+- **Ingestion API**: `/api/internal/ingest` validates and stores scraped data, performs scoped reconciliation to mark cancelled fights
+- **GitHub Actions**: `.github/workflows/scraper.yml` runs daily at 2 AM UTC with `include_completed=true` default
 - **Database**: Prisma models (Fighter, Event, Fight) receive scraped data
 
 ---

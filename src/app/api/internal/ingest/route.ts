@@ -302,13 +302,29 @@ async function upsertScrapedData(data: any) {
         // IMPORTANT: Always convert winnerId, even if fighters aren't swapped
         let normalizedWinnerId = fight.winnerId;
         if (fight.winnerId) {
+          // DEBUG: Log comparison values
+          console.log('[WINNER_ID_DEBUG]', {
+            winnerId: fight.winnerId,
+            fighter1Id: fight.fighter1Id,
+            fighter2Id: fight.fighter2Id,
+            swapped,
+            fighter1DbId: fighter1.id,
+            fighter2DbId: fighter2.id,
+            match1: fight.winnerId === fight.fighter1Id,
+            match2: fight.winnerId === fight.fighter2Id
+          });
+
           // Find which fighter won based on scraper IDs
           if (fight.winnerId === fight.fighter1Id) {
             // Winner is fighter1 (or fighter2 if swapped)
             normalizedWinnerId = swapped ? fighter2.id : fighter1.id;
+            console.log('[WINNER_ID_DEBUG] Matched fighter1, normalized to:', normalizedWinnerId);
           } else if (fight.winnerId === fight.fighter2Id) {
             // Winner is fighter2 (or fighter1 if swapped)
             normalizedWinnerId = swapped ? fighter1.id : fighter2.id;
+            console.log('[WINNER_ID_DEBUG] Matched fighter2, normalized to:', normalizedWinnerId);
+          } else {
+            console.log('[WINNER_ID_DEBUG] NO MATCH! winnerId not converted');
           }
         }
 
