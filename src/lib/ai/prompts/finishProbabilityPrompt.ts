@@ -22,6 +22,11 @@ export interface FighterFinishStats {
   strikingDefensePercentage: number            // % of strikes avoided - higher = better
   takedownDefensePercentage: number            // % of takedowns defended
 
+  // Loss finish vulnerability (CRITICAL for defense assessment)
+  lossFinishRate: number                       // % of losses by finish (KO + SUB) - higher = vulnerable
+  koLossPercentage: number                     // % of losses by KO/TKO - indicates chin durability
+  submissionLossPercentage: number             // % of losses by submission - indicates grappling defense
+
   // Offensive finish metrics
   finishRate: number                           // % of wins by finish (KO + SUB)
   koPercentage: number                         // % of wins by KO/TKO
@@ -127,8 +132,12 @@ Defensive Metrics (Durability):
 - Striking Defense %: ${(fighter1.strikingDefensePercentage * 100).toFixed(1)}% (higher = better at avoiding damage)
 - Takedown Defense %: ${(fighter1.takedownDefensePercentage * 100).toFixed(1)}%
 
+🚨 LOSS FINISH VULNERABILITY (CRITICAL FOR PREDICTIONS):
+- UFC Loss Finish Rate: ${(fighter1.lossFinishRate * 100).toFixed(1)}% (${(fighter1.koLossPercentage * 100).toFixed(1)}% KO losses, ${(fighter1.submissionLossPercentage * 100).toFixed(1)}% SUB losses)
+  → ${fighter1.lossFinishRate >= 0.6 ? '⚠️ HIGH vulnerability - frequently finished in the UFC' : fighter1.lossFinishRate >= 0.3 ? 'MODERATE vulnerability' : 'LOW vulnerability - durable'}
+
 Offensive Finish Metrics:
-- Finish Rate: ${(fighter1.finishRate * 100).toFixed(1)}% (${(fighter1.koPercentage * 100).toFixed(1)}% KO, ${(fighter1.submissionPercentage * 100).toFixed(1)}% SUB)
+- UFC Finish Rate: ${(fighter1.finishRate * 100).toFixed(1)}% (${(fighter1.koPercentage * 100).toFixed(1)}% KO, ${(fighter1.submissionPercentage * 100).toFixed(1)}% SUB)
 - Significant Strikes Landed per Minute: ${fighter1.significantStrikesLandedPerMinute.toFixed(2)}
 - Submission Attempts per 15 min: ${fighter1.submissionAverage.toFixed(2)}
 ${fighter1.last3Finishes !== undefined ? `- Last 3 Fights: ${fighter1.last3Finishes} finishes` : ''}
@@ -141,8 +150,12 @@ Defensive Metrics (Durability):
 - Striking Defense %: ${(fighter2.strikingDefensePercentage * 100).toFixed(1)}% (higher = better at avoiding damage)
 - Takedown Defense %: ${(fighter2.takedownDefensePercentage * 100).toFixed(1)}%
 
+🚨 LOSS FINISH VULNERABILITY (CRITICAL FOR PREDICTIONS):
+- UFC Loss Finish Rate: ${(fighter2.lossFinishRate * 100).toFixed(1)}% (${(fighter2.koLossPercentage * 100).toFixed(1)}% KO losses, ${(fighter2.submissionLossPercentage * 100).toFixed(1)}% SUB losses)
+  → ${fighter2.lossFinishRate >= 0.6 ? '⚠️ HIGH vulnerability - frequently finished in the UFC' : fighter2.lossFinishRate >= 0.3 ? 'MODERATE vulnerability' : 'LOW vulnerability - durable'}
+
 Offensive Finish Metrics:
-- Finish Rate: ${(fighter2.finishRate * 100).toFixed(1)}% (${(fighter2.koPercentage * 100).toFixed(1)}% KO, ${(fighter2.submissionPercentage * 100).toFixed(1)}% SUB)
+- UFC Finish Rate: ${(fighter2.finishRate * 100).toFixed(1)}% (${(fighter2.koPercentage * 100).toFixed(1)}% KO, ${(fighter2.submissionPercentage * 100).toFixed(1)}% SUB)
 - Significant Strikes Landed per Minute: ${fighter2.significantStrikesLandedPerMinute.toFixed(2)}
 - Submission Attempts per 15 min: ${fighter2.submissionAverage.toFixed(2)}
 ${fighter2.last3Finishes !== undefined ? `- Last 3 Fights: ${fighter2.last3Finishes} finishes` : ''}
@@ -151,25 +164,32 @@ ${recentContextSection}
 
 ANALYSIS FRAMEWORK (4 Steps):
 
-Step 1 - Compare Defensive Metrics:
-- Which fighter is more durable? (lower strikes absorbed, higher defense %)
-- Which fighter is more vulnerable to being finished?
+Step 1 - Assess Defensive Vulnerability (MOST CRITICAL):
+- 🚨 START HERE: Check loss finish rates - this is the PRIMARY vulnerability indicator
+  * 60%+ loss finish rate = HIGH vulnerability (frequently finished when losing)
+  * 30-59% = MODERATE vulnerability (average durability)
+  * <30% = LOW vulnerability (durable, hard to finish)
+- Match offensive strengths vs defensive weaknesses (e.g., KO artist vs 70% KO loss rate = danger)
+- Secondary: Compare strikes absorbed and defense percentages
 - Weight recent form if available
 
-Step 2 - Compare Finish Rates:
+Step 2 - Compare Offensive Finish Rates:
 - Which fighter has a higher finish rate historically?
 - Are they finishers via KO or submission?
-- Do their offensive styles match defensive vulnerabilities?
+- CRITICAL: Does their finish method align with opponent's vulnerability? (KO power vs high KO loss rate)
+- High offensive finish rate + high defensive vulnerability in opponent = STRONG finish probability
 
 Step 3 - Adjust for Weight Class Baseline:
 - This weight class has a ${(weightClassRates.finishRate * 100).toFixed(1)}% base finish rate
 - Should this specific matchup be higher or lower than baseline?
 - Consider if both fighters are durable grapplers (lower) or aggressive strikers (higher)
+- Factor in if one fighter is significantly more vulnerable than average for the weight class
 
 Step 4 - Final Assessment:
 - Synthesize all factors into a single finish probability
 - Account for style matchup (striker vs wrestler, etc.)
 - Consider if betting odds suggest a mismatch (blowouts often end early)
+- REMEMBER: A single highly vulnerable fighter paired with a strong finisher should push probability significantly higher
 
 OUTPUT (JSON only, no markdown):
 {
@@ -187,10 +207,12 @@ IMPORTANT - ANALYSIS STYLE:
 - Write conversationally with some personality, but stay professional
 - Reference stats naturally in your analysis: "With 5.2 strikes absorbed per minute and only 52% defense, he's vulnerable"
 - Be engaging but credible: Blend data with readable insights
+- CRITICAL: When mentioning finish rates or loss finish rates, specify "UFC" to avoid confusion (e.g., "100% UFC finish rate" not just "100% finish rate")
 - Examples of good phrasing:
   - "Absorbing 5+ strikes per minute with just 52% defense makes him a finish candidate"
   - "Both fighters favor offense over defense, which tends to produce exciting exchanges"
-  - "The 65% baseline finish rate will likely be exceeded given both fighters finish over 75% of their wins"
+  - "The 65% baseline finish rate will likely be exceeded given both fighters finish over 75% of their UFC wins"
+  - "His 100% UFC loss finish rate shows he's been finished in every UFC loss, indicating high vulnerability"
 
 IMPORTANT - TECHNICAL ACCURACY:
 - Be realistic: Most fights end in decisions, so probabilities >0.7 should be rare

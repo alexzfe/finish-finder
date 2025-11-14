@@ -193,15 +193,15 @@ EVENT: ${context.eventName}
 WEIGHT CLASS: ${context.weightClass}
 
 FIGHTER 1: ${fighter1.name} (${fighter1.record}) - ${fighter1.primaryStyle.toUpperCase()}
-- Finish Rate: ${(fighter1.finishRate * 100).toFixed(1)}% (${(fighter1.koPercentage * 100).toFixed(1)}% KO, ${(fighter1.submissionPercentage * 100).toFixed(1)}% SUB)
-- Decision Rate: ${f1DecisionRate}% of wins
+- UFC Finish Rate: ${(fighter1.finishRate * 100).toFixed(1)}% (${(fighter1.koPercentage * 100).toFixed(1)}% KO, ${(fighter1.submissionPercentage * 100).toFixed(1)}% SUB)
+- Decision Rate: ${f1DecisionRate}% of UFC wins
 - Sig Strikes/min: ${fighter1.significantStrikesLandedPerMinute.toFixed(2)} | Absorbed/min: ${fighter1.significantStrikesAbsorbedPerMinute.toFixed(2)}
 - Takedowns/15min: ${fighter1.takedownAverage.toFixed(2)} | Submission Attempts/15min: ${fighter1.submissionAverage.toFixed(2)}
 - Avg Fight Time: ${Math.floor(fighter1.averageFightTimeSeconds / 60)}:${(fighter1.averageFightTimeSeconds % 60).toString().padStart(2, '0')}
 
 FIGHTER 2: ${fighter2.name} (${fighter2.record}) - ${fighter2.primaryStyle.toUpperCase()}
-- Finish Rate: ${(fighter2.finishRate * 100).toFixed(1)}% (${(fighter2.koPercentage * 100).toFixed(1)}% KO, ${(fighter2.submissionPercentage * 100).toFixed(1)}% SUB)
-- Decision Rate: ${f2DecisionRate}% of wins
+- UFC Finish Rate: ${(fighter2.finishRate * 100).toFixed(1)}% (${(fighter2.koPercentage * 100).toFixed(1)}% KO, ${(fighter2.submissionPercentage * 100).toFixed(1)}% SUB)
+- Decision Rate: ${f2DecisionRate}% of UFC wins
 - Sig Strikes/min: ${fighter2.significantStrikesLandedPerMinute.toFixed(2)} | Absorbed/min: ${fighter2.significantStrikesAbsorbedPerMinute.toFixed(2)}
 - Takedowns/15min: ${fighter2.takedownAverage.toFixed(2)} | Submission Attempts/15min: ${fighter2.submissionAverage.toFixed(2)}
 - Avg Fight Time: ${Math.floor(fighter2.averageFightTimeSeconds / 60)}:${(fighter2.averageFightTimeSeconds % 60).toString().padStart(2, '0')}
@@ -232,9 +232,10 @@ KEY FACTORS - SYNTHESIZE, DON'T CHECKLIST
 Identify the 2-3 MOST IMPORTANT factors that define THIS specific matchup:
 
 1. **FINISHING POTENTIAL** (Most Important)
-   - Combined finish rate: ${avgFinishRate.toFixed(1)}%
+   - Combined UFC finish rate: ${avgFinishRate.toFixed(1)}%
    - GUIDELINES: 60%+ = Elite finishers (18-20pts), 40-59% = Solid (12-15pts), <30% = Decision-prone (5-8pts)
    - Consider KO power, submission threats, killer instinct
+   - NOTE: All finish rates are UFC-only statistics, not career totals
 
 2. **PACE & PRESSURE** (Only mention if exceptional!)
    - Combined strikes/min: ${combinedStrikeRate.toFixed(1)}
@@ -284,21 +285,22 @@ PENALTIES (negative):
   penalties: Low action (-15), decision-heavy (-10), control-heavy wrestling (-10)
 
 ═══════════════════════════════════════════════════════════════════
-REASONING INSTRUCTIONS - WRITE AN ENGAGING NARRATIVE
+REASONING INSTRUCTIONS - WRITE A PUNCHY, ENGAGING NARRATIVE
 ═══════════════════════════════════════════════════════════════════
 
-Your "reasoning" field (3-4 sentences) must:
-✓ Start with the MOST EXCITING aspect of this specific matchup
-✓ Weave a compelling narrative - DO NOT just list stats
-✓ Only mention statistics if they're exceptional or directly relevant to your main point
+Your "reasoning" field (2-3 concise sentences) must:
+✓ Start with the MOST EXCITING aspect - hook the reader immediately
+✓ Be direct and punchy - every word counts
+✓ Only mention statistics if they're exceptional or directly drive your point
 ✓ Write like an expert analyst for knowledgeable fans
 ✓ Be specific to THIS fight - avoid generic phrases
+✓ CRITICAL: When mentioning finish rates, specify "UFC" to avoid confusion (e.g., "80% UFC finish rate" not just "80% finish rate")
 
-❌ BORING (generic, stat-focused):
+❌ BORING (wordy, stat-focused):
   "Both fighters average 6 strikes per minute, suggesting a high-paced fight. With finish rates around 50%, there's potential for a stoppage. The striker vs grappler dynamic could be interesting."
 
-✅ EXCELLENT (specific, narrative-driven):
-  "This is a classic power vs technique matchup. Pereira's legendary knockout power (80% KO rate) makes every exchange potentially fight-ending, while Adesanya's defensive wizardry and counter-striking present a legitimate puzzle. The title stakes and their rivalry history elevate this from a technical chess match to must-see TV."
+✅ EXCELLENT (punchy, narrative-driven):
+  "Pereira's legendary knockout power (80% UFC KO rate) makes every exchange fight-ending, while Adesanya's defensive wizardry presents a legitimate puzzle. Title stakes and rivalry history elevate this from technical chess match to must-see TV."
 
 OUTPUT (JSON only, no markdown):
 {
@@ -311,7 +313,7 @@ OUTPUT (JSON only, no markdown):
     "styleMatchupScore": <float 0-20>,
     "contextBonus": <float 0-10>,
     "penalties": <float, negative or 0>,
-    "reasoning": "<3-4 compelling sentences starting with the most exciting aspect>"
+    "reasoning": "<2-3 punchy sentences starting with the most exciting aspect>"
   }
 }
 

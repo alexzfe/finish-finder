@@ -424,7 +424,12 @@ async function upsertScrapedData(data: any) {
 
           // Mark fights as cancelled if they're in DB but not in scraped data
           for (const dbFight of dbFights) {
-            const dbFightKey = `${dbFight.eventId}:${dbFight.fighter1Id}:${dbFight.fighter2Id}`
+            // Normalize fighter order to match how scraped keys are built
+            const [normalizedDbFighter1Id, normalizedDbFighter2Id] = [
+              dbFight.fighter1Id,
+              dbFight.fighter2Id,
+            ].sort()
+            const dbFightKey = `${dbFight.eventId}:${normalizedDbFighter1Id}:${normalizedDbFighter2Id}`
 
             if (!scrapedFightKeys.has(dbFightKey)) {
               await tx.fight.update({
