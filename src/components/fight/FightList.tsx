@@ -133,6 +133,17 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
     const isActive = selectedFight?.id === fight.id
     const funScore = fight.predictedFunScore || 0
 
+    // Debug logging for completed fights
+    if (fight.completed && fight.winnerId) {
+      console.log('Fight:', fight.fighter1?.name, 'vs', fight.fighter2?.name)
+      console.log('winnerId:', fight.winnerId, typeof fight.winnerId)
+      console.log('fighter1.id:', fight.fighter1?.id, typeof fight.fighter1?.id)
+      console.log('fighter2.id:', fight.fighter2?.id, typeof fight.fighter2?.id)
+      console.log('Matches F1?', fight.winnerId === fight.fighter1?.id)
+      console.log('Matches F2?', fight.winnerId === fight.fighter2?.id)
+      console.log('---')
+    }
+
     return (
       <div
         key={fight.id}
