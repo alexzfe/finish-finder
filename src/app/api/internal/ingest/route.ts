@@ -298,14 +298,17 @@ async function upsertScrapedData(data: any) {
           })
         }
 
-        // Normalize winnerId if we swapped fighters
+        // Resolve winnerId from scraper ID to database CUID
+        // IMPORTANT: Always convert winnerId, even if fighters aren't swapped
         let normalizedWinnerId = fight.winnerId;
-        if (swapped && fight.winnerId) {
-          // Winner was originally fighter1 but now it's fighter2, or vice versa
+        if (fight.winnerId) {
+          // Find which fighter won based on scraper IDs
           if (fight.winnerId === fight.fighter1Id) {
-            normalizedWinnerId = fighter2.id;
+            // Winner is fighter1 (or fighter2 if swapped)
+            normalizedWinnerId = swapped ? fighter2.id : fighter1.id;
           } else if (fight.winnerId === fight.fighter2Id) {
-            normalizedWinnerId = fighter1.id;
+            // Winner is fighter2 (or fighter1 if swapped)
+            normalizedWinnerId = swapped ? fighter1.id : fighter2.id;
           }
         }
 

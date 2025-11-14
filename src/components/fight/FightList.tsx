@@ -133,17 +133,6 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
     const isActive = selectedFight?.id === fight.id
     const funScore = fight.predictedFunScore || 0
 
-    // Debug logging for completed fights
-    if (fight.completed && fight.winnerId) {
-      console.log('Fight:', fight.fighter1?.name, 'vs', fight.fighter2?.name)
-      console.log('winnerId:', fight.winnerId, typeof fight.winnerId)
-      console.log('fighter1.id:', fight.fighter1?.id, typeof fight.fighter1?.id)
-      console.log('fighter2.id:', fight.fighter2?.id, typeof fight.fighter2?.id)
-      console.log('Matches F1?', fight.winnerId === fight.fighter1?.id)
-      console.log('Matches F2?', fight.winnerId === fight.fighter2?.id)
-      console.log('---')
-    }
-
     return (
       <div
         key={fight.id}
@@ -188,11 +177,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
                 size="md"
               />
               <div className="min-w-0 flex-1">
-                <div className={`ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center gap-1.5 ${
-                  fight.completed && fight.winnerId && fight.winnerId === fight.fighter1?.id
-                    ? 'text-[var(--ufc-red)] font-bold'
-                    : 'text-white'
-                }`} style={!fight.completed || !fight.winnerId || fight.winnerId !== fight.fighter1?.id ? getFunScoreStyle(funScore) : undefined}>
+                <div className="ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center gap-1.5 text-white" style={getFunScoreStyle(funScore)}>
                   {fight.fighter1?.name || 'TBD'}
                   {fight.completed && fight.winnerId && fight.winnerId === fight.fighter1?.id && (
                     <span className="text-[var(--ufc-red)]">✓</span>
@@ -212,11 +197,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
             {/* Fighter 2 */}
             <div className="flex flex-1 items-center justify-end space-x-2 sm:space-x-3">
               <div className="min-w-0 flex-1 text-right">
-                <div className={`ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center justify-end gap-1.5 ${
-                  fight.completed && fight.winnerId && fight.winnerId === fight.fighter2?.id
-                    ? 'text-[var(--ufc-red)] font-bold'
-                    : 'text-white'
-                }`} style={!fight.completed || !fight.winnerId || fight.winnerId !== fight.fighter2?.id ? getFunScoreStyle(funScore) : undefined}>
+                <div className="ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center justify-end gap-1.5 text-white" style={getFunScoreStyle(funScore)}>
                   {fight.completed && fight.winnerId && fight.winnerId === fight.fighter2?.id && (
                     <span className="text-[var(--ufc-red)]">✓</span>
                   )}
