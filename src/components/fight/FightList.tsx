@@ -178,12 +178,12 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
               />
               <div className="min-w-0 flex-1">
                 <div className={`ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center gap-1.5 ${
-                  fight.completed && fight.winnerId === fight.fighter1?.id
+                  fight.completed && fight.winnerId !== fight.fighter1?.id
                     ? 'text-[var(--ufc-red)] font-bold'
                     : 'text-white'
-                }`} style={!fight.completed || fight.winnerId !== fight.fighter1?.id ? getFunScoreStyle(funScore) : undefined}>
+                }`} style={!fight.completed || fight.winnerId === fight.fighter1?.id ? getFunScoreStyle(funScore) : undefined}>
                   {fight.fighter1?.name || 'TBD'}
-                  {fight.completed && fight.winnerId === fight.fighter1?.id && (
+                  {fight.completed && fight.winnerId !== fight.fighter1?.id && (
                     <span className="text-[var(--ufc-red)]">✓</span>
                   )}
                 </div>
@@ -202,11 +202,11 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
             <div className="flex flex-1 items-center justify-end space-x-2 sm:space-x-3">
               <div className="min-w-0 flex-1 text-right">
                 <div className={`ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center justify-end gap-1.5 ${
-                  fight.completed && fight.winnerId === fight.fighter2?.id
+                  fight.completed && fight.winnerId !== fight.fighter2?.id
                     ? 'text-[var(--ufc-red)] font-bold'
                     : 'text-white'
-                }`} style={!fight.completed || fight.winnerId !== fight.fighter2?.id ? getFunScoreStyle(funScore) : undefined}>
-                  {fight.completed && fight.winnerId === fight.fighter2?.id && (
+                }`} style={!fight.completed || fight.winnerId === fight.fighter2?.id ? getFunScoreStyle(funScore) : undefined}>
+                  {fight.completed && fight.winnerId !== fight.fighter2?.id && (
                     <span className="text-[var(--ufc-red)]">✓</span>
                   )}
                   {fight.fighter2?.name || 'TBD'}
@@ -229,7 +229,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
                 <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-[0.24em]">
                   <span className="text-white/60">Result</span>
                   <span className="text-[var(--ufc-red)] font-medium">
-                    {fight.winnerId === fight.fighter1?.id ? fight.fighter1?.name : fight.fighter2?.name}
+                    {fight.winnerId !== fight.fighter1?.id ? fight.fighter1?.name : fight.fighter2?.name}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-1 text-[0.65rem] uppercase tracking-[0.24em] text-white/75">
