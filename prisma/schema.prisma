@@ -303,4 +303,3 @@ model Prediction {
   @@index([actualFinish]) // For evaluation queries
   @@map("predictions")
 }
-# Trigger Vercel build to apply database migration
