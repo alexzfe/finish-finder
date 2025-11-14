@@ -281,7 +281,7 @@ async function upsertScrapedData(data: any) {
         const swapped = normalizedFighter1Id !== fighter1.id;
 
         // Use composite unique key to find existing fight (with normalized order)
-        const existing = await tx.fight.findUnique({
+        let existing = await tx.fight.findUnique({
           where: {
             eventId_fighter1Id_fighter2Id: {
               eventId: event.id,
@@ -290,6 +290,13 @@ async function upsertScrapedData(data: any) {
             },
           },
         })
+
+        // Fallback: Also check by sourceUrl (handles fights created before normalization)
+        if (!existing && fight.sourceUrl) {
+          existing = await tx.fight.findUnique({
+            where: { sourceUrl: fight.sourceUrl },
+          })
+        }
 
         // Normalize winnerId if we swapped fighters
         let normalizedWinnerId = fight.winnerId;
