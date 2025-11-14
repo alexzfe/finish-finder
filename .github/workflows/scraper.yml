@@ -14,10 +14,10 @@ on:
         type: string
         default: ''
       include_completed:
-        description: 'Also scrape 3 most recent completed events with outcomes (true/false)'
+        description: 'Also scrape 2 most recent completed events with outcomes (true/false)'
         required: false
         type: boolean
-        default: false
+        default: true
 
 jobs:
   scrape-ufcstats:
@@ -61,7 +61,7 @@ jobs:
 
           if [ "${{ github.event.inputs.include_completed }}" = "true" ]; then
             CMD="$CMD -a include_completed=true"
-            echo "📊 Including 3 most recent completed events with outcomes"
+            echo "📊 Including 2 most recent completed events with outcomes"
           else
             echo "⏰ Upcoming events only"
           fi

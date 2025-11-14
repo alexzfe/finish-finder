@@ -17,19 +17,19 @@ class UFCStatsSpider(scrapy.Spider):
 
     Start URLs:
         - http://ufcstats.com/statistics/events/upcoming (always scraped)
-        - http://ufcstats.com/statistics/events/completed (optional, limited to 3 most recent)
+        - http://ufcstats.com/statistics/events/completed (enabled by default, limited to 2 most recent)
 
     Scrapes UFC events from UFCStats.com with full fight outcome data.
 
     Spider arguments:
         limit (int): Limit number of UPCOMING events to scrape (optional, defaults to all upcoming)
                      Usage: scrapy crawl ufcstats -a limit=5
-        include_completed (str): Also scrape 3 most recent completed events with outcomes
+        include_completed (str): Also scrape 2 most recent completed events with outcomes
                                  Values: 'true', '1', 'yes'
                                  Usage: scrapy crawl ufcstats -a include_completed=true
 
     Note:
-        Completed events are ALWAYS limited to 3 most recent to avoid excessive scraping.
+        Completed events are ALWAYS limited to 2 most recent to avoid excessive scraping.
         The 'limit' parameter only applies to upcoming events.
     """
 
@@ -92,9 +92,9 @@ class UFCStatsSpider(scrapy.Spider):
 
         # Apply limits
         if event_type == 'completed':
-            # Always limit completed events to 3 most recent
-            events = events[:3]
-            self.logger.info(f"Limiting completed events to 3 most recent")
+            # Always limit completed events to 2 most recent
+            events = events[:2]
+            self.logger.info(f"Limiting completed events to 2 most recent")
         elif self.limit:
             # Apply user-specified limit to upcoming events
             self.logger.info(f"Limiting upcoming events to {self.limit}")
