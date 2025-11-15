@@ -1,16 +1,20 @@
-name: AI Predictions Generator
+name: AI Predictions Generator (v2 - Improved Web Search)
 
 on:
   schedule:
-    - cron: '30 1 * * *'  # Run daily at 1:30 AM UTC (different from scraper)
+    - cron: '30 1 * * *'  # Run daily at 1:30 AM UTC (after scraper at 12:00 AM)
   workflow_dispatch:        # Allow manual trigger
     inputs:
-      batch_size:
-        description: 'OpenAI batch size (default: 6)'
+      ai_provider:
+        description: 'AI Provider to use (openai or anthropic)'
         required: false
-        default: '6'
-      force_regenerate:
-        description: 'Force regenerate existing predictions'
+        default: 'openai'
+        type: choice
+        options:
+          - 'openai'
+          - 'anthropic'
+      no_web_search:
+        description: 'Disable web search enrichment'
         required: false
         default: 'false'
         type: choice
@@ -44,21 +48,39 @@ jobs:
         env:
           # AI-specific environment variables
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BRAVE_SEARCH_API_KEY: ${{ secrets.BRAVE_SEARCH_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          OPENAI_PREDICTION_CHUNK_SIZE: ${{ github.event.inputs.batch_size || '6' }}
+
+          # AI provider (openai or anthropic)
+          AI_PROVIDER: ${{ github.event.inputs.ai_provider || 'openai' }}
 
           # Monitoring and logging
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-
-          # Force regeneration flag
-          FORCE_REGENERATE_PREDICTIONS: ${{ github.event.inputs.force_regenerate || 'false' }}
         run: |
-          node scripts/ai-predictions-runner.js
+          # Run the new AI predictions runner with improved web search
+          if [ "${{ github.event.inputs.no_web_search }}" = "true" ]; then
+            echo "Running with web search disabled..."
+            npx ts-node scripts/new-ai-predictions-runner.ts --no-web-search
+          else
+            echo "Running with improved web search enabled..."
+            npx ts-node scripts/new-ai-predictions-runner.ts
+          fi
 
       - name: Check AI predictions health (if failed)
         if: failure()
         run: |
-          echo "AI predictions failed. Check logs above for details."
-          echo "Common issues: OpenAI API rate limits, database connection, or invalid fight data."
-          echo "Rerun manually with smaller batch size if needed."
+          echo "❌ AI predictions failed. Check logs above for details."
+          echo ""
+          echo "Common issues:"
+          echo "  - API rate limits (OpenAI/Anthropic/Brave Search)"
+          echo "  - Database connection issues"
+          echo "  - Missing API keys in secrets"
+          echo "  - Invalid fight data"
+          echo ""
+          echo "To debug:"
+          echo "  1. Check if BRAVE_SEARCH_API_KEY secret is set"
+          echo "  2. Verify DATABASE_URL is correct"
+          echo "  3. Check API provider key (OPENAI_API_KEY or ANTHROPIC_API_KEY)"
+          echo "  4. Review rate limits on your API keys"
