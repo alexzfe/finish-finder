@@ -291,7 +291,20 @@ async function upsertScrapedData(data: any) {
           },
         })
 
-        // Fallback: Also check by sourceUrl (handles fights created before normalization)
+        // Fallback 1: Check REVERSED order (handles fights created before normalization)
+        if (!existing) {
+          existing = await tx.fight.findUnique({
+            where: {
+              eventId_fighter1Id_fighter2Id: {
+                eventId: event.id,
+                fighter1Id: normalizedFighter2Id,  // Reversed
+                fighter2Id: normalizedFighter1Id,  // Reversed
+              },
+            },
+          })
+        }
+
+        // Fallback 2: Check by sourceUrl
         if (!existing && fight.sourceUrl) {
           existing = await tx.fight.findUnique({
             where: { sourceUrl: fight.sourceUrl },
