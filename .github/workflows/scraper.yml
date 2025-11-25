@@ -14,10 +14,15 @@ on:
         type: string
         default: ''
       include_completed:
-        description: 'Also scrape 2 most recent completed events with outcomes (true/false)'
+        description: 'Also scrape completed events with outcomes (true/false)'
         required: false
         type: boolean
         default: true
+      completed_limit:
+        description: 'Number of completed events to scrape (default: 2)'
+        required: false
+        type: string
+        default: '2'
 
 jobs:
   scrape-ufcstats:
@@ -62,9 +67,17 @@ jobs:
           # For scheduled runs, github.event.inputs is empty, so default to including completed events
           # For manual runs, respect the user's choice (defaults to true in workflow_dispatch)
           INCLUDE_COMPLETED="${{ github.event.inputs.include_completed }}"
+          COMPLETED_LIMIT="${{ github.event.inputs.completed_limit }}"
+
           if [ -z "$INCLUDE_COMPLETED" ] || [ "$INCLUDE_COMPLETED" = "true" ]; then
             CMD="$CMD -a include_completed=true"
-            echo "📊 Including 2 most recent completed events with outcomes"
+            # Use provided limit or default to 2
+            if [ -n "$COMPLETED_LIMIT" ] && [ "$COMPLETED_LIMIT" != "2" ]; then
+              CMD="$CMD -a completed_limit=$COMPLETED_LIMIT"
+              echo "📊 Including $COMPLETED_LIMIT most recent completed events with outcomes"
+            else
+              echo "📊 Including 2 most recent completed events with outcomes"
+            fi
           else
             echo "⏰ Upcoming events only"
           fi

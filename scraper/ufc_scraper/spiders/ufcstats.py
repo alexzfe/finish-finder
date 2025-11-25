@@ -36,11 +36,13 @@ class UFCStatsSpider(scrapy.Spider):
     name = "ufcstats"
     allowed_domains = ["ufcstats.com"]
 
-    def __init__(self, limit=None, include_completed=None, *args, **kwargs):
+    def __init__(self, limit=None, include_completed=None, completed_limit=None, *args, **kwargs):
         super(UFCStatsSpider, self).__init__(*args, **kwargs)
         self.limit = int(limit) if limit else None
         # Parse include_completed as boolean
         self.include_completed = include_completed in ['true', '1', 'yes', 'True', 'Yes']
+        # Completed events limit (default 2)
+        self.completed_limit = int(completed_limit) if completed_limit else 2
         self.events_scraped = 0
 
     def start_requests(self):
@@ -92,9 +94,9 @@ class UFCStatsSpider(scrapy.Spider):
 
         # Apply limits
         if event_type == 'completed':
-            # Always limit completed events to 2 most recent
-            events = events[:2]
-            self.logger.info(f"Limiting completed events to 2 most recent")
+            # Limit completed events (default 2, configurable via completed_limit)
+            events = events[:self.completed_limit]
+            self.logger.info(f"Limiting completed events to {self.completed_limit} most recent")
         elif self.limit:
             # Apply user-specified limit to upcoming events
             self.logger.info(f"Limiting upcoming events to {self.limit}")
