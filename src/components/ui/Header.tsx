@@ -12,7 +12,7 @@ export function Header() {
           href={`${basePath}/`}
           className="inline-block transition-transform duration-150 hover:-translate-y-0.5"
         >
-          <h1 className="ufc-condensed text-xl text-white">Finish Finder</h1>
+          <h1 className="ufc-condensed text-xl text-white border-b-2 border-[var(--ufc-red)] pb-1">Finish Finder</h1>
         </a>
       </div>
     </header>
