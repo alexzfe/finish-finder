@@ -339,12 +339,11 @@ def main():
             probabilities = model.predict_proba(X)[0].tolist()
             confidence = max(probabilities)
 
-            # Tier 5 threshold adjustment: FOTN is rare (1.3%), so model is conservative.
-            # Promote to Tier 5 if T5 probability >= 4% (captures top action fights)
-            T5_PROMOTION_THRESHOLD = 0.04
-            if probabilities[4] >= T5_PROMOTION_THRESHOLD:
-                tier = 5
-                confidence = probabilities[4]
+            # NOTE: Tier 5 threshold adjustment considered but deferred.
+            # FOTN is rare (1.3%), so model is conservative - currently 0 T5 predictions.
+            # Option: Promote to T5 if probabilities[4] >= 0.04 (would capture ~5 fights)
+            # Decision: Wait until fun score calculations are finalized before adjusting.
+            # See: Pimblett vs Gaethje has 5.4% T5 prob but gets T4 currently.
 
             # Update database
             update_fight_ml_tier(conn, fight['id'], tier, confidence, probabilities)
