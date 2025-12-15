@@ -339,6 +339,13 @@ def main():
             probabilities = model.predict_proba(X)[0].tolist()
             confidence = max(probabilities)
 
+            # Tier 5 threshold adjustment: FOTN is rare (1.3%), so model is conservative.
+            # Promote to Tier 5 if T5 probability >= 4% (captures top action fights)
+            T5_PROMOTION_THRESHOLD = 0.04
+            if probabilities[4] >= T5_PROMOTION_THRESHOLD:
+                tier = 5
+                confidence = probabilities[4]
+
             # Update database
             update_fight_ml_tier(conn, fight['id'], tier, confidence, probabilities)
             processed += 1
