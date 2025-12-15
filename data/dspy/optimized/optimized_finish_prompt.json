@@ -1,0 +1,29 @@
+{
+  "signature": "Predict the probability that an MMA fight ends in a finish (KO/TKO/Submission) rather than a decision.\n\nAnalyze the fighters' offensive finishing ability and defensive durability to predict finish likelihood.\n",
+  "demos": [
+    {
+      "fighter1_context": "Yair Rodriguez (11-4-0)",
+      "fighter2_context": "Brian Ortega (8-5-0)",
+      "weight_class": "Featherweight Bout",
+      "reasoning": "1) **Defensive comparison**: Yair Rodriguez has demonstrated solid defensive skills, utilizing his reach and movement effectively to evade strikes. Brian Ortega, while known for his durability, has also absorbed significant damage in his fights, which raises concerns about his ability to withstand high-volume striking. This suggests Rodriguez may have the edge in defensive capabilities.\n\n2) **Offensive finish rates**: Rodriguez has a higher finish rate in his victories, with several wins coming by way of KO/TKO, showcasing his striking power and ability to end fights early. Ortega, primarily a submission specialist, has fewer overall finishes compared to Rodriguez, indicating that while he can finish fights, he may not do so as frequently.\n\n3) **Weight class adjustment**: In the Featherweight division, fighters tend to be quicker and more agile, which can lead to higher finish rates due to the speed of exchanges. Both fighters are well-suited to this weight class, but Rodriguez's striking style may lend itself to more finishes, especially against an opponent like Ortega who may engage in striking exchanges.\n\n4) **Final assessment**: Given Rodriguez's striking ability and Ortega's defensive vulnerabilities, there is a higher likelihood of a finish in this matchup. While Ortega's grappling could lead to submissions, Rodriguez's striking prowess and Ortega's tendency to absorb damage suggest a finish is more probable.",
+      "finish_probability": 0.65,
+      "actual_finish": 1
+    },
+    {
+      "fighter1_context": "Charles Jourdain (17-8-1)",
+      "fighter2_context": "Sean Woodson (7-2-1)",
+      "weight_class": "Featherweight Bout",
+      "reasoning": "1) **Defensive comparison**: Charles Jourdain has shown a balanced approach in his fights, with a record of 17-8-1 indicating he has faced a variety of opponents and styles. He has demonstrated good defensive skills, often utilizing movement and striking to evade damage. Sean Woodson, with a record of 7-2-1, has a notable reach advantage and tends to keep fights at distance, but he has also been vulnerable to aggressive fighters who can close the gap. This suggests that Jourdain may be able to exploit Woodson's defensive weaknesses.\n\n2) **Offensive finish rates**: Jourdain has a higher finish rate in his victories, with a mix of knockouts and submissions, showcasing his ability to end fights decisively. Woodson, while having a solid striking game, has primarily won by decision, indicating he may not actively seek finishes as much as Jourdain does. This gives Jourdain an edge in terms of offensive finishing ability.\n\n3) **Weight class adjustment**: In the Featherweight division, fighters are typically quicker and more agile, which can lead to higher finish rates. Both fighters are well-suited to this weight class, but Jourdain's aggressive style and ability to finish fights may be enhanced by the speed and power typical of this division.\n\n4) **Final assessment**: Given Jourdain's higher finish rate and aggressive fighting style, combined with Woodson's defensive vulnerabilities, there is a reasonable likelihood of a finish in this matchup. Jourdain's ability to capitalize on openings could lead to a stoppage, making the probability of a finish higher.",
+      "finish_probability": 0.65,
+      "actual_finish": 0
+    },
+    {
+      "fighter1_context": "Kurt Holobaugh (2-7-0)",
+      "fighter2_context": "Trey Ogden (3-3-0)",
+      "weight_class": "Lightweight Bout",
+      "reasoning": "1) **Defensive comparison**: Kurt Holobaugh has a record of 2-7-0, indicating he has been finished multiple times in his career, which raises concerns about his defensive capabilities. Trey Ogden, with a record of 3-3-0, shows a slightly better balance but still has vulnerabilities. Both fighters have demonstrated weaknesses in their defenses, which could lead to opportunities for finishes.\n\n2) **Offensive finish rates**: Holobaugh has only managed 2 wins, with a mix of decisions and finishes, while Ogden has 3 wins, also with a mix of finishes and decisions. However, both fighters have struggled to secure finishes consistently, suggesting that they may not be aggressive finishers in their fights.\n\n3) **Weight class adjustment**: In the lightweight division, fighters typically possess a combination of speed and power, which can lead to higher finish rates compared to heavier weight classes. However, given the records of both fighters, it seems they may not fully capitalize on this advantage, as both have shown a tendency to go the distance in some of their fights.\n\n4) **Final assessment**: Given the records and the potential for both fighters to be finished, along with the lightweight class's propensity for finishes, there is a moderate likelihood that this fight could end in a finish. However, the overall low finishing rates of both fighters temper this probability.",
+      "finish_probability": 0.45,
+      "actual_finish": 0
+    }
+  ]
+}

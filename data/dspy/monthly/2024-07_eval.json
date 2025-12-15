@@ -1,0 +1,335 @@
+[
+  {
+    "fighter1_context": "Leon Edwards (22-6-0)",
+    "fighter2_context": "Belal Muhammad (24-5-0)",
+    "weight_class": "UFC Welterweight Title Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Tom Aspinall (15-3-0)",
+    "fighter2_context": "Curtis Blaydes (14-5-0)",
+    "weight_class": "UFC Interim Heavyweight Title Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "King Green (33-17-1)",
+    "fighter2_context": "Paddy Pimblett (23-3-0)",
+    "weight_class": "Lightweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Christian Leroy Duncan (13-2-0)",
+    "fighter2_context": "Gregory Rodrigues (18-6-0)",
+    "weight_class": "Middleweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Arnold Allen (20-3-0)",
+    "fighter2_context": "Giga Chikadze (15-5-0)",
+    "weight_class": "Featherweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Nathaniel Wood (22-6-0)",
+    "fighter2_context": "Daniel Pineda (5-8-0)",
+    "weight_class": "Featherweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Molly McCann (7-7-0)",
+    "fighter2_context": "Bruna Brasil (2-3-0)",
+    "weight_class": "Women's Strawweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Jake Hadley (3-4-0)",
+    "fighter2_context": "Caolan Loughran (2-2-0)",
+    "weight_class": "Bantamweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Muhammad Mokaev (7-0-0)",
+    "fighter2_context": "Manel Kape (21-7-0)",
+    "weight_class": "Flyweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Oban Elliott (12-3-0)",
+    "fighter2_context": "Preston Parsons (2-4-0)",
+    "weight_class": "Welterweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Modestas Bukauskas (19-6-0)",
+    "fighter2_context": "Marcin Prachnio (4-7-0)",
+    "weight_class": "Light Heavyweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Sam Patterson (4-1-0)",
+    "fighter2_context": "Kiefer Crosbie (0-3-0)",
+    "weight_class": "Welterweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Mick Parkin (4-1-0)",
+    "fighter2_context": "Lukasz Brzeski (1-6-0)",
+    "weight_class": "Heavyweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Shauna Bannon (2-2-0)",
+    "fighter2_context": "Alice Ardelean (11-7-0)",
+    "weight_class": "Women's Strawweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Split "
+  },
+  {
+    "fighter1_context": "Amanda Lemos (15-5-1)",
+    "fighter2_context": "Virna Jandiroba (22-4-0)",
+    "weight_class": "Women's Strawweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Steve Garcia (19-5-0)",
+    "fighter2_context": "SeungWoo Choi (4-7-0)",
+    "weight_class": "Featherweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Kurt Holobaugh (2-7-0)",
+    "fighter2_context": "Kaynan Kruschewsky (0-2-0)",
+    "weight_class": "Lightweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Cody Durden (17-9-1)",
+    "fighter2_context": "Bruno Silva (9-11-0)",
+    "weight_class": "Flyweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Dooho Choi (5-3-1)",
+    "fighter2_context": "Bill Algeo (5-5-0)",
+    "weight_class": "Featherweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "JeongYeong Lee (2-2-0)",
+    "fighter2_context": "Hyder Amil (11-2-0)",
+    "weight_class": "Featherweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Brian Kelleher (8-9-0)",
+    "fighter2_context": "Cody Gibson (22-12-0)",
+    "weight_class": "Bantamweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Miranda Maverick (8-4-0)",
+    "fighter2_context": "Dione Barbosa (2-2-0)",
+    "weight_class": "Women's Flyweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Loik Radzhabov (2-2-0)",
+    "fighter2_context": "Trey Ogden (3-3-0)",
+    "weight_class": "Lightweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Luana Carolina (6-4-0)",
+    "fighter2_context": "Lucie Pudilova (3-8-0)",
+    "weight_class": "Women's Flyweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Mohammed Usman (4-2-0)",
+    "fighter2_context": "Thomas Petersen (10-4-0)",
+    "weight_class": "Heavyweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Rose Namajunas (15-7-0)",
+    "fighter2_context": "Tracy Cortez (12-3-0)",
+    "weight_class": "Women's Flyweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Santiago Ponzinibbio (12-8-0)",
+    "fighter2_context": "Muslim Salikhov (22-6-0)",
+    "weight_class": "Welterweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Split "
+  },
+  {
+    "fighter1_context": "Drew Dober (28-15-0)",
+    "fighter2_context": "Jean Silva (16-3-0)",
+    "weight_class": "Lightweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "TKO - Doctor's Stoppage "
+  },
+  {
+    "fighter1_context": "Gabriel Bonfim (19-1-0)",
+    "fighter2_context": "Ange Loosa (2-3-0)",
+    "weight_class": "Welterweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Julian Erosa (9-8-0)",
+    "fighter2_context": "Christian Rodriguez (5-4-0)",
+    "weight_class": "Featherweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Abdul Razak Alhassan (6-7-0)",
+    "fighter2_context": "Cody Brundage (11-7-1)",
+    "weight_class": "Middleweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Could Not Continue "
+  },
+  {
+    "fighter1_context": "Joshua Van (16-2-0)",
+    "fighter2_context": "Charles Johnson (18-7-0)",
+    "weight_class": "Flyweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Jasmine Jasudavicius (14-4-0)",
+    "fighter2_context": "Fatima Kline (9-1-0)",
+    "weight_class": "Women's Flyweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Montel Jackson (15-3-0)",
+    "fighter2_context": "Da'Mon Blackshear (5-4-1)",
+    "weight_class": "Bantamweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Luana Santos (10-2-0)",
+    "fighter2_context": "Mariya Agapova (2-4-0)",
+    "weight_class": "Women's Flyweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Josh Fremd (2-4-0)",
+    "fighter2_context": "Andre Petroski (8-4-0)",
+    "weight_class": "Middleweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Evan Elder (3-2-0)",
+    "fighter2_context": "Darrius Flowers (0-3-0)",
+    "weight_class": "Welterweight Bout",
+    "predicted_finish_prob": 0.5,
+    "predicted_fun_score": 50,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  }
+]

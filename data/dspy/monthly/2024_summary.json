@@ -1,0 +1,21 @@
+{
+  "year": 2024,
+  "results": [
+    {
+      "month": "2024-12",
+      "totalFights": 27,
+      "processedFights": 27,
+      "accuracy": 0.8148148148148148,
+      "brierScore": 0.16281111111111113,
+      "finishRate": 0.5925925925925926,
+      "predictedFinishRate": 0.6296296296296297,
+      "cost": 0.32145
+    }
+  ],
+  "summary": {
+    "totalFights": 27,
+    "totalCost": 0.32145,
+    "avgAccuracy": 0.8148148148148148,
+    "avgBrier": 0.16281111111111113
+  }
+}

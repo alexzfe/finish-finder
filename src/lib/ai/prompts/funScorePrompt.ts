@@ -14,6 +14,8 @@
  * Output: Structured JSON with score and detailed breakdown
  */
 
+import { DSPY_FUN_EXAMPLES } from './anchorExamples'
+
 /**
  * Fighter style classification
  */
@@ -207,6 +209,16 @@ FIGHTER 2: ${fighter2.name} (${fighter2.record}) - ${fighter2.primaryStyle.toUpp
 - Avg Fight Time: ${Math.floor(fighter2.averageFightTimeSeconds / 60)}:${(fighter2.averageFightTimeSeconds % 60).toString().padStart(2, '0')}
 ${contextSection}
 ${recentContextSection}
+
+═══════════════════════════════════════════════════════════════════
+CALIBRATED EXAMPLES (from 240 real UFC fights - use these as reference)
+═══════════════════════════════════════════════════════════════════
+
+${DSPY_FUN_EXAMPLES.map((ex, i) => `EXAMPLE ${i + 1}: ${ex.fighter1} vs ${ex.fighter2} (${ex.weightClass})
+Reasoning: ${ex.reasoning}
+Fun Score: ${ex.funScore}
+Actual Result: ${ex.actualFinish ? 'FINISH' : 'DECISION'}
+`).join('\n')}
 
 ═══════════════════════════════════════════════════════════════════
 SCORING PHILOSOPHY - USE THE FULL 0-100 SCALE

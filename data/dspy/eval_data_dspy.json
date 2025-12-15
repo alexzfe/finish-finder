@@ -1,0 +1,272 @@
+[
+  {
+    "fighter1_context": "Merab Dvalishvili\nRecord: 21-5-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 6\" | Reach: 68\"\nAge: Unknown\nWins: 1 KO (5%), 1 SUB (5%), 12 DEC\nLosses: 0 KO, 1 SUB, 2 DEC\nFinish Rate: 14%",
+    "fighter2_context": "Petr Yan\nRecord: 20-5-0\nWeight Class: Unknown\nStance: Switch | Height: 5' 7\" | Reach: 67\"\nAge: Unknown\nWins: 4 KO (20%), 0 SUB (0%), 8 DEC\nLosses: 0 KO, 0 SUB, 3 DEC\nFinish Rate: 33%",
+    "weight_class": "UFC Bantamweight Title Bout",
+    "predicted_finish_prob": 0.45,
+    "predicted_fun_score": 55,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Alexandre Pantoja\nRecord: 30-6-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 5\" | Reach: 67\"\nAge: Unknown\nWins: 2 KO (7%), 6 SUB (20%), 6 DEC\nLosses: 1 KO, 0 SUB, 3 DEC\nFinish Rate: 57%",
+    "fighter2_context": "Joshua Van\nRecord: 16-2-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 5\" | Reach: 65\"\nAge: Unknown\nWins: 3 KO (19%), 0 SUB (0%), 6 DEC\nLosses: 1 KO, 0 SUB, 0 DEC\nFinish Rate: 33%",
+    "weight_class": "UFC Flyweight Title Bout",
+    "predicted_finish_prob": 0.65,
+    "predicted_fun_score": 78,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Brandon Moreno\nRecord: 23-9-2\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 7\" | Reach: 70\"\nAge: Unknown\nWins: 3 KO (13%), 3 SUB (13%), 5 DEC\nLosses: 1 KO, 0 SUB, 5 DEC\nFinish Rate: 55%",
+    "fighter2_context": "Tatsuro Taira\nRecord: 18-1-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 7\" | Reach: 70\"\nAge: Unknown\nWins: 3 KO (17%), 3 SUB (17%), 2 DEC\nLosses: 0 KO, 0 SUB, 1 DEC\nFinish Rate: 75%",
+    "weight_class": "Flyweight Bout",
+    "predicted_finish_prob": 0.55,
+    "predicted_fun_score": 72,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Henry Cejudo\nRecord: 16-6-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 4\" | Reach: 64\"\nAge: Unknown\nWins: 4 KO (25%), 0 SUB (0%), 6 DEC\nLosses: 1 KO, 0 SUB, 5 DEC\nFinish Rate: 40%",
+    "fighter2_context": "Payton Talbott\nRecord: 11-1-0\nWeight Class: Unknown\nStance: Switch | Height: 5' 10\" | Reach: 70\"\nAge: Unknown\nWins: 2 KO (18%), 1 SUB (9%), 3 DEC\nLosses: 0 KO, 0 SUB, 1 DEC\nFinish Rate: 50%",
+    "weight_class": "Bantamweight Bout",
+    "predicted_finish_prob": 0.45,
+    "predicted_fun_score": 72,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Jan Blachowicz\nRecord: 29-11-2\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 2\" | Reach: 78\"\nAge: Unknown\nWins: 5 KO (17%), 2 SUB (7%), 5 DEC\nLosses: 1 KO, 1 SUB, 6 DEC\nFinish Rate: 58%",
+    "fighter2_context": "Bogdan Guskov\nRecord: 18-3-1\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 3\" | Reach: 76\"\nAge: Unknown\nWins: 3 KO (17%), 1 SUB (6%), 0 DEC\nLosses: 0 KO, 1 SUB, 0 DEC\nFinish Rate: 100%",
+    "weight_class": "Light Heavyweight Bout",
+    "predicted_finish_prob": 0.72,
+    "predicted_fun_score": 84,
+    "actual_finish": 0,
+    "actual_method": "Decision - Majority "
+  },
+  {
+    "fighter1_context": "Grant Dawson\nRecord: 23-3-1\nWeight Class: Unknown\nStance: Switch | Height: 5' 10\" | Reach: 72\"\nAge: Unknown\nWins: 2 KO (9%), 5 SUB (22%), 5 DEC\nLosses: 2 KO, 0 SUB, 0 DEC\nFinish Rate: 58%",
+    "fighter2_context": "Manuel Torres\nRecord: 17-3-0\nWeight Class: Unknown\nStance: Switch | Height: 5' 10\" | Reach: 73\"\nAge: Unknown\nWins: 5 KO (29%), 1 SUB (6%), 0 DEC\nLosses: 1 KO, 0 SUB, 0 DEC\nFinish Rate: 100%",
+    "weight_class": "Lightweight Bout",
+    "predicted_finish_prob": 0.75,
+    "predicted_fun_score": 82,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Terrance McKinney\nRecord: 17-8-0\nWeight Class: Unknown\nStance: Switch | Height: 5' 10\" | Reach: 73\"\nAge: Unknown\nWins: 4 KO (24%), 3 SUB (18%), 0 DEC\nLosses: 4 KO, 2 SUB, 0 DEC\nFinish Rate: 100%",
+    "fighter2_context": "Chris Duncan\nRecord: 15-2-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 10\" | Reach: 71\"\nAge: Unknown\nWins: 1 KO (7%), 3 SUB (20%), 3 DEC\nLosses: 1 KO, 1 SUB, 0 DEC\nFinish Rate: 57%",
+    "weight_class": "Lightweight Bout",
+    "predicted_finish_prob": 0.75,
+    "predicted_fun_score": 82,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Maycee Barber\nRecord: 15-2-0\nWeight Class: Unknown\nStance: Switch | Height: 5' 5\" | Reach: 65\"\nAge: Unknown\nWins: 5 KO (33%), 0 SUB (0%), 6 DEC\nLosses: 0 KO, 0 SUB, 2 DEC\nFinish Rate: 46%",
+    "fighter2_context": "Karine Silva\nRecord: 19-6-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 5\" | Reach: 67\"\nAge: Unknown\nWins: 0 KO (0%), 4 SUB (21%), 2 DEC\nLosses: 0 KO, 0 SUB, 2 DEC\nFinish Rate: 67%",
+    "weight_class": "Women's Flyweight Bout",
+    "predicted_finish_prob": 0.55,
+    "predicted_fun_score": 65,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Nazim Sadykhov\nRecord: 11-2-1\nWeight Class: Unknown\nStance: Southpaw | Height: 5' 10\" | Reach: 69\"\nAge: Unknown\nWins: 4 KO (36%), 1 SUB (9%), 0 DEC\nLosses: 1 KO, 0 SUB, 0 DEC\nFinish Rate: 100%",
+    "fighter2_context": "Fares Ziam\nRecord: 18-4-0\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 1\" | Reach: 75\"\nAge: Unknown\nWins: 2 KO (11%), 0 SUB (0%), 6 DEC\nLosses: 0 KO, 1 SUB, 1 DEC\nFinish Rate: 25%",
+    "weight_class": "Lightweight Bout",
+    "predicted_finish_prob": 0.65,
+    "predicted_fun_score": 72,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Marvin Vettori\nRecord: 19-10-1\nWeight Class: Unknown\nStance: Southpaw | Height: 6' 0\" | Reach: 74\"\nAge: Unknown\nWins: 0 KO (0%), 2 SUB (11%), 7 DEC\nLosses: 0 KO, 0 SUB, 8 DEC\nFinish Rate: 22%",
+    "fighter2_context": "Brunno Ferreira\nRecord: 15-2-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 10\" | Reach: 72\"\nAge: Unknown\nWins: 4 KO (27%), 2 SUB (13%), 1 DEC\nLosses: 1 KO, 1 SUB, 0 DEC\nFinish Rate: 86%",
+    "weight_class": "Middleweight Bout",
+    "predicted_finish_prob": 0.65,
+    "predicted_fun_score": 66,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Edson Barboza\nRecord: 24-14-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 11\" | Reach: 75\"\nAge: Unknown\nWins: 9 KO (38%), 0 SUB (0%), 9 DEC\nLosses: 5 KO, 2 SUB, 7 DEC\nFinish Rate: 50%",
+    "fighter2_context": "Jalin Turner\nRecord: 15-9-0\nWeight Class: Unknown\nStance: Southpaw | Height: 6' 3\" | Reach: 77\"\nAge: Unknown\nWins: 6 KO (40%), 3 SUB (20%), 0 DEC\nLosses: 2 KO, 1 SUB, 3 DEC\nFinish Rate: 100%",
+    "weight_class": "Lightweight Bout",
+    "predicted_finish_prob": 0.65,
+    "predicted_fun_score": 78,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Iwo Baraniewski\nRecord: 7-0-0\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 0\" | Reach: 73\"\nAge: Unknown\nWins: 2 KO (29%), 0 SUB (0%), 0 DEC\nLosses: 0 KO, 0 SUB, 0 DEC\nFinish Rate: 100%",
+    "fighter2_context": "Ibo Aslan\nRecord: 14-4-0\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 3\" | Reach: 77\"\nAge: Unknown\nWins: 3 KO (21%), 0 SUB (0%), 0 DEC\nLosses: 1 KO, 1 SUB, 1 DEC\nFinish Rate: 100%",
+    "weight_class": "Light Heavyweight Bout",
+    "predicted_finish_prob": 0.75,
+    "predicted_fun_score": 87,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Mansur Abdul-Malik\nRecord: 9-0-1\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 2\" | Reach: 80\"\nAge: Unknown\nWins: 3 KO (33%), 1 SUB (11%), 0 DEC\nLosses: 0 KO, 0 SUB, 0 DEC\nFinish Rate: 100%",
+    "fighter2_context": "Antonio Trocoli\nRecord: 12-6-0\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 5\" | Reach: 80\"\nAge: Unknown\nWins: 0 KO (0%), 0 SUB (0%), 0 DEC\nLosses: 1 KO, 2 SUB, 0 DEC\nFinish Rate: 0%",
+    "weight_class": "Middleweight Bout",
+    "predicted_finish_prob": 0.75,
+    "predicted_fun_score": 51,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Muhammad Naimov\nRecord: 13-4-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 9\" | Reach: 70\"\nAge: Unknown\nWins: 2 KO (15%), 0 SUB (0%), 3 DEC\nLosses: 1 KO, 1 SUB, 1 DEC\nFinish Rate: 40%",
+    "fighter2_context": "Mairon Santos\nRecord: 18-1-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 7\" | Reach: 72\"\nAge: Unknown\nWins: 2 KO (11%), 0 SUB (0%), 2 DEC\nLosses: 0 KO, 0 SUB, 0 DEC\nFinish Rate: 50%",
+    "weight_class": "Featherweight Bout",
+    "predicted_finish_prob": 0.65,
+    "predicted_fun_score": 55,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Arman Tsarukyan\nRecord: 23-3-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 7\" | Reach: 72\"\nAge: Unknown\nWins: 4 KO (17%), 1 SUB (4%), 5 DEC\nLosses: 0 KO, 0 SUB, 2 DEC\nFinish Rate: 50%",
+    "fighter2_context": "Dan Hooker\nRecord: 24-13-0\nWeight Class: Unknown\nStance: Switch | Height: 6' 0\" | Reach: 75\"\nAge: Unknown\nWins: 7 KO (29%), 2 SUB (8%), 5 DEC\nLosses: 3 KO, 2 SUB, 4 DEC\nFinish Rate: 64%",
+    "weight_class": "Lightweight Bout",
+    "predicted_finish_prob": 0.65,
+    "predicted_fun_score": 72,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Belal Muhammad\nRecord: 24-5-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 11\" | Reach: 72\"\nAge: Unknown\nWins: 2 KO (8%), 1 SUB (4%), 12 DEC\nLosses: 1 KO, 0 SUB, 4 DEC\nFinish Rate: 20%",
+    "fighter2_context": "Ian Machado Garry\nRecord: 17-1-0\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 3\" | Reach: 74\"\nAge: Unknown\nWins: 3 KO (18%), 0 SUB (0%), 7 DEC\nLosses: 0 KO, 0 SUB, 1 DEC\nFinish Rate: 30%",
+    "weight_class": "Welterweight Bout",
+    "predicted_finish_prob": 0.35,
+    "predicted_fun_score": 58,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Volkan Oezdemir\nRecord: 21-8-0\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 2\" | Reach: 75\"\nAge: Unknown\nWins: 5 KO (24%), 1 SUB (5%), 3 DEC\nLosses: 2 KO, 1 SUB, 4 DEC\nFinish Rate: 67%",
+    "fighter2_context": "Alonzo Menifield\nRecord: 17-6-1\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 0\" | Reach: 76\"\nAge: Unknown\nWins: 6 KO (35%), 2 SUB (12%), 4 DEC\nLosses: 4 KO, 0 SUB, 2 DEC\nFinish Rate: 67%",
+    "weight_class": "Light Heavyweight Bout",
+    "predicted_finish_prob": 0.65,
+    "predicted_fun_score": 75,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Jack Hermansson\nRecord: 24-10-0\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 1\" | Reach: 77\"\nAge: Unknown\nWins: 3 KO (13%), 3 SUB (13%), 5 DEC\nLosses: 5 KO, 1 SUB, 2 DEC\nFinish Rate: 55%",
+    "fighter2_context": "Myktybek Orolbai\nRecord: 15-2-1\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 10\" | Reach: 74\"\nAge: Unknown\nWins: 1 KO (7%), 2 SUB (13%), 1 DEC\nLosses: 0 KO, 0 SUB, 1 DEC\nFinish Rate: 75%",
+    "weight_class": "Welterweight Bout",
+    "predicted_finish_prob": 0.65,
+    "predicted_fun_score": 68,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Waldo Cortes Acosta\nRecord: 16-2-0\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 4\" | Reach: 78\"\nAge: Unknown\nWins: 5 KO (31%), 0 SUB (0%), 5 DEC\nLosses: 0 KO, 0 SUB, 2 DEC\nFinish Rate: 50%",
+    "fighter2_context": "Shamil Gaziev\nRecord: 14-2-0\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 4\" | Reach: 78\"\nAge: Unknown\nWins: 2 KO (14%), 1 SUB (7%), 1 DEC\nLosses: 2 KO, 0 SUB, 0 DEC\nFinish Rate: 75%",
+    "weight_class": "Heavyweight Bout",
+    "predicted_finish_prob": 0.65,
+    "predicted_fun_score": 68,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Tagir Ulanbekov\nRecord: 17-3-0\nWeight Class: Unknown\nStance: Southpaw | Height: 5' 7\" | Reach: 70\"\nAge: Unknown\nWins: 0 KO (0%), 2 SUB (12%), 4 DEC\nLosses: 0 KO, 1 SUB, 1 DEC\nFinish Rate: 33%",
+    "fighter2_context": "Kyoji Horiguchi\nRecord: 35-5-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 4\" | Reach: 63\"\nAge: Unknown\nWins: 2 KO (6%), 1 SUB (3%), 5 DEC\nLosses: 0 KO, 1 SUB, 0 DEC\nFinish Rate: 38%",
+    "weight_class": "Flyweight Bout",
+    "predicted_finish_prob": 0.65,
+    "predicted_fun_score": 52,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Bogdan Grad\nRecord: 15-4-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 8\" | Reach: 70\"\nAge: Unknown\nWins: 1 KO (7%), 0 SUB (0%), 1 DEC\nLosses: 2 KO, 0 SUB, 1 DEC\nFinish Rate: 50%",
+    "fighter2_context": "Luke Riley\nRecord: 12-0-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 9\" | Reach: 69\"\nAge: Unknown\nWins: 1 KO (8%), 0 SUB (0%), 0 DEC\nLosses: 0 KO, 0 SUB, 0 DEC\nFinish Rate: 100%",
+    "weight_class": "Featherweight Bout",
+    "predicted_finish_prob": 0.72,
+    "predicted_fun_score": 68,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Nicolas Dalby\nRecord: 24-6-1\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 11\" | Reach: 74\"\nAge: Unknown\nWins: 1 KO (4%), 0 SUB (0%), 7 DEC\nLosses: 1 KO, 0 SUB, 4 DEC\nFinish Rate: 13%",
+    "fighter2_context": "Saygid Izagakhmaev\nRecord: 22-3-0\nWeight Class: Unknown\nStance: Unknown | Height: 6' 0\" | Reach: 74\"\nAge: Unknown\nWins: 0 KO (0%), 0 SUB (0%), 0 DEC\nLosses: 0 KO, 0 SUB, 1 DEC\nFinish Rate: 0%",
+    "weight_class": "Welterweight Bout",
+    "predicted_finish_prob": 0.35,
+    "predicted_fun_score": 37,
+    "actual_finish": 0,
+    "actual_method": "Decision - Split "
+  },
+  {
+    "fighter1_context": "Alex Perez\nRecord: 25-10-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 6\" | Reach: 65\"\nAge: Unknown\nWins: 3 KO (12%), 3 SUB (12%), 2 DEC\nLosses: 2 KO, 3 SUB, 1 DEC\nFinish Rate: 75%",
+    "fighter2_context": "Asu Almabayev\nRecord: 23-3-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 4\" | Reach: 65\"\nAge: Unknown\nWins: 0 KO (0%), 2 SUB (9%), 4 DEC\nLosses: 1 KO, 0 SUB, 0 DEC\nFinish Rate: 33%",
+    "weight_class": "Flyweight Bout",
+    "predicted_finish_prob": 0.72,
+    "predicted_fun_score": 52,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Abdul Rakhman Yakhyaev\nRecord: 8-0-0\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 2\" | Reach: 78\"\nAge: Unknown\nWins: 1 KO (13%), 1 SUB (13%), 0 DEC\nLosses: 0 KO, 0 SUB, 0 DEC\nFinish Rate: 100%",
+    "fighter2_context": "Rafael Cerqueira\nRecord: 11-4-0\nWeight Class: Unknown\nStance: Southpaw | Height: 6' 3\" | Reach: 76\"\nAge: Unknown\nWins: 0 KO (0%), 0 SUB (0%), 0 DEC\nLosses: 2 KO, 1 SUB, 1 DEC\nFinish Rate: 0%",
+    "weight_class": "Light Heavyweight Bout",
+    "predicted_finish_prob": 0.85,
+    "predicted_fun_score": 78,
+    "actual_finish": 1,
+    "actual_method": "Submission "
+  },
+  {
+    "fighter1_context": "Bekzat Almakhan\nRecord: 12-3-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 7\" | Reach: 68\"\nAge: Unknown\nWins: 1 KO (8%), 0 SUB (0%), 0 DEC\nLosses: 0 KO, 0 SUB, 2 DEC\nFinish Rate: 100%",
+    "fighter2_context": "Aleksandre Topuria\nRecord: 7-1-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 7\" | Reach: 68\"\nAge: Unknown\nWins: 0 KO (0%), 0 SUB (0%), 2 DEC\nLosses: 0 KO, 0 SUB, 0 DEC\nFinish Rate: 0%",
+    "weight_class": "Bantamweight Bout",
+    "predicted_finish_prob": 0.35,
+    "predicted_fun_score": 48,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Ismail Naurdiev\nRecord: 25-8-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 10\" | Reach: 74\"\nAge: Unknown\nWins: 1 KO (4%), 0 SUB (0%), 3 DEC\nLosses: 0 KO, 0 SUB, 3 DEC\nFinish Rate: 25%",
+    "fighter2_context": "Ryan Loder\nRecord: 8-3-0\nWeight Class: Unknown\nStance: Southpaw | Height: 6' 2\" | Reach: 76\"\nAge: Unknown\nWins: 1 KO (13%), 0 SUB (0%), 0 DEC\nLosses: 2 KO, 0 SUB, 0 DEC\nFinish Rate: 100%",
+    "weight_class": "Middleweight Bout",
+    "predicted_finish_prob": 0.68,
+    "predicted_fun_score": 65,
+    "actual_finish": 1,
+    "actual_method": "KO/TKO "
+  },
+  {
+    "fighter1_context": "Nurullo Aliev\nRecord: 11-0-0\nWeight Class: Unknown\nStance: Orthodox | Height: 5' 10\" | Reach: 72\"\nAge: Unknown\nWins: 1 KO (9%), 0 SUB (0%), 3 DEC\nLosses: 0 KO, 0 SUB, 0 DEC\nFinish Rate: 25%",
+    "fighter2_context": "Shem Rock\nRecord: 12-2-1\nWeight Class: Unknown\nStance: Southpaw | Height: 5' 11\" | Reach: 73\"\nAge: Unknown\nWins: 0 KO (0%), 0 SUB (0%), 0 DEC\nLosses: 0 KO, 0 SUB, 1 DEC\nFinish Rate: 0%",
+    "weight_class": "Lightweight Bout",
+    "predicted_finish_prob": 0.35,
+    "predicted_fun_score": 42,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Marek Bujlo\nRecord: 6-1-0\nWeight Class: Unknown\nStance: Orthodox | Height: 6' 4\" | Reach: 77\"\nAge: Unknown\nWins: 0 KO (0%), 0 SUB (0%), 0 DEC\nLosses: 0 KO, 0 SUB, 1 DEC\nFinish Rate: 0%",
+    "fighter2_context": "Denzel Freeman\nRecord: 7-1-0\nWeight Class: Unknown\nStance: Southpaw | Height: 6' 1\" | Reach: 77\"\nAge: Unknown\nWins: 0 KO (0%), 0 SUB (0%), 1 DEC\nLosses: 0 KO, 0 SUB, 0 DEC\nFinish Rate: 0%",
+    "weight_class": "Heavyweight Bout",
+    "predicted_finish_prob": 0.35,
+    "predicted_fun_score": 32,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Jack Della Maddalena\nRecord: 18-3-0\nWeight Class: Unknown\nStance: Switch | Height: 5' 11\" | Reach: 73\"\nAge: Unknown\nWins: 4 KO (22%), 1 SUB (6%), 4 DEC\nLosses: 0 KO, 0 SUB, 1 DEC\nFinish Rate: 56%",
+    "fighter2_context": "Islam Makhachev\nRecord: 28-1-0\nWeight Class: Unknown\nStance: Southpaw | Height: 5' 10\" | Reach: 70\"\nAge: Unknown\nWins: 3 KO (11%), 8 SUB (29%), 6 DEC\nLosses: 1 KO, 0 SUB, 0 DEC\nFinish Rate: 65%",
+    "weight_class": "UFC Welterweight Title Bout",
+    "predicted_finish_prob": 0.65,
+    "predicted_fun_score": 75,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  },
+  {
+    "fighter1_context": "Valentina Shevchenko\nRecord: 26-4-1\nWeight Class: Unknown\nStance: Southpaw | Height: 5' 5\" | Reach: 66\"\nAge: Unknown\nWins: 4 KO (15%), 2 SUB (8%), 9 DEC\nLosses: 0 KO, 1 SUB, 2 DEC\nFinish Rate: 40%",
+    "fighter2_context": "Zhang Weili\nRecord: 26-4-0\nWeight Class: Unknown\nStance: Switch | Height: 5' 4\" | Reach: 63\"\nAge: Unknown\nWins: 2 KO (8%), 2 SUB (8%), 6 DEC\nLosses: 1 KO, 0 SUB, 2 DEC\nFinish Rate: 40%",
+    "weight_class": "UFC Women's Flyweight Title Bout",
+    "predicted_finish_prob": 0.52,
+    "predicted_fun_score": 72,
+    "actual_finish": 0,
+    "actual_method": "Decision - Unanimous "
+  }
+]

@@ -9,6 +9,7 @@
  */
 
 import { getWeightClassRates } from './weightClassRates'
+import { DSPY_FINISH_EXAMPLES } from './anchorExamples'
 
 /**
  * Fighter statistics for finish probability prediction
@@ -161,6 +162,16 @@ Offensive Finish Metrics:
 ${fighter2.last3Finishes !== undefined ? `- Last 3 Fights: ${fighter2.last3Finishes} finishes` : ''}
 ${bettingOddsSection}
 ${recentContextSection}
+
+═══════════════════════════════════════════════════════════════════
+CALIBRATED EXAMPLES (from 240 real UFC fights - use these as reference)
+═══════════════════════════════════════════════════════════════════
+
+${DSPY_FINISH_EXAMPLES.map((ex, i) => `EXAMPLE ${i + 1}: ${ex.fighter1} vs ${ex.fighter2} (${ex.weightClass})
+Reasoning: ${ex.reasoning}
+Finish Probability: ${(ex.finishProbability * 100).toFixed(0)}%
+Actual Result: ${ex.actualFinish ? 'FINISH' : 'DECISION'}
+`).join('\n')}
 
 ANALYSIS FRAMEWORK (4 Steps):
 

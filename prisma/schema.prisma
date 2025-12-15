@@ -83,9 +83,15 @@ model Fighter {
   createdAt                  DateTime  @default(now())
   updatedAt                  DateTime  @updatedAt
 
+  // Embedding/RAG fields (vector column managed via raw SQL)
+  profileText                String?   @map("profile_text") @db.Text  // Text summary for embedding
+  embeddingUpdatedAt         DateTime? @map("embedding_updated_at")
+  // Note: profile_embedding (vector) and search_vector (tsvector) are managed via raw SQL
+
   // Relations
   fighter1Fights             Fight[]   @relation("Fighter1")
   fighter2Fights             Fight[]   @relation("Fighter2")
+  contextChunks              FighterContextChunk[]
 
   @@map("fighters")
 }
@@ -133,6 +139,13 @@ model Fight {
   funFactors          String   @default("[]")
   aiDescription       String?
 
+  // ML Tier Model Prediction (pre-computed from fighter statistics)
+  // Used as objective baseline for entertainment prediction
+  mlTier              Int?     // 1-5: Low, Average, Good, Excellent, Elite
+  mlTierConfidence    Float?   // 0-1: model confidence in tier prediction
+  mlTierProbabilities Json?    // Array of 5 probabilities [P(T1),...,P(T5)]
+  mlTierComputedAt    DateTime? // When ML tier was last computed
+
   // Fight outcome data
   completed           Boolean  @default(false)
   isCancelled         Boolean  @default(false)
@@ -155,6 +168,8 @@ model Fight {
   fighter1            Fighter     @relation("Fighter1", fields: [fighter1Id], references: [id])
   fighter2            Fighter     @relation("Fighter2", fields: [fighter2Id], references: [id])
   predictions         Prediction[] // New AI prediction system
+  weakLabel           WeakSupervisionLabel? // Phase 2: Calibration weak supervision label
+  predictionLogs      PredictionLog[] // Phase 4: Prediction logging for calibration
 
   // Prevent duplicate fights for same event and fighter pairing
   @@unique([eventId, fighter1Id, fighter2Id])
@@ -281,6 +296,12 @@ model Prediction {
   funConfidence Float // 0-1
   funBreakdown Json  // Score breakdown: { pace_score, finish_rate_score, style_matchup_score, etc. }
 
+  // ML Tier Model Prediction (from trained XGBoost classifier)
+  // Provides objective baseline for comparison with LLM predictions
+  mlTier            Int?   // 1-5: Low, Average, Good, Excellent, Elite
+  mlTierConfidence  Float? // 0-1: model confidence in tier prediction
+  mlTierProbabilities Json? // Array of 5 probabilities for each tier [P(T1),...,P(T5)]
+
   // Metadata
   modelUsed String // "claude-3-5-sonnet-20241022", "gpt-4o", etc.
   tokensUsed Int   @default(0)
@@ -302,4 +323,138 @@ model Prediction {
   @@index([createdAt])
   @@index([actualFinish]) // For evaluation queries
   @@map("predictions")
+}
+
+// ============================================
+// PHASE 2: CALIBRATION INFRASTRUCTURE
+// ============================================
+
+model CalibrationParams {
+  id                String   @id @default(cuid())
+  predictionType    String   // "finish" (Platt) or "fun" (Conformal)
+
+  // Platt scaling params (for finish probability - binary classification)
+  paramA            Float?   // Logistic regression slope
+  paramB            Float?   // Logistic regression intercept
+
+  // Conformal prediction params (for fun score - continuous)
+  conformityScores  Json?    // Array of historical residuals [number[]]
+  coverageLevel     Float?   // Target coverage, e.g., 0.90 for 90% CI
+
+  // Training metadata
+  trainedOn         Int      // Number of samples used for training
+  trainingWindow    String?  // e.g., "6_months", "12_months"
+
+  // Calibration metrics (before/after applying calibration)
+  brierScoreBefore  Float?   // Mean squared error before calibration
+  brierScoreAfter   Float?   // Mean squared error after calibration
+  eceScore          Float?   // Expected Calibration Error
+  mceScore          Float?   // Maximum Calibration Error
+
+  // Lifecycle
+  active            Boolean  @default(false)
+  validFrom         DateTime
+  validTo           DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([predictionType, active])
+  @@map("calibration_params")
+}
+
+model WeakSupervisionLabel {
+  id                    String   @id @default(cuid())
+  fightId               String   @unique
+
+  // Binary ground truth
+  actualFinish          Boolean  // True if fight ended in KO/TKO/SUB
+
+  // Entertainment label from labeling functions
+  entertainmentLabel    String   // "HIGH", "MEDIUM", "LOW", "ABSTAIN"
+  entertainmentScore    Float?   // Aggregated score from labeling functions (0-100)
+  entertainmentConfidence Float  // Confidence in the label (0-1)
+
+  // Which labeling functions contributed
+  contributingFunctions String[] // e.g., ["high_action", "quick_finish", "bonus_winner"]
+  functionVotes         Json?    // Detailed votes: { "high_action": "HIGH", "bonus_winner": "HIGH" }
+
+  // Raw metrics used for labeling (from fight stats)
+  significantStrikes    Int?     // Total significant strikes landed
+  knockdowns            Int?     // Total knockdowns in the fight
+  finishRound           Int?     // Which round the fight ended (null if decision)
+  totalFightTimeSeconds Int?     // Fight duration
+  bonusAwarded          Boolean? // Fight of the Night / Performance of the Night
+  controlTime           Int?     // Ground control time in seconds
+
+  // Metadata
+  labeledAt             DateTime @default(now())
+  labelingVersion       String?  // Version of labeling functions used
+
+  // Relations
+  fight                 Fight    @relation(fields: [fightId], references: [id], onDelete: Cascade)
+
+  @@map("weak_supervision_labels")
+}
+
+// ============================================
+// PHASE 3: RAG INFRASTRUCTURE
+// ============================================
+
+model FighterContextChunk {
+  id          String    @id @default(cuid())
+  fighterId   String    @map("fighter_id")
+  content     String    @db.Text
+  contentType String    @map("content_type")  // 'news', 'analysis', 'fight_history', 'training_camp'
+  sourceUrl   String?   @map("source_url")
+  publishedAt DateTime? @map("published_at")
+  expiresAt   DateTime? @map("expires_at")    // For time-sensitive content
+  createdAt   DateTime  @default(now()) @map("created_at")
+  // Note: embedding (vector) and search_vector (tsvector) are managed via raw SQL
+
+  // Relations
+  fighter     Fighter   @relation(fields: [fighterId], references: [id], onDelete: Cascade)
+
+  @@index([fighterId])
+  @@index([contentType])
+  @@index([expiresAt])
+  @@map("fighter_context_chunks")
+}
+
+// ============================================
+// PHASE 4: PREDICTION LOGGING
+// ============================================
+
+model PredictionLog {
+  id                          String    @id @default(cuid())
+  fightId                     String    @map("fight_id")
+
+  // Raw predictions from LLM
+  rawFinishProbability        Float     @map("raw_finish_probability")
+  calibratedFinishProbability Float     @map("calibrated_finish_probability")
+  finishConfidence            Float     @map("finish_confidence")
+
+  rawFunScore                 Int       @map("raw_fun_score")
+  funScoreLower               Float?    @map("fun_score_lower")  // Conformal interval
+  funScoreUpper               Float?    @map("fun_score_upper")  // Conformal interval
+  funConfidence               Float     @map("fun_confidence")
+
+  // Model info
+  modelUsed                   String    @map("model_used")
+  tokensUsed                  Int       @map("tokens_used")
+  costUsd                     Float     @map("cost_usd")
+
+  // Actual outcomes (filled in after fight completes)
+  actualFinish                Boolean?  @map("actual_finish")      // true = finish, false = decision
+  actualEntertainment         String?   @map("actual_entertainment") // 'HIGH', 'MEDIUM', 'LOW' from weak supervision
+
+  // Metadata
+  createdAt                   DateTime  @default(now()) @map("created_at")
+  evaluatedAt                 DateTime? @map("evaluated_at")
+
+  // Relations
+  fight                       Fight     @relation(fields: [fightId], references: [id], onDelete: Cascade)
+
+  @@index([fightId])
+  @@index([createdAt])
+  @@index([actualFinish])
+  @@map("prediction_logs")
 }

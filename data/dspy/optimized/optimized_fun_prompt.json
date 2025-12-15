@@ -1,0 +1,29 @@
+{
+  "signature": "Predict how entertaining an MMA fight will be on a scale of 0-100.\n\nConsider pace (striking output), finish likelihood, style matchup, and fight context.\n",
+  "demos": [
+    {
+      "fighter1_context": "Yair Rodriguez (11-4-0)",
+      "fighter2_context": "Brian Ortega (8-5-0)",
+      "weight_class": "Featherweight Bout",
+      "reasoning": "This highly anticipated Featherweight bout between Yair Rodriguez and Brian Ortega is expected to be a thrilling matchup, showcasing contrasting styles that could lead to an action-packed fight. Rodriguez is renowned for his striking prowess, creativity, and ability to finish fights, while Ortega is a submission specialist with a strong grappling game. The clash of Rodriguez's dynamic striking against Ortega's grappling creates a compelling narrative, as fans will be eager to see whether Rodriguez can keep the fight standing or if Ortega can take it to the ground. Both fighters have shown a willingness to engage in high-paced exchanges, and the stakes are significant, as they are both looking to solidify their positions in the competitive featherweight division. Given their finishing abilities and the potential for dramatic moments, this fight is likely to deliver an exciting spectacle for fans.",
+      "fun_score": 90,
+      "actual_finish": 1
+    },
+    {
+      "fighter1_context": "Charles Jourdain (17-8-1)",
+      "fighter2_context": "Sean Woodson (7-2-1)",
+      "weight_class": "Featherweight Bout",
+      "reasoning": "This featherweight bout between Charles Jourdain and Sean Woodson is highly anticipated due to both fighters' striking capabilities and styles. Jourdain, with a record of 17 wins, 8 losses, and 1 draw, is known for his aggressive striking and willingness to engage in high-paced exchanges, making him a fan favorite. Woodson, at 7 wins, 2 losses, and 1 draw, brings a unique style with his long reach and technical striking, which could create interesting dynamics in the fight. \n\nThe potential for finishes is present, as both fighters have demonstrated knockout power and finishing ability in their careers. The stakes are significant, as both are looking to climb the ranks in a competitive featherweight division. Given their contrasting styles\u2014Jourdain's aggression versus Woodson's range control\u2014this fight is likely to deliver an exciting spectacle filled with action and possibly a finish.",
+      "fun_score": 80,
+      "actual_finish": 0
+    },
+    {
+      "fighter1_context": "Kurt Holobaugh (2-7-0)",
+      "fighter2_context": "Trey Ogden (3-3-0)",
+      "weight_class": "Lightweight Bout",
+      "reasoning": "This lightweight bout between Kurt Holobaugh and Trey Ogden features two fighters with records that suggest a struggle for consistency and success in the cage. Holobaugh, with a record of 2-7-0, has faced significant challenges in his career, while Ogden's 3-3-0 record indicates a similar level of experience and inconsistency. Given their records, the fight may lack the high-level action and finishing ability typically seen in more established fighters. The stakes are relatively low, as neither fighter is currently in title contention or on a notable winning streak, which could lead to a cautious approach as they seek to avoid further losses. Overall, this bout may not provide the excitement or entertainment value that fans typically look for, as the fighters may prioritize safety over aggression.",
+      "fun_score": 20,
+      "actual_finish": 0
+    }
+  ]
+}
