@@ -1,7 +1,8 @@
 # Engineering Handoff: Platt Scaling Calibration & Hybrid Retrieval
 
 **Date:** 2025-12-14
-**Session Focus:** Training Platt scaling from DSPy data, creating hybrid retrieval database function
+**Updated:** 2025-12-14 (Session 2)
+**Session Focus:** Training Platt scaling from DSPy data, creating hybrid retrieval database function, fixing PredictionLog and ML Tiers
 
 ---
 
@@ -11,6 +12,8 @@ This session completed the calibration pipeline for the AI prediction system by:
 1. Training Platt scaling parameters from 516 historical UFC fights
 2. Creating the missing `get_fighter_context_with_decay` database function
 3. Testing the full enhanced prediction pipeline
+4. **[Session 2]** Fixing PredictionLog not being written
+5. **[Session 2]** Fixing ML Tier field mismatch causing wrong predictions
 
 ---
 
@@ -129,6 +132,8 @@ CREATE INDEX IF NOT EXISTS fighter_context_chunks_embedding_idx
 | `src/lib/ai/calibration/plattScaling.ts` | Updated formula to use log-odds transformation |
 | `src/lib/ai/prompts/CONTEXT.md` | Documented calibration and embeddings |
 | `docs/ai-context/project-structure.md` | Updated file tree and models |
+| `scripts/new-ai-predictions-runner.ts` | **[Session 2]** Switched to EnhancedPredictionService for logging |
+| `scripts/compute-ml-tiers.py` | **[Session 2]** Fixed field name mismatch for striking stats |
 
 ---
 
@@ -182,7 +187,7 @@ Cost: $0.0174
 
 ---
 
-## Remaining Gaps
+## Remaining Gaps (Session 1)
 
 | Gap | Status | Notes |
 |-----|--------|-------|
@@ -190,6 +195,8 @@ Cost: $0.0174
 | ✅ DB Function | Complete | Deployed, tested |
 | ❌ Conformal Intervals | Cannot train | Need actual fun score ratings |
 | ⚠️ Context Chunks | Empty | `fighter_context_chunks` has 0 rows |
+
+> **Note:** See "Remaining Gaps (Updated)" section below for Session 2 status.
 
 ### About Conformal Prediction
 Conformal prediction intervals for fun score require `(predicted_fun_score, actual_fun_score)` pairs. We don't collect actual entertainment ratings from users, so this cannot be trained. The system works without it.
@@ -233,6 +240,71 @@ DATABASE_URL="..." npx ts-node scripts/train-platt-from-dspy.ts
 
 ---
 
+## Session 2: Bug Fixes (2025-12-14)
+
+### 5. PredictionLog Not Being Written
+
+**Problem:** The `PredictionLog` table had 0 rows despite predictions running. Predictions weren't being logged for future calibration analysis.
+
+**Root Cause:** The production runner (`scripts/new-ai-predictions-runner.ts`) was using `NewPredictionService` which has no logging capability. Only `EnhancedPredictionService` has the `logPrediction()` method.
+
+**Solution:** Updated `new-ai-predictions-runner.ts` to use `EnhancedPredictionService`:
+
+```typescript
+// Before
+import { NewPredictionService } from '../src/lib/ai/newPredictionService'
+const service = new NewPredictionService(CONFIG.provider)
+
+// After
+import { createEnhancedPredictionService } from '../src/lib/ai/enhancedPredictionService'
+const service = await createEnhancedPredictionService(CONFIG.provider, {
+  useEnrichedContext: false,  // Use runner's web search context instead
+  logPrediction: true,
+  applyCalibration: true,
+  includeConformalIntervals: false,
+})
+```
+
+**Result:** PredictionLog entries are now created for each prediction, enabling future calibration analysis.
+
+### 6. ML Tier Field Mismatch
+
+**Problem:** ML Tier predictions were heavily skewed toward Tier 1 (79% of fights). Even title fights were being predicted as Tier 1, which is incorrect.
+
+**Root Cause:** The `scripts/compute-ml-tiers.py` script was reading from the wrong database column:
+- Script read: `significantStrikesPerMinute` (0% populated in database)
+- Correct field: `significantStrikesLandedPerMinute` (218 fighters populated)
+
+**Solution:** Fixed the SQL query field names:
+
+```python
+# Before (broken)
+f1."significantStrikesPerMinute" as f1_slpm
+
+# After (fixed)
+f1."significantStrikesLandedPerMinute" as f1_slpm
+```
+
+**Result:** After recomputing with `--force`:
+- Title fights now correctly predicted as Tier 4 (high entertainment)
+- Distribution normalized across tiers 1-5
+- Example: Pantoja vs Royval II went from Tier 1 → Tier 4
+
+---
+
+## Remaining Gaps (Updated)
+
+| Gap | Status | Notes |
+|-----|--------|-------|
+| ✅ Platt Scaling | Complete | Trained, saved, working |
+| ✅ DB Function | Complete | Deployed, tested |
+| ✅ PredictionLog | Complete | Runner now uses EnhancedPredictionService |
+| ✅ ML Tiers | Complete | Field mismatch fixed, tiers recomputed |
+| ❌ Conformal Intervals | Cannot train | Need actual fun score ratings |
+| ⚠️ Context Chunks | Empty | `fighter_context_chunks` has 0 rows |
+
+---
+
 ## Next Steps (Suggested)
 
 1. **Populate Context Chunks** - Build pipeline to ingest fighter news/analysis
@@ -243,3 +315,4 @@ DATABASE_URL="..." npx ts-node scripts/train-platt-from-dspy.ts
 ---
 
 *Handoff prepared: 2025-12-14*
+*Updated: 2025-12-14 (Session 2)*

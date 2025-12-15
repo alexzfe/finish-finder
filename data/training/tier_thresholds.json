@@ -1,0 +1,44 @@
+{
+  "tier_5_criteria": {
+    "name": "Elite",
+    "primary": "FOTN bonus awarded"
+  },
+  "tier_4_criteria": {
+    "name": "Excellent",
+    "primary": "POTN bonus awarded",
+    "secondary": "Finish + sig_strikes > 100"
+  },
+  "tier_3_criteria": {
+    "name": "Good",
+    "primary": "Any finish (no bonus)",
+    "secondary": "sig_strikes > 150 AND strike_diff < 30"
+  },
+  "tier_2_criteria": {
+    "name": "Average",
+    "sig_strikes_range": [
+      80,
+      150
+    ]
+  },
+  "tier_1_criteria": {
+    "name": "Low",
+    "primary": "sig_strikes < 80",
+    "secondary": "High control + low strikes"
+  },
+  "thresholds": {
+    "low_volume": 28,
+    "medium_volume": 61,
+    "high_volume": 104,
+    "very_high_volume": 153,
+    "competitive_diff_max": 30,
+    "one_sided_diff_min": 50
+  },
+  "statistics": {
+    "total_fights": 8482,
+    "bonus_fights": 561,
+    "fotn_fights": 114,
+    "potn_fights": 447,
+    "overall_finish_rate": 0.32645602452251826,
+    "bonus_finish_rate": 0.5739750445632799
+  }
+}

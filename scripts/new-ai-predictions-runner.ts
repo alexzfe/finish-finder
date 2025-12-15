@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AI Predictions Runner - Phase 3.2
+ * AI Predictions Runner - Phase 4 (Enhanced)
  *
  * Generates AI predictions for fights that don't have them yet.
  *
@@ -9,6 +9,8 @@
  * - Batch processing: Processes all unpredicted fights for upcoming events
  * - Progress tracking: Logs progress and metrics (tokens, cost, time)
  * - Error handling: Continues on individual fight failures, logs errors
+ * - Platt scaling calibration: Calibrates finish probabilities using trained parameters
+ * - PredictionLog logging: Logs raw vs calibrated values for future recalibration
  *
  * Usage:
  *   npx ts-node scripts/new-ai-predictions-runner.ts [options]
@@ -21,9 +23,8 @@
  *   --no-web-search   Disable web search enrichment (faster, but less context)
  *
  * Environment Variables:
- *   AI_PROVIDER               'anthropic' or 'openai' (default: anthropic)
- *   GOOGLE_SEARCH_API_KEY     Required for web search enrichment
- *   GOOGLE_SEARCH_ENGINE_ID   Required for web search enrichment
+ *   AI_PROVIDER             'anthropic' or 'openai' (default: anthropic)
+ *   BRAVE_SEARCH_API_KEY    Required for web search enrichment (free tier: 2k queries/month)
  */
 
 // Load environment variables from .env.local
@@ -38,9 +39,13 @@ import { createHash } from 'crypto'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { prisma } from '../src/lib/database/prisma'
-import { NewPredictionService, calculateRiskLevel } from '../src/lib/ai/newPredictionService'
+import { calculateRiskLevel } from '../src/lib/ai/newPredictionService'
+import {
+  createEnhancedPredictionService,
+  type EnhancedPredictionService,
+} from '../src/lib/ai/enhancedPredictionService'
 import { classifyFighterStyle } from '../src/lib/ai/prompts'
-import { FighterContextService } from '../src/lib/ai/fighterContextService'
+import { ImprovedFighterContextService } from '../src/lib/ai/improvedFighterContextService'
 import { getDefaultSearchFunction } from '../src/lib/ai/webSearchWrapper'
 import type { Fighter, Fight, Event } from '@prisma/client'
 
@@ -230,8 +235,8 @@ async function findFightsNeedingPredictions(
 async function generatePrediction(
   fight: FightWithRelations,
   versionId: string,
-  service: NewPredictionService,
-  contextService?: FighterContextService
+  service: EnhancedPredictionService,
+  contextService?: ImprovedFighterContextService
 ): Promise<{
   success: boolean
   tokensUsed: number
@@ -365,8 +370,17 @@ async function generatePrediction(
       },
     }
 
-    // Generate prediction
-    const prediction = await service.predictFight(finishInput, funInput)
+    // Generate prediction with calibration and logging
+    // Pass fighter and fight IDs to enable PredictionLog logging
+    const isHighStakes = fight.titleFight || fight.mainEvent
+    const prediction = await service.predictFight(
+      finishInput,
+      funInput,
+      fighter1.id,
+      fighter2.id,
+      fight.id,
+      isHighStakes
+    )
 
     // Save to database
     await prisma.prediction.upsert({
@@ -434,8 +448,8 @@ async function generatePrediction(
 async function main() {
   const args = parseArgs()
 
-  console.log('🤖 AI Predictions Runner - Phase 3')
-  console.log('==================================')
+  console.log('🤖 AI Predictions Runner - Phase 4 (Enhanced)')
+  console.log('=============================================')
   console.log(`Provider: ${CONFIG.provider}`)
   console.log(`Dry run: ${args.dryRun}`)
   console.log(`Force regenerate: ${args.force}`)
@@ -482,15 +496,27 @@ async function main() {
 
   // Step 3: Initialize services
   console.log('🚀 Generating predictions...')
-  const service = new NewPredictionService(CONFIG.provider)
 
-  // Initialize context service if web search is enabled
-  let contextService: FighterContextService | undefined
+  // Initialize enhanced prediction service with calibration and logging
+  // Disable useEnrichedContext since we use runner's web search (context chunks are empty)
+  const service = await createEnhancedPredictionService(CONFIG.provider, {
+    useEnrichedContext: false, // Use runner's web search context instead
+    logPrediction: true,
+    applyCalibration: true,
+    includeConformalIntervals: false, // Not trained yet
+  })
+
+  console.log(`✓ Enhanced prediction service initialized`)
+  console.log(`  Calibration: ${service.hasCalibration() ? 'ENABLED' : 'disabled (no params)'}`)
+  console.log(`  Logging: ENABLED`)
+
+  // Initialize improved context service if web search is enabled
+  let contextService: ImprovedFighterContextService | undefined
   if (!args.noWebSearch) {
     try {
       const searchFunction = getDefaultSearchFunction()
-      contextService = new FighterContextService(searchFunction)
-      console.log('✓ Fighter context service initialized with Google Search')
+      contextService = new ImprovedFighterContextService(searchFunction)
+      console.log('✓ Improved fighter context service initialized (adaptive queries + fallback)')
     } catch (error) {
       console.warn(`⚠ Could not initialize web search: ${error instanceof Error ? error.message : String(error)}`)
       console.warn('  Predictions will run without recent context enrichment.')
