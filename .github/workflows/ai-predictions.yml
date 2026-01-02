@@ -1,4 +1,4 @@
-name: AI Predictions Generator (v2 - Improved Web Search)
+name: AI Predictions Generator (v3 - Unified)
 
 on:
   schedule:
@@ -59,13 +59,13 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
         run: |
-          # Run the new AI predictions runner with improved web search
+          # Run the unified AI predictions runner (Phase 4)
           if [ "${{ github.event.inputs.no_web_search }}" = "true" ]; then
-            echo "Running with web search disabled..."
-            npx ts-node scripts/new-ai-predictions-runner.ts --no-web-search
+            echo "Running unified predictions with web search disabled..."
+            npx ts-node scripts/unified-ai-predictions-runner.ts --no-web-search
           else
-            echo "Running with improved web search enabled..."
-            npx ts-node scripts/new-ai-predictions-runner.ts
+            echo "Running unified predictions with web search enabled..."
+            npx ts-node scripts/unified-ai-predictions-runner.ts
           fi
 
       - name: Check AI predictions health (if failed)
