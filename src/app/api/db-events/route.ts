@@ -141,12 +141,13 @@ export async function GET() {
         aiDescription: (() => {
           const prediction = fight.predictions[0]
           if (prediction?.finishReasoning) {
-            // finishReasoning is a JSON object with breakdown, extract the finalAssessment
+            // finishReasoning is a JSON object - prefer finishAnalysis (concise) over finalAssessment
             try {
               const reasoning = typeof prediction.finishReasoning === 'string'
                 ? JSON.parse(prediction.finishReasoning)
                 : prediction.finishReasoning
-              return reasoning.finalAssessment || null
+              // Use concise finishAnalysis if available, fallback to finalAssessment
+              return reasoning.finishAnalysis || reasoning.finalAssessment || null
             } catch {
               // If parsing fails, return the raw value if it's a string
               return typeof prediction.finishReasoning === 'string'
@@ -159,12 +160,13 @@ export async function GET() {
         funReasoning: (() => {
           const prediction = fight.predictions[0]
           if (prediction?.funBreakdown) {
-            // funBreakdown is a JSON object with reasoning text
+            // funBreakdown is a JSON object - prefer funAnalysis (concise) over reasoning (narrative)
             try {
               const breakdown = typeof prediction.funBreakdown === 'string'
                 ? JSON.parse(prediction.funBreakdown)
                 : prediction.funBreakdown
-              return breakdown.reasoning || null
+              // Use concise funAnalysis if available, fallback to reasoning
+              return breakdown.funAnalysis || breakdown.reasoning || null
             } catch {
               return null
             }

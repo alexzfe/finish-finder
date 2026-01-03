@@ -109,6 +109,14 @@ function buildFightSimulationTool(): Anthropic.Tool {
           },
           required: ['vulnerabilityAnalysis', 'offenseAnalysis', 'styleMatchup', 'finalAssessment'],
         },
+        finishAnalysis: {
+          type: 'string',
+          description: 'Concise 1-2 sentences: WHY this fight will or won\'t end in a finish. Focus on key vulnerability vs offense matchup.',
+        },
+        funAnalysis: {
+          type: 'string',
+          description: 'Concise 1-2 sentences: WHY this fight will or won\'t be entertaining. Focus on pace, style clash, and action potential.',
+        },
         narrative: {
           type: 'string',
           description: '3-4 sentence fight simulation - HOW might this fight unfold',
@@ -155,7 +163,7 @@ function buildFightSimulationTool(): Anthropic.Tool {
           description: 'Confidence in the analysis (0.0-1.0 decimal)',
         },
       },
-      required: ['reasoning', 'narrative', 'attributes', 'keyFactors', 'confidence'],
+      required: ['reasoning', 'finishAnalysis', 'funAnalysis', 'narrative', 'attributes', 'keyFactors', 'confidence'],
     },
   }
 }
@@ -182,6 +190,8 @@ const OPENAI_RESPONSE_FORMAT = {
           required: ['vulnerabilityAnalysis', 'offenseAnalysis', 'styleMatchup', 'finalAssessment'],
           additionalProperties: false,
         },
+        finishAnalysis: { type: 'string' },
+        funAnalysis: { type: 'string' },
         narrative: { type: 'string' },
         attributes: {
           type: 'object',
@@ -202,7 +212,7 @@ const OPENAI_RESPONSE_FORMAT = {
         },
         confidence: { type: 'number' },
       },
-      required: ['reasoning', 'narrative', 'attributes', 'keyFactors', 'confidence'],
+      required: ['reasoning', 'finishAnalysis', 'funAnalysis', 'narrative', 'attributes', 'keyFactors', 'confidence'],
       additionalProperties: false,
     },
   },
@@ -227,6 +237,7 @@ export interface UnifiedFightPrediction {
     offenseAnalysis: string
     styleMatchup: string
     finalAssessment: string
+    finishAnalysis: string  // Concise 1-2 sentence WHY finish will/won't happen
     keyFactors: string[]
   }
   funBreakdown: {
@@ -235,7 +246,8 @@ export interface UnifiedFightPrediction {
     technicality: number
     styleClash: string
     brawlPotential: boolean
-    reasoning: string
+    reasoning: string       // Full narrative
+    funAnalysis: string     // Concise 1-2 sentence WHY entertaining
     keyFactors: string[]
   }
 
@@ -383,6 +395,7 @@ export class UnifiedPredictionService {
         offenseAnalysis: simulation.reasoning.offenseAnalysis,
         styleMatchup: simulation.reasoning.styleMatchup,
         finalAssessment: simulation.reasoning.finalAssessment,
+        finishAnalysis: simulation.finishAnalysis,
         keyFactors: simulation.keyFactors,
       },
       funBreakdown: {
@@ -392,6 +405,7 @@ export class UnifiedPredictionService {
         styleClash: simulation.attributes.styleClash,
         brawlPotential: simulation.attributes.brawlPotential,
         reasoning: simulation.narrative,
+        funAnalysis: simulation.funAnalysis,
         keyFactors: simulation.keyFactors,
       },
       validation,
@@ -671,6 +685,16 @@ export class UnifiedPredictionService {
     // Check narrative
     if (typeof o.narrative !== 'string') {
       throw new TypeError('narrative must be a string')
+    }
+
+    // Check finishAnalysis
+    if (typeof o.finishAnalysis !== 'string') {
+      throw new TypeError('finishAnalysis must be a string')
+    }
+
+    // Check funAnalysis
+    if (typeof o.funAnalysis !== 'string') {
+      throw new TypeError('funAnalysis must be a string')
     }
 
     // Check attributes

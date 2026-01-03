@@ -124,6 +124,8 @@ export interface PredictionReasoning {
  */
 export interface FightSimulationOutput {
   reasoning: PredictionReasoning  // Step-by-step analysis (FIRST - CoT principle)
+  finishAnalysis: string          // Concise 1-2 sentence: WHY this fight will/won't be a finish
+  funAnalysis: string             // Concise 1-2 sentence: WHY this fight will/won't be entertaining
   narrative: string               // 3-4 sentence fight story
   attributes: FightAttributes     // Qualitative ratings
   keyFactors: string[]            // 3-5 key factors (2-3 words each)
@@ -304,6 +306,8 @@ IMPORTANT: We are NOT predicting who will win. We are only predicting:
     "styleMatchup": "<Tape Watcher view: 2-3 sentences on how styles interact and create action/entertainment>",
     "finalAssessment": "<Synthesizer view: 2-3 sentences on overall finish likelihood and entertainment value>"
   },
+  "finishAnalysis": "<1-2 sentences: Concise explanation of WHY this fight will or won't end in a finish. Focus on the key vulnerability vs offense matchup.>",
+  "funAnalysis": "<1-2 sentences: Concise explanation of WHY this fight will or won't be entertaining. Focus on pace, style clash, and action potential.>",
   "narrative": "<3-4 sentence fight simulation - HOW might this fight unfold? Focus on the action and entertainment value, not who wins>",
   "attributes": {
     "pace": <1-5>,
