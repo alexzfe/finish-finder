@@ -14,6 +14,7 @@ export const ScrapedFighterSchema = z.object({
   id: z.string(),
   name: z.string(),
   sourceUrl: z.string().url(),
+  imageUrl: z.string().url().nullable().optional(),  // Fighter headshot from ESPN/Wikipedia
 
   // Basic record
   record: z.string().nullable().optional(),

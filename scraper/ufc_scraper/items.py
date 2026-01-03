@@ -50,6 +50,7 @@ class FighterItem(scrapy.Item):
     id = scrapy.Field()  # URL slug: "Jon-Jones"
     name = scrapy.Field()
     sourceUrl = scrapy.Field()
+    imageUrl = scrapy.Field()  # Fighter headshot URL (from ESPN/Wikipedia)
 
     # Basic record
     record = scrapy.Field()  # "W-L-D" format

@@ -174,6 +174,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
             <div className="flex flex-1 items-center space-x-2 sm:space-x-3">
               <FighterAvatar
                 fighterName={fight.fighter1?.name}
+                imageUrl={fight.fighter1?.imageUrl}
                 size="md"
               />
               <div className="min-w-0 flex-1">
@@ -209,6 +210,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
               </div>
               <FighterAvatar
                 fighterName={fight.fighter2?.name}
+                imageUrl={fight.fighter2?.imageUrl}
                 size="md"
               />
             </div>

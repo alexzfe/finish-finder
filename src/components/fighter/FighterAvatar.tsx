@@ -5,6 +5,7 @@ import { useFighterImage } from '@/lib/hooks/useFighterImage'
 
 interface FighterAvatarProps {
   fighterName: string | undefined
+  imageUrl?: string | null  // Direct image URL from database
   size?: 'sm' | 'md' | 'lg' | 'xl'
   className?: string
   showName?: boolean
@@ -27,13 +28,22 @@ const textSizeClasses = {
 
 const FighterAvatarComponent = ({
   fighterName,
+  imageUrl: directImageUrl,
   size = 'md',
   className = '',
   showName = false,
   showConfidence = false
 }: FighterAvatarProps) => {
   const [imageError, setImageError] = useState(false)
-  const { url, source, confidence, loading, error } = useFighterImage(fighterName)
+
+  // Use direct imageUrl from database if provided, skip API call
+  const skipApiCall = !!directImageUrl
+  const { url: apiUrl, source, confidence, loading, error } = useFighterImage(
+    skipApiCall ? undefined : fighterName
+  )
+
+  // Prefer direct URL from database, fall back to API result
+  const url = directImageUrl || apiUrl
 
   const handleImageError = () => {
     setImageError(true)
@@ -56,12 +66,13 @@ const FighterAvatarComponent = ({
     return 'text-red-400'
   }
 
-  const shouldShowImage = url && !imageError && !error && source !== 'placeholder'
+  // Show image if we have a direct URL from database OR a valid API result
+  const shouldShowImage = url && !imageError && (directImageUrl || (source !== 'placeholder' && !error))
 
   return (
     <div className={`flex flex-col items-center ${className}`}>
       <div className={`${sizeClasses[size]} relative flex items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/10`}>
-        {loading ? (
+        {loading && !directImageUrl ? (
           <div className="h-full w-full animate-pulse rounded-full bg-white/10" />
         ) : shouldShowImage ? (
           <img

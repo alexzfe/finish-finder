@@ -106,6 +106,7 @@ async function upsertScrapedData(data: any) {
               losses: fighter.losses ?? 0,
               draws: fighter.draws ?? 0,
               weightClass: fighter.weightClass ?? 'Unknown',
+              imageUrl: fighter.imageUrl,  // Fighter headshot from ESPN/Wikipedia
               sourceUrl: fighter.sourceUrl,
               lastScrapedAt: new Date(),
               contentHash,
@@ -163,6 +164,7 @@ async function upsertScrapedData(data: any) {
               wins: fighter.wins ?? existing.wins,
               losses: fighter.losses ?? existing.losses,
               draws: fighter.draws ?? existing.draws,
+              imageUrl: fighter.imageUrl ?? existing.imageUrl,  // Keep existing if not provided
               lastScrapedAt: new Date(),
               contentHash,
 

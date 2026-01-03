@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from typing import Generator
 from ufc_scraper.items import EventItem, FightItem, FighterItem
 from ufc_scraper import parsers
+from ufc_scraper.image_scraper import get_fighter_image
 
 
 class UFCStatsSpider(scrapy.Spider):
@@ -27,22 +28,28 @@ class UFCStatsSpider(scrapy.Spider):
         include_completed (str): Also scrape 2 most recent completed events with outcomes
                                  Values: 'true', '1', 'yes'
                                  Usage: scrapy crawl ufcstats -a include_completed=true
+        fetch_images (str): Fetch fighter images from ESPN/Wikipedia
+                            Values: 'true', '1', 'yes'
+                            Usage: scrapy crawl ufcstats -a fetch_images=true
 
     Note:
         Completed events are ALWAYS limited to 2 most recent to avoid excessive scraping.
         The 'limit' parameter only applies to upcoming events.
+        Image fetching is disabled by default to reduce external API calls.
     """
 
     name = "ufcstats"
     allowed_domains = ["ufcstats.com"]
 
-    def __init__(self, limit=None, include_completed=None, completed_limit=None, *args, **kwargs):
+    def __init__(self, limit=None, include_completed=None, completed_limit=None, fetch_images=None, *args, **kwargs):
         super(UFCStatsSpider, self).__init__(*args, **kwargs)
         self.limit = int(limit) if limit else None
         # Parse include_completed as boolean
         self.include_completed = include_completed in ['true', '1', 'yes', 'True', 'Yes']
         # Completed events limit (default 2)
         self.completed_limit = int(completed_limit) if completed_limit else 2
+        # Image scraping (disabled by default to avoid extra API calls)
+        self.fetch_images = fetch_images in ['true', '1', 'yes', 'True', 'Yes']
         self.events_scraped = 0
 
     def start_requests(self):
@@ -163,14 +170,27 @@ class UFCStatsSpider(scrapy.Spider):
             FighterItem: Fighter data with complete record
         """
         base_data = response.meta.get('fighter_base_data', {})
+        fighter_name = base_data.get('name', 'Unknown')
 
-        self.logger.info(f"Parsing fighter profile: {base_data.get('name', 'Unknown')}")
+        self.logger.info(f"Parsing fighter profile: {fighter_name}")
 
         soup = BeautifulSoup(response.text, 'html.parser')
         profile_data = parsers.parse_fighter_profile(soup, response.url)
 
         # Merge base data with profile data (profile data takes precedence)
         fighter_data = {**base_data, **profile_data}
+
+        # Fetch fighter image if enabled
+        if self.fetch_images:
+            try:
+                image_url = get_fighter_image(fighter_name)
+                if image_url:
+                    fighter_data['imageUrl'] = image_url
+                    self.logger.info(f"Found image for {fighter_name}: {image_url}")
+                else:
+                    self.logger.debug(f"No image found for {fighter_name}")
+            except Exception as e:
+                self.logger.warning(f"Image fetch failed for {fighter_name}: {e}")
 
         # Yield complete fighter item
         fighter_item = FighterItem(fighter_data)
