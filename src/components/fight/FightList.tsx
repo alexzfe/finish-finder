@@ -96,26 +96,20 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
     setLoading(false)
   }, [event])
 
-  const getFunScoreTextClass = (score: number) => {
-    if (score >= 85) return 'text-red-500'
-    if (score >= 75) return 'text-orange-400'
-    if (score >= 65) return 'text-yellow-400'
-    return 'text-white'
-  }
-
   const getFunScoreStyle = (score: number) => {
-    if (score >= 85) return { color: '#d20a0a' }
-    if (score >= 75) return { color: '#f97316' }
-    if (score >= 65) return { color: '#fbbf24' }
-    return { color: '#f1f5f9' }
+    // Warm "heat" scale: cold → warm → hot → fire
+    if (score >= 85) return { color: 'var(--score-fire)' }
+    if (score >= 75) return { color: 'var(--score-hot)' }
+    if (score >= 65) return { color: 'var(--score-warm)' }
+    return { color: 'var(--score-cold)' }
   }
 
   const getFinishProbabilityStyle = (probability: number) => {
-    // probability is 0-1, convert to percentage for thresholds
+    // Cool analytical scale for finish likelihood
     const pct = probability * 100
-    if (pct >= 70) return { bg: 'bg-cyan-500/20', border: 'border-cyan-500/40', text: 'text-cyan-300' }
-    if (pct >= 50) return { bg: 'bg-cyan-500/10', border: 'border-cyan-500/25', text: 'text-cyan-400' }
-    return { bg: 'bg-white/5', border: 'border-white/10', text: 'text-white/80' }
+    if (pct >= 70) return { bg: 'bg-[var(--finish-high)]/15', border: 'border-[var(--finish-high)]/40', text: 'text-[var(--finish-high)]' }
+    if (pct >= 50) return { bg: 'bg-[var(--finish-mid)]/10', border: 'border-[var(--finish-mid)]/25', text: 'text-[var(--finish-mid)]' }
+    return { bg: 'bg-white/5', border: 'border-white/10', text: 'text-[var(--finish-low)]' }
   }
 
   const sectionsToRender: Section[] = useMemo(() => [
@@ -186,7 +180,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
                 size="responsive"
               />
               <div className="min-w-0 flex-1">
-                <div className="ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center gap-1.5 text-white" style={getFunScoreStyle(funScore)}>
+                <div className="ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center gap-1.5 text-white">
                   {fight.fighter1?.name || 'TBD'}
                   {fight.completed && fight.winnerId && fight.winnerId === fight.fighter1?.id && (
                     <span className="text-[var(--ufc-red)]">✓</span>
@@ -206,7 +200,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
             {/* Fighter 2 */}
             <div className="flex flex-1 items-center justify-end space-x-2 sm:space-x-3 md:space-x-4">
               <div className="min-w-0 flex-1 text-right">
-                <div className="ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center justify-end gap-1.5 text-white" style={getFunScoreStyle(funScore)}>
+                <div className="ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center justify-end gap-1.5 text-white">
                   {fight.completed && fight.winnerId && fight.winnerId === fight.fighter2?.id && (
                     <span className="text-[var(--ufc-red)]">✓</span>
                   )}

@@ -20,12 +20,12 @@ export const FightCard = React.memo(
   // Manual state control for hover/tap to avoid React 19 compatibility issues
   const [isHovered, setIsHovered] = useState(false)
   const [isTapped, setIsTapped] = useState(false)
-  // Fun Score color coding based on implementation plan thresholds
+  // Fun Score color using heat scale (matches FightList.tsx)
   const getFunScoreColor = (score: number) => {
-    if (score >= 80) return 'bg-red-500'
-    if (score >= 60) return 'bg-yellow-500'
-    if (score >= 40) return 'bg-orange-500'
-    return 'bg-gray-500'
+    if (score >= 85) return 'bg-[var(--score-fire)]'
+    if (score >= 75) return 'bg-[var(--score-hot)]'
+    if (score >= 65) return 'bg-[var(--score-warm)]'
+    return 'bg-[var(--score-cold)]'
   }
 
   const formatWeightClass = (wc?: string | null): string => {

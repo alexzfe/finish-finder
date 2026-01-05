@@ -18,6 +18,22 @@ const formatWeightClass = (weightClass?: string | null): string => {
     .join(' ')
 }
 
+// Fun Score color based on heat scale
+const getFunScoreColor = (score: number): string => {
+  if (score >= 85) return 'var(--score-fire)'
+  if (score >= 75) return 'var(--score-hot)'
+  if (score >= 65) return 'var(--score-warm)'
+  return 'var(--score-cold)'
+}
+
+// Finish Probability styling based on likelihood
+const getFinishProbabilityStyles = (probability: number) => {
+  const pct = probability * 100
+  if (pct >= 70) return { bg: 'bg-[var(--finish-high)]/15', border: 'border-[var(--finish-high)]/30', text: 'text-[var(--finish-high)]' }
+  if (pct >= 50) return { bg: 'bg-[var(--finish-mid)]/10', border: 'border-[var(--finish-mid)]/20', text: 'text-[var(--finish-mid)]' }
+  return { bg: 'bg-white/5', border: 'border-white/10', text: 'text-[var(--finish-low)]' }
+}
+
 export default function Home() {
   const [events, setEvents] = useState<UFCEvent[]>([])
   const [currentEventIndex, setCurrentEventIndex] = useState(0)
@@ -291,12 +307,17 @@ export default function Home() {
                     <div className="grid gap-2.5 text-sm uppercase tracking-[0.24em] text-white/80">
                       <div className="rounded-xl bg-white/5 px-4 py-3.5">
                         <span className="block text-[0.7rem] text-white/70">Fun Score</span>
-                        <span className="ufc-condensed text-2xl text-[var(--ufc-red)] md:text-3xl">{selectedFight.predictedFunScore || 0}</span>
+                        <span className="ufc-condensed text-2xl md:text-3xl" style={{ color: getFunScoreColor(selectedFight.predictedFunScore || 0) }}>{selectedFight.predictedFunScore || 0}</span>
                       </div>
-                      <div className="rounded-xl bg-white/5 px-4 py-3.5">
-                        <span className="block text-[0.7rem] text-white/70">Finish Probability</span>
-                        <span className="ufc-condensed text-xl text-white md:text-2xl">{Math.round((selectedFight.finishProbability || 0) * 100)}%</span>
-                      </div>
+                      {(() => {
+                        const finishStyles = getFinishProbabilityStyles(selectedFight.finishProbability || 0)
+                        return (
+                          <div className={`rounded-xl ${finishStyles.bg} border ${finishStyles.border} px-4 py-3.5`}>
+                            <span className="block text-[0.7rem] text-white/70">Finish Probability</span>
+                            <span className={`ufc-condensed text-xl md:text-2xl ${finishStyles.text}`}>{Math.round((selectedFight.finishProbability || 0) * 100)}%</span>
+                          </div>
+                        )
+                      })()}
                       <div className="rounded-xl bg-white/5 px-4 py-3.5">
                         <span className="block text-[0.7rem] text-white/70">Risk Profile</span>
                         <span className="ufc-condensed text-base text-white md:text-lg">{selectedFight.riskLevel || 'Balanced'}</span>

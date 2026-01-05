@@ -13,6 +13,17 @@
   --ufc-font-condensed: "Roboto Condensed Variable", "Roboto Condensed", "Arial Narrow", "DIN Alternate", "Helvetica Neue", sans-serif;
   --ufc-font-sans: "Karla Variable", "Karla", "Arial", "Helvetica Neue", sans-serif;
   --ufc-letter-spacing-wide: 0.08em;
+
+  /* Fun Score - Warm "heat" scale (entertainment value) */
+  --score-cold: #64748b;      /* slate-500: <65 - tepid fight */
+  --score-warm: #f59e0b;      /* amber-500: 65-74 - warming up */
+  --score-hot: #f97316;       /* orange-500: 75-84 - heating up */
+  --score-fire: #ea580c;      /* orange-600: 85+ - on fire */
+
+  /* Finish Probability - Cool analytical scale */
+  --finish-high: #22d3ee;     /* cyan-400: 70%+ */
+  --finish-mid: #67e8f9;      /* cyan-300: 50-69% */
+  --finish-low: #94a3b8;      /* slate-400: <50% */
 }
 
 @theme inline {
