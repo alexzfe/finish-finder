@@ -110,6 +110,14 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
     return { color: '#f1f5f9' }
   }
 
+  const getFinishProbabilityStyle = (probability: number) => {
+    // probability is 0-1, convert to percentage for thresholds
+    const pct = probability * 100
+    if (pct >= 70) return { bg: 'bg-cyan-500/20', border: 'border-cyan-500/40', text: 'text-cyan-300' }
+    if (pct >= 50) return { bg: 'bg-cyan-500/10', border: 'border-cyan-500/25', text: 'text-cyan-400' }
+    return { bg: 'bg-white/5', border: 'border-white/10', text: 'text-white/80' }
+  }
+
   const sectionsToRender: Section[] = useMemo(() => [
     { title: 'Main Card', fights: sections.mainCard.map((fight, index) => ({
       ...fight,
@@ -235,11 +243,13 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-wrap items-center justify-between gap-1 text-[0.65rem] md:text-[0.7rem] lg:text-xs uppercase tracking-[0.24em] text-white/75 sm:flex-nowrap sm:gap-0">
+              <div className="flex flex-wrap items-center justify-between gap-1.5 text-[0.65rem] md:text-[0.7rem] lg:text-xs uppercase tracking-[0.24em] text-white/75 sm:flex-nowrap sm:gap-2">
                 <span className="truncate">{fight.weightClass}</span>
                 <span className="whitespace-nowrap">{fight.scheduledRounds || 3} Rounds</span>
                 {fight.finishProbability ? (
-                  <span className="whitespace-nowrap text-white">Finish {Math.round(fight.finishProbability * 100)}%</span>
+                  <span className={`whitespace-nowrap rounded-full px-2 py-0.5 border ${getFinishProbabilityStyle(fight.finishProbability).bg} ${getFinishProbabilityStyle(fight.finishProbability).border} ${getFinishProbabilityStyle(fight.finishProbability).text}`}>
+                    Finish {Math.round(fight.finishProbability * 100)}%
+                  </span>
                 ) : null}
               </div>
             )}

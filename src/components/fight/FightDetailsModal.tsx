@@ -92,9 +92,9 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl bg-white/5 px-4 py-3">
-                      <span className="block text-[0.7rem] md:text-[0.75rem] text-white/70">Finish Probability</span>
-                      <span className="ufc-condensed text-xl text-white">
+                    <div className="rounded-xl bg-cyan-500/10 border border-cyan-500/20 px-4 py-3">
+                      <span className="block text-[0.7rem] md:text-[0.75rem] text-cyan-300/70">Finish Probability</span>
+                      <span className="ufc-condensed text-xl text-cyan-300">
                         {Math.round((fight.finishProbability || 0) * 100)}%
                       </span>
                     </div>
