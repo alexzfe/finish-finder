@@ -20,9 +20,8 @@ export function FightCardGrid() {
   if (fights.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-black/50 py-12 text-center text-white">
-        <div className="mb-3 text-5xl">🥊</div>
         <h3 className="ufc-condensed text-xl text-white">No fights match your filters</h3>
-        <p className="mt-1 text-[0.65rem] uppercase tracking-[0.3em] text-white/50">
+        <p className="mt-1 text-[0.7rem] md:text-xs uppercase tracking-[0.3em] text-white/50">
           Try adjusting your weight class filters
         </p>
       </div>

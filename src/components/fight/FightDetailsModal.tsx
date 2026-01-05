@@ -86,20 +86,20 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                 {/* Stats Grid */}
                 <div className="grid gap-3 mb-5">
                   <div className="rounded-xl bg-white/5 px-4 py-3.5">
-                    <span className="block text-[0.7rem] text-white/70">Fun Score</span>
+                    <span className="block text-[0.75rem] md:text-xs text-white/70">Fun Score</span>
                     <span className="ufc-condensed text-3xl text-[var(--ufc-red)]">
                       {fight.predictedFunScore || 0}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-xl bg-white/5 px-4 py-3">
-                      <span className="block text-[0.7rem] text-white/70">Finish Probability</span>
+                      <span className="block text-[0.75rem] md:text-xs text-white/70">Finish Probability</span>
                       <span className="ufc-condensed text-xl text-white">
-                        {fight.finishProbability || 0}%
+                        {Math.round((fight.finishProbability || 0) * 100)}%
                       </span>
                     </div>
                     <div className="rounded-xl bg-white/5 px-4 py-3">
-                      <span className="block text-[0.7rem] text-white/70">Risk Profile</span>
+                      <span className="block text-[0.75rem] md:text-xs text-white/70">Risk Profile</span>
                       <span className="ufc-condensed text-lg text-white">
                         {fight.riskLevel || 'Balanced'}
                       </span>
@@ -130,7 +130,7 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                         {/* Key Factors as Bubbles */}
                         {Array.isArray(fight.funFactors) && fight.funFactors.length > 0 && (
                           <div>
-                            <p className="ufc-condensed text-[0.65rem] uppercase tracking-[0.3em] text-white/50 mb-2">Key Factors</p>
+                            <p className="ufc-condensed text-[0.7rem] md:text-xs uppercase tracking-[0.3em] text-white/50 mb-2">Key Factors</p>
                             <div className="flex flex-wrap gap-2">
                               {fight.funFactors.map((factor, idx) => (
                                 <span

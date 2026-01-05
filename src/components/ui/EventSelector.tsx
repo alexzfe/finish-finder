@@ -10,7 +10,7 @@ export function EventSelector({ events, selectedEvent, onEventSelect }: EventSel
   return (
     <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
       <h2 className="text-white text-xl font-semibold mb-4">
-        📅 Upcoming UFC Events
+        Upcoming UFC Events
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -42,7 +42,7 @@ export function EventSelector({ events, selectedEvent, onEventSelect }: EventSel
               })()}
             </p>
             <p className="text-sm opacity-70">
-              📍 {event.location}
+              {event.location}
             </p>
             <p className="text-xs opacity-60 mt-1">
               {event.venue}
