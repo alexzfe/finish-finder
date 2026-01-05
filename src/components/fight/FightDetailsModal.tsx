@@ -52,7 +52,7 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform rounded-2xl border border-white/10 bg-black/90 p-6 text-white shadow-2xl transition-all">
+              <Dialog.Panel className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md transform rounded-2xl border border-white/10 bg-black/90 p-4 sm:p-6 text-white shadow-2xl transition-all">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">
                   <Dialog.Title className="ufc-condensed text-xs text-white/70">

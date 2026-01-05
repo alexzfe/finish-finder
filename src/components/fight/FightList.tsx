@@ -171,14 +171,18 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
           {/* Mobile: Stacked Layout, Desktop: Side by Side */}
           <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             {/* Fighter 1 */}
-            <div className="flex flex-1 items-center space-x-2 sm:space-x-3">
+            <div className="flex flex-1 items-center space-x-2 sm:space-x-3 md:space-x-4">
               <FighterAvatar
                 fighterName={fight.fighter1?.name}
-                size="md"
+                imageUrl={fight.fighter1?.imageUrl}
+                size="responsive"
               />
               <div className="min-w-0 flex-1">
-                <div className="ufc-condensed truncate text-sm text-white sm:text-base md:text-lg" style={getFunScoreStyle(funScore)}>
+                <div className="ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center gap-1.5 text-white" style={getFunScoreStyle(funScore)}>
                   {fight.fighter1?.name || 'TBD'}
+                  {fight.completed && fight.winnerId && fight.winnerId === fight.fighter1?.id && (
+                    <span className="text-[var(--ufc-red)]">✓</span>
+                  )}
                 </div>
                 <div className="text-[0.65rem] uppercase tracking-[0.22em] text-white/70">
                   {formatRecord(fight.fighter1?.record)}
@@ -192,9 +196,12 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
             </div>
 
             {/* Fighter 2 */}
-            <div className="flex flex-1 items-center justify-end space-x-2 sm:space-x-3">
+            <div className="flex flex-1 items-center justify-end space-x-2 sm:space-x-3 md:space-x-4">
               <div className="min-w-0 flex-1 text-right">
-                <div className="ufc-condensed truncate text-sm text-white sm:text-base md:text-lg" style={getFunScoreStyle(funScore)}>
+                <div className="ufc-condensed truncate text-sm sm:text-base md:text-lg flex items-center justify-end gap-1.5 text-white" style={getFunScoreStyle(funScore)}>
+                  {fight.completed && fight.winnerId && fight.winnerId === fight.fighter2?.id && (
+                    <span className="text-[var(--ufc-red)]">✓</span>
+                  )}
                   {fight.fighter2?.name || 'TBD'}
                 </div>
                 <div className="text-[0.65rem] uppercase tracking-[0.22em] text-white/70">
@@ -203,20 +210,39 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
               </div>
               <FighterAvatar
                 fighterName={fight.fighter2?.name}
-                size="md"
+                imageUrl={fight.fighter2?.imageUrl}
+                size="responsive"
               />
             </div>
           </div>
 
           {/* Fight Details */}
           <div className="mt-3 border-t border-white/10 pt-2.5">
-            <div className="flex flex-wrap items-center justify-between gap-1 text-[0.65rem] uppercase tracking-[0.24em] text-white/75 sm:flex-nowrap sm:gap-0">
-              <span className="truncate">{fight.weightClass}</span>
-              <span className="whitespace-nowrap">{fight.scheduledRounds || 3} Rounds</span>
-              {fight.finishProbability ? (
-                <span className="whitespace-nowrap text-white">Finish {Math.round(fight.finishProbability * 100)}%</span>
-              ) : null}
-            </div>
+            {fight.completed && fight.winnerId ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-[0.24em]">
+                  <span className="text-white/60">Result</span>
+                  <span className="text-[var(--ufc-red)] font-medium">
+                    {fight.winnerId === fight.fighter1?.id ? fight.fighter1?.name : fight.fighter2?.name}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-1 text-[0.65rem] uppercase tracking-[0.24em] text-white/75">
+                  <span className="truncate">{fight.weightClass}</span>
+                  {fight.method && <span className="whitespace-nowrap text-white">via {fight.method}</span>}
+                  {fight.round && fight.time && (
+                    <span className="whitespace-nowrap">R{fight.round} {fight.time}</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-1 text-[0.65rem] uppercase tracking-[0.24em] text-white/75 sm:flex-nowrap sm:gap-0">
+                <span className="truncate">{fight.weightClass}</span>
+                <span className="whitespace-nowrap">{fight.scheduledRounds || 3} Rounds</span>
+                {fight.finishProbability ? (
+                  <span className="whitespace-nowrap text-white">Finish {Math.round(fight.finishProbability * 100)}%</span>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -225,10 +251,52 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-black/50 py-10 text-center text-white">
-        <div className="mb-3 text-4xl">🎯</div>
-        <p className="ufc-condensed text-base text-white">Loading Fight Card...</p>
-        <p className="mt-1 text-[0.65rem] uppercase tracking-[0.3em] text-white/50">Syncing bouts and metrics</p>
+      <div className="space-y-4">
+        {/* Skeleton section */}
+        <div className="rounded-2xl border border-white/5 bg-black/40 shadow-[0_18px_50px_rgba(0,0,0,0.45)]">
+          <div className="flex items-center justify-between border-b border-white/5 px-3 py-3 sm:px-5">
+            <div className="h-5 w-28 animate-pulse rounded bg-white/10" />
+            <div className="h-3 w-16 animate-pulse rounded bg-white/10" />
+          </div>
+          <div className="p-3 sm:p-5">
+            <div className="grid gap-3.5">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-xl border border-white/10 overflow-hidden">
+                  {/* Header skeleton */}
+                  <div className="border-b border-white/10 bg-black/60 px-3 py-2.5 sm:px-4">
+                    <div className="flex items-center justify-between">
+                      <div className="h-3 w-20 animate-pulse rounded bg-white/10" />
+                      <div className="text-right">
+                        <div className="h-5 w-10 animate-pulse rounded bg-white/10 mb-1" />
+                        <div className="h-2 w-14 animate-pulse rounded bg-white/10" />
+                      </div>
+                    </div>
+                  </div>
+                  {/* Fighter row skeleton */}
+                  <div className="bg-black/50 p-2.5 sm:p-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 md:w-16 md:h-16 animate-pulse rounded-full bg-white/10" />
+                        <div>
+                          <div className="h-4 w-24 animate-pulse rounded bg-white/10 mb-1.5" />
+                          <div className="h-2 w-14 animate-pulse rounded bg-white/10" />
+                        </div>
+                      </div>
+                      <div className="h-3 w-6 animate-pulse rounded bg-white/10" />
+                      <div className="flex items-center space-x-3">
+                        <div className="text-right">
+                          <div className="h-4 w-24 animate-pulse rounded bg-white/10 mb-1.5" />
+                          <div className="h-2 w-14 animate-pulse rounded bg-white/10 ml-auto" />
+                        </div>
+                        <div className="w-12 h-12 md:w-16 md:h-16 animate-pulse rounded-full bg-white/10" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
