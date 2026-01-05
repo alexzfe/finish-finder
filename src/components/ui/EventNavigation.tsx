@@ -129,7 +129,7 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
           </h1>
           {currentEvent.completed && (
             <span
-              className="ufc-condensed rounded-full bg-white/10 px-3 py-1 text-[0.7rem] md:text-xs uppercase tracking-[0.2em] text-white/70 border border-white/20"
+              className="ufc-condensed rounded-full bg-white/10 px-3 py-1 text-[0.65rem] md:text-[0.7rem] uppercase tracking-[0.2em] text-white/70 border border-white/20"
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
               Completed
@@ -153,7 +153,7 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
           })()}
         </p>
 
-        <p className="mt-2 text-[0.7rem] md:text-xs uppercase tracking-[0.35em] text-white/45">
+        <p className="mt-2 text-[0.65rem] md:text-[0.7rem] uppercase tracking-[0.35em] text-white/45">
           {currentEvent.location}
         </p>
 

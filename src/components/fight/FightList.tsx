@@ -151,7 +151,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
                 {fight.cardPosition || 'Fight' }
               </span>
               {fight.titleFight && (
-                <span className="ufc-condensed text-[0.65rem] md:text-xs tracking-[0.3em] text-white" style={{ backgroundColor: 'rgba(210,10,10,0.15)', padding: '0.15rem 0.55rem', borderRadius: '999px', border: '1px solid rgba(210,10,10,0.35)' }}>
+                <span className="ufc-condensed text-[0.6rem] md:text-[0.65rem] lg:text-[0.7rem] tracking-[0.3em] text-white" style={{ backgroundColor: 'rgba(210,10,10,0.15)', padding: '0.15rem 0.55rem', borderRadius: '999px', border: '1px solid rgba(210,10,10,0.35)' }}>
                   Title
                 </span>
               )}
@@ -160,7 +160,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
               <div className="ufc-condensed text-lg md:text-xl" style={getFunScoreStyle(funScore)}>
                 {funScore}
               </div>
-              <div className="text-[0.65rem] md:text-xs uppercase tracking-[0.26em] text-white/70">
+              <div className="text-[0.6rem] md:text-[0.65rem] lg:text-[0.7rem] uppercase tracking-[0.26em] text-white/70">
                 Fun Score
               </div>
             </div>
@@ -184,7 +184,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
                     <span className="text-[var(--ufc-red)]">✓</span>
                   )}
                 </div>
-                <div className="text-[0.7rem] md:text-xs lg:text-[0.8125rem] uppercase tracking-[0.22em] text-white/70">
+                <div className="text-[0.65rem] md:text-[0.7rem] lg:text-xs uppercase tracking-[0.22em] text-white/70">
                   {formatRecord(fight.fighter1?.record)}
                 </div>
               </div>
@@ -204,7 +204,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
                   )}
                   {fight.fighter2?.name || 'TBD'}
                 </div>
-                <div className="text-[0.7rem] md:text-xs lg:text-[0.8125rem] uppercase tracking-[0.22em] text-white/70">
+                <div className="text-[0.65rem] md:text-[0.7rem] lg:text-xs uppercase tracking-[0.22em] text-white/70">
                   {formatRecord(fight.fighter2?.record)}
                 </div>
               </div>
@@ -220,13 +220,13 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
           <div className="mt-3 border-t border-white/10 pt-2.5">
             {fight.completed && fight.winnerId ? (
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-[0.7rem] md:text-xs lg:text-[0.8125rem] uppercase tracking-[0.24em]">
+                <div className="flex items-center justify-between text-[0.65rem] md:text-[0.7rem] lg:text-xs uppercase tracking-[0.24em]">
                   <span className="text-white/60">Result</span>
                   <span className="text-[var(--ufc-red)] font-medium">
                     {fight.winnerId === fight.fighter1?.id ? fight.fighter1?.name : fight.fighter2?.name}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-1 text-[0.7rem] md:text-xs lg:text-[0.8125rem] uppercase tracking-[0.24em] text-white/75">
+                <div className="flex flex-wrap items-center justify-between gap-1 text-[0.65rem] md:text-[0.7rem] lg:text-xs uppercase tracking-[0.24em] text-white/75">
                   <span className="truncate">{fight.weightClass}</span>
                   {fight.method && <span className="whitespace-nowrap text-white">via {fight.method}</span>}
                   {fight.round && fight.time && (
@@ -235,7 +235,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-wrap items-center justify-between gap-1 text-[0.7rem] md:text-xs lg:text-[0.8125rem] uppercase tracking-[0.24em] text-white/75 sm:flex-nowrap sm:gap-0">
+              <div className="flex flex-wrap items-center justify-between gap-1 text-[0.65rem] md:text-[0.7rem] lg:text-xs uppercase tracking-[0.24em] text-white/75 sm:flex-nowrap sm:gap-0">
                 <span className="truncate">{fight.weightClass}</span>
                 <span className="whitespace-nowrap">{fight.scheduledRounds || 3} Rounds</span>
                 {fight.finishProbability ? (
@@ -305,7 +305,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-black/50 py-12 text-center text-white">
         <h3 className="ufc-condensed text-xl text-white">Fight card incoming</h3>
-        <p className="mt-1 text-[0.7rem] md:text-xs uppercase tracking-[0.3em] text-white/50">Check back once the UFC locks the bouts</p>
+        <p className="mt-1 text-[0.65rem] md:text-[0.7rem] lg:text-xs uppercase tracking-[0.3em] text-white/50">Check back once the UFC locks the bouts</p>
       </div>
     )
   }
@@ -316,7 +316,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
         <div key={section.title} className="rounded-2xl border border-white/5 bg-black/40 shadow-[0_18px_50px_rgba(0,0,0,0.45)]">
           <div className="flex items-center justify-between border-b border-white/5 px-3 py-3 sm:px-5">
             <h2 className="ufc-condensed text-lg text-white md:text-xl">{section.title}</h2>
-            <span className="text-[0.65rem] md:text-xs uppercase tracking-[0.3em] text-white/40">{section.fights.length} Fights</span>
+            <span className="text-[0.6rem] md:text-[0.65rem] lg:text-[0.7rem] uppercase tracking-[0.3em] text-white/40">{section.fights.length} Fights</span>
           </div>
 
           <div className="p-3 sm:p-5">
