@@ -16,7 +16,17 @@
 # next.js
 /.next/
 /out/
-/docs/
+
+# docs - GitHub Pages output (ignore static build artifacts, keep documentation)
+/docs/_next/
+/docs/data/
+/docs/*.html
+/docs/.nojekyll
+/docs/images/
+/docs/404/
+/docs/*.svg
+/docs/*.ico
+/docs/*.txt
 
 # production
 /build

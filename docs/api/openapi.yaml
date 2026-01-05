@@ -1,0 +1,976 @@
+openapi: 3.1.0
+info:
+  title: Finish Finder API
+  version: 1.0.0
+  description: |
+    UFC Fight Prediction and Entertainment Analysis API
+
+    Finish Finder is a platform that predicts fight outcomes and entertainment value
+    for upcoming UFC events using AI-powered analysis.
+
+    ## Authentication
+
+    Most endpoints are public read-only. The internal ingestion API requires
+    Bearer token authentication via the `INGEST_API_SECRET` environment variable.
+
+    ## Rate Limiting
+
+    No explicit rate limiting is configured, but the database health monitoring
+    tracks query performance and may trigger alerts for excessive load.
+
+  contact:
+    name: Finish Finder Team
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://finish-finder.vercel.app
+    description: Production server
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Events
+    description: UFC event and fight data
+  - name: Health
+    description: System health and monitoring
+  - name: Performance
+    description: Database performance metrics
+  - name: Internal
+    description: Internal APIs (requires authentication)
+  - name: Admin
+    description: Administrative operations
+
+paths:
+  /api/db-events:
+    get:
+      summary: Get all UFC events with fight cards
+      description: |
+        Returns up to 50 UFC events with complete fight card data including
+        fighter information, AI predictions, and fight outcomes for completed events.
+      operationId: getEvents
+      tags:
+        - Events
+      responses:
+        '200':
+          description: Successful response with events data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventsResponse'
+        '500':
+          description: Database or server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/health:
+    get:
+      summary: System health check
+      description: |
+        Comprehensive health check endpoint that validates:
+        - Database connectivity and query time
+        - Query performance metrics
+        - System resources (memory, uptime)
+        - External service availability (OpenAI API)
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Health check results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+        '500':
+          description: Health check system failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/performance:
+    get:
+      summary: Get database performance metrics
+      description: |
+        Returns aggregated database query performance metrics including:
+        - Total queries and average duration
+        - Slow and critical query counts
+        - Top problematic queries
+        - Optimization recommendations
+      operationId: getPerformanceMetrics
+      tags:
+        - Performance
+      responses:
+        '200':
+          description: Performance metrics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceResponse'
+        '500':
+          description: Failed to retrieve metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Reset performance metrics
+      description: Clears all stored query performance metrics
+      operationId: resetPerformanceMetrics
+      tags:
+        - Performance
+      responses:
+        '200':
+          description: Metrics cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Performance metrics cleared"
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: Failed to reset metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/fighter-image:
+    get:
+      summary: Get fighter image URL
+      description: |
+        Searches multiple sources for fighter headshot images.
+        Currently disabled - always returns placeholder.
+
+        When enabled, searches in order:
+        1. Tapology
+        2. UFC.com
+        3. Sherdog
+      operationId: getFighterImage
+      tags:
+        - Events
+      parameters:
+        - name: name
+          in: query
+          required: true
+          description: Fighter name to search for
+          schema:
+            type: string
+            example: "Jon Jones"
+      responses:
+        '200':
+          description: Fighter image result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FighterImageResponse'
+
+  /api/internal/ingest:
+    post:
+      summary: Ingest scraped UFC data
+      description: |
+        Internal endpoint for the Python scraper to post collected data.
+        Performs upsert operations with change detection via content hashing.
+
+        **Requires authentication via Bearer token.**
+      operationId: ingestData
+      tags:
+        - Internal
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestRequest'
+      responses:
+        '200':
+          description: Data ingested successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Validation failed"
+                  errors:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Unauthorized"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/wipe-database:
+    post:
+      summary: Wipe all database data
+      description: |
+        **DANGEROUS** - Deletes all data from the database.
+
+        Requires:
+        - Correct admin password
+        - Explicit confirmation string
+        - Production environments require `ALLOW_PRODUCTION_WIPE=true`
+      operationId: wipeDatabase
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+                - confirm
+              properties:
+                password:
+                  type: string
+                  description: Admin password
+                confirm:
+                  type: string
+                  description: Must be "WIPE_ALL_DATA"
+                  example: "WIPE_ALL_DATA"
+      responses:
+        '200':
+          description: Database wiped successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WipeDatabaseResponse'
+        '400':
+          description: Missing confirmation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '401':
+          description: Wrong password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Unauthorized"
+        '403':
+          description: Production wipe not allowed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  environment:
+                    type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: INGEST_API_SECRET token
+
+  schemas:
+    # Common types
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    # Fighter schema
+    Fighter:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          description: Unique fighter identifier (URL slug)
+          example: "jon-jones"
+        name:
+          type: string
+          example: "Jon Jones"
+        nickname:
+          type: string
+          nullable: true
+          example: "Bones"
+        record:
+          type: string
+          description: Win-Loss-Draw record
+          example: "27-1-0"
+        wins:
+          type: integer
+          example: 27
+        losses:
+          type: integer
+          example: 1
+        draws:
+          type: integer
+          example: 0
+        weightClass:
+          type: string
+          example: "Heavyweight"
+        imageUrl:
+          type: string
+          nullable: true
+          format: uri
+        height:
+          type: string
+          example: "6' 4\""
+        reach:
+          type: string
+          example: "84\""
+        stance:
+          type: string
+          enum: [Orthodox, Southpaw, Switch]
+        # Statistics
+        significantStrikesLandedPerMinute:
+          type: number
+          format: float
+        strikingAccuracyPercentage:
+          type: number
+          format: float
+          description: 0-1 range
+        significantStrikesAbsorbedPerMinute:
+          type: number
+          format: float
+        strikingDefensePercentage:
+          type: number
+          format: float
+          description: 0-1 range
+        takedownAverage:
+          type: number
+          format: float
+        takedownAccuracyPercentage:
+          type: number
+          format: float
+        takedownDefensePercentage:
+          type: number
+          format: float
+        submissionAverage:
+          type: number
+          format: float
+        # Win/Loss methods
+        winsByKO:
+          type: integer
+        winsBySubmission:
+          type: integer
+        winsByDecision:
+          type: integer
+        lossesByKO:
+          type: integer
+        lossesBySubmission:
+          type: integer
+        lossesByDecision:
+          type: integer
+        # Calculated rates
+        finishRate:
+          type: number
+          format: float
+          description: (KO + SUB wins) / total wins
+        koPercentage:
+          type: number
+          format: float
+        submissionPercentage:
+          type: number
+          format: float
+        lossFinishRate:
+          type: number
+          format: float
+        koLossPercentage:
+          type: number
+          format: float
+        submissionLossPercentage:
+          type: number
+          format: float
+
+    # Fight schema
+    Fight:
+      type: object
+      required:
+        - id
+        - fighter1
+        - fighter2
+        - weightClass
+      properties:
+        id:
+          type: string
+        fighter1:
+          $ref: '#/components/schemas/Fighter'
+        fighter2:
+          $ref: '#/components/schemas/Fighter'
+        weightClass:
+          type: string
+          example: "Lightweight"
+        titleFight:
+          type: boolean
+          default: false
+        mainEvent:
+          type: boolean
+          default: false
+        cardPosition:
+          type: string
+          enum: [Main Event, Co-Main Event, Main Card, Prelims, Early Prelims]
+        scheduledRounds:
+          type: integer
+          enum: [3, 5]
+        fightNumber:
+          type: integer
+          nullable: true
+        # AI Predictions
+        predictedFunScore:
+          type: number
+          format: float
+          description: Entertainment score 0-100
+          minimum: 0
+          maximum: 100
+        finishProbability:
+          type: number
+          format: float
+          description: Probability of finish (KO/SUB) 0-1
+        aiDescription:
+          type: string
+          nullable: true
+          description: AI analysis summary
+        funReasoning:
+          type: string
+          nullable: true
+        funFactors:
+          type: array
+          items:
+            type: string
+          description: Key entertainment factors
+        funFactor:
+          type: integer
+          deprecated: true
+        riskLevel:
+          type: string
+          enum: [low, balanced, high]
+        fightPrediction:
+          type: string
+          nullable: true
+        # Outcome (completed fights only)
+        completed:
+          type: boolean
+          default: false
+        winnerId:
+          type: string
+          nullable: true
+        method:
+          type: string
+          nullable: true
+          enum: [KO/TKO, SUB, DEC, DQ, NC]
+        round:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 5
+        time:
+          type: string
+          nullable: true
+          pattern: '^\d{1,2}:\d{2}$'
+          example: "4:35"
+        bookingDate:
+          type: string
+          format: date-time
+
+    # Event schema
+    UFCEvent:
+      type: object
+      required:
+        - id
+        - name
+        - date
+      properties:
+        id:
+          type: string
+          example: "UFC-299"
+        name:
+          type: string
+          example: "UFC 299: O'Malley vs. Vera 2"
+        date:
+          type: string
+          format: date-time
+        location:
+          type: string
+          example: "Miami, Florida, USA"
+        venue:
+          type: string
+          example: "Kaseya Center"
+        completed:
+          type: boolean
+          default: false
+        fightCard:
+          type: array
+          items:
+            $ref: '#/components/schemas/Fight'
+        mainCard:
+          type: array
+          items:
+            $ref: '#/components/schemas/Fight'
+        prelimCard:
+          type: array
+          items:
+            $ref: '#/components/schemas/Fight'
+        earlyPrelimCard:
+          type: array
+          items:
+            $ref: '#/components/schemas/Fight'
+
+    # Response schemas
+    EventsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            events:
+              type: array
+              items:
+                $ref: '#/components/schemas/UFCEvent'
+            timestamp:
+              type: string
+              format: date-time
+        error:
+          type: string
+          nullable: true
+
+    HealthCheckResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, down]
+        timestamp:
+          type: string
+          format: date-time
+        responseTime:
+          type: string
+          example: "150ms"
+        checks:
+          type: object
+          properties:
+            database:
+              type: object
+              properties:
+                healthy:
+                  type: boolean
+                message:
+                  type: string
+                details:
+                  type: object
+                  properties:
+                    connectionTime:
+                      type: string
+                    eventsInDatabase:
+                      type: integer
+                    clientStatus:
+                      type: string
+            queryPerformance:
+              type: object
+              properties:
+                healthy:
+                  type: boolean
+                message:
+                  type: string
+                details:
+                  type: object
+                  properties:
+                    totalQueries:
+                      type: integer
+                    averageDuration:
+                      type: string
+                    slowQueryRate:
+                      type: string
+                    criticalQueryRate:
+                      type: string
+            system:
+              type: object
+              properties:
+                healthy:
+                  type: boolean
+                message:
+                  type: string
+                details:
+                  type: object
+                  properties:
+                    memory:
+                      type: object
+                      properties:
+                        used:
+                          type: string
+                        total:
+                          type: string
+                        utilization:
+                          type: string
+                    uptime:
+                      type: string
+                    nodeVersion:
+                      type: string
+                    platform:
+                      type: string
+            externalServices:
+              type: object
+              properties:
+                healthy:
+                  type: boolean
+                message:
+                  type: string
+                details:
+                  type: object
+        version:
+          type: string
+        environment:
+          type: string
+
+    PerformanceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            summary:
+              type: object
+              properties:
+                totalQueries:
+                  type: integer
+                averageDuration:
+                  type: number
+                healthScore:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                monitoringEnabled:
+                  type: boolean
+            performance:
+              type: object
+              properties:
+                slowQueries:
+                  type: integer
+                criticalQueries:
+                  type: integer
+                slowQueryRate:
+                  type: number
+                criticalQueryRate:
+                  type: number
+            topSlowQueries:
+              type: array
+              items:
+                type: object
+                properties:
+                  duration:
+                    type: number
+                  model:
+                    type: string
+                  action:
+                    type: string
+                  performance:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+            frequentQueries:
+              type: array
+              items:
+                type: object
+                properties:
+                  query:
+                    type: string
+                  frequency:
+                    type: integer
+            analysis:
+              type: object
+              properties:
+                patterns:
+                  type: object
+                recommendations:
+                  type: array
+                  items:
+                    type: string
+                summary:
+                  type: string
+            basicRecommendations:
+              type: array
+              items:
+                type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    FighterImageResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        source:
+          type: string
+          enum: [tapology, ufc, sherdog, fallback, placeholder]
+        confidence:
+          type: integer
+          minimum: 0
+          maximum: 100
+        cached:
+          type: boolean
+
+    # Ingestion schemas
+    IngestFighter:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        record:
+          type: string
+        wins:
+          type: integer
+        losses:
+          type: integer
+        draws:
+          type: integer
+        weightClass:
+          type: string
+        imageUrl:
+          type: string
+        sourceUrl:
+          type: string
+        height:
+          type: string
+        weightLbs:
+          type: integer
+        reach:
+          type: string
+        reachInches:
+          type: integer
+        stance:
+          type: string
+        dob:
+          type: string
+          format: date
+        # All statistics fields...
+        significantStrikesLandedPerMinute:
+          type: number
+        strikingAccuracyPercentage:
+          type: number
+        significantStrikesAbsorbedPerMinute:
+          type: number
+        strikingDefensePercentage:
+          type: number
+        takedownAverage:
+          type: number
+        takedownAccuracyPercentage:
+          type: number
+        takedownDefensePercentage:
+          type: number
+        submissionAverage:
+          type: number
+        averageFightTimeSeconds:
+          type: integer
+        winsByKO:
+          type: integer
+        winsBySubmission:
+          type: integer
+        winsByDecision:
+          type: integer
+        lossesByKO:
+          type: integer
+        lossesBySubmission:
+          type: integer
+        lossesByDecision:
+          type: integer
+        finishRate:
+          type: number
+        koPercentage:
+          type: number
+        submissionPercentage:
+          type: number
+        lossFinishRate:
+          type: number
+        koLossPercentage:
+          type: number
+        submissionLossPercentage:
+          type: number
+
+    IngestEvent:
+      type: object
+      required:
+        - id
+        - name
+        - date
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        date:
+          type: string
+          format: date-time
+        venue:
+          type: string
+        location:
+          type: string
+        completed:
+          type: boolean
+        cancelled:
+          type: boolean
+        sourceUrl:
+          type: string
+
+    IngestFight:
+      type: object
+      required:
+        - id
+        - fighter1Id
+        - fighter2Id
+        - eventId
+      properties:
+        id:
+          type: string
+        fighter1Id:
+          type: string
+        fighter2Id:
+          type: string
+        eventId:
+          type: string
+        weightClass:
+          type: string
+        titleFight:
+          type: boolean
+        mainEvent:
+          type: boolean
+        cardPosition:
+          type: string
+        scheduledRounds:
+          type: integer
+        completed:
+          type: boolean
+        winnerId:
+          type: string
+          nullable: true
+        method:
+          type: string
+          nullable: true
+        round:
+          type: integer
+          nullable: true
+        time:
+          type: string
+          nullable: true
+        sourceUrl:
+          type: string
+
+    IngestRequest:
+      type: object
+      properties:
+        fighters:
+          type: array
+          items:
+            $ref: '#/components/schemas/IngestFighter'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/IngestEvent'
+        fights:
+          type: array
+          items:
+            $ref: '#/components/schemas/IngestFight'
+        scrapedEventUrls:
+          type: array
+          items:
+            type: string
+          description: URLs of events that were scraped for reconciliation
+
+    IngestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        scrapeLogId:
+          type: string
+        eventsCreated:
+          type: integer
+        fightsCreated:
+          type: integer
+        fightsCancelled:
+          type: integer
+        fightersCreated:
+          type: integer
+
+    WipeDatabaseResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        before:
+          type: object
+          additionalProperties:
+            type: integer
+        after:
+          type: object
+          additionalProperties:
+            type: integer
+        deleted:
+          type: object
+          additionalProperties:
+            type: integer
+        timestamp:
+          type: string
+          format: date-time
