@@ -17,6 +17,8 @@ import requests
 import unicodedata
 import time
 import logging
+import re
+import difflib
 from typing import Optional, Dict, Any
 from functools import lru_cache
 
@@ -51,28 +53,91 @@ def _rate_limit(source: str) -> None:
 
 
 def _normalize_name(name: str) -> str:
-    """Normalize fighter name for matching."""
-    # Remove accents
+    """
+    Normalize fighter name for matching.
+
+    Handles:
+    - Accents (José -> Jose)
+    - Hyphens as word separators (Cortes-Acosta -> Cortes Acosta)
+    - Apostrophes (O'Malley -> OMalley)
+    - Extra whitespace
+    """
+    if not name:
+        return ""
+
+    # 1. Normalize unicode (handle accents like José -> Jose)
     name = unicodedata.normalize('NFD', name)
     name = ''.join(c for c in name if unicodedata.category(c) != 'Mn')
-    # Lowercase and clean whitespace
+
+    # 2. Replace hyphens and underscores with spaces BEFORE removing other chars
+    # This fixes "Cortes-Acosta" -> "Cortes Acosta"
+    name = name.replace('-', ' ').replace('_', ' ')
+
+    # 3. Remove non-alphanumeric characters (but keep spaces)
+    # This handles "O'Malley" -> "OMalley"
+    name = re.sub(r'[^a-zA-Z0-9\s]', '', name)
+
+    # 4. Lowercase and clean extra whitespace
     return ' '.join(name.lower().split())
 
 
 def _names_match(name1: str, name2: str, threshold: float = 0.85) -> bool:
-    """Check if two names match using token-based comparison."""
-    n1 = set(_normalize_name(name1).split())
-    n2 = set(_normalize_name(name2).split())
+    """
+    Robust name matching handling order, hyphens, and nicknames.
 
-    if not n1 or not n2:
+    Uses a multi-stage approach:
+    1. Exact match after normalization
+    2. Token sort ratio (handles name order variations)
+    3. Prefix matching (handles nicknames like Alex vs Alexander)
+    """
+    n1_raw = _normalize_name(name1)
+    n2_raw = _normalize_name(name2)
+
+    if not n1_raw or not n2_raw:
         return False
 
-    # Calculate Jaccard similarity
-    intersection = len(n1 & n2)
-    union = len(n1 | n2)
-    similarity = intersection / union if union > 0 else 0
+    # 1. Exact Match (Fastest)
+    if n1_raw == n2_raw:
+        return True
 
-    return similarity >= threshold
+    tokens1 = n1_raw.split()
+    tokens2 = n2_raw.split()
+
+    # 2. Token Sort Ratio (Handles "First Last" vs "Last First")
+    # Sort tokens alphabetically so "Waldo Cortes Acosta" == "Acosta Waldo Cortes"
+    t1_sorted = ' '.join(sorted(tokens1))
+    t2_sorted = ' '.join(sorted(tokens2))
+
+    # difflib is standard library, no pip install needed
+    ratio = difflib.SequenceMatcher(None, t1_sorted, t2_sorted).ratio()
+
+    if ratio >= threshold:
+        return True
+
+    # 3. Prefix/Nickname Match (Handles "Alex" vs "Alexander")
+    # Check if tokens match via prefix in either direction
+    def check_prefix_match(src_tokens: list, tgt_tokens: list) -> bool:
+        """Check if all src_tokens match as prefixes of tgt_tokens."""
+        # Don't match very short single tokens (avoid "Al" matching everything)
+        if len(src_tokens) == 1 and len(src_tokens[0]) < 3:
+            return False
+
+        matches = 0
+        used_targets = set()
+        for s_token in src_tokens:
+            for i, t_token in enumerate(tgt_tokens):
+                if i not in used_targets and t_token.startswith(s_token):
+                    matches += 1
+                    used_targets.add(i)
+                    break
+
+        return matches == len(src_tokens)
+
+    # Try prefix matching in both directions
+    if check_prefix_match(tokens1, tokens2) or check_prefix_match(tokens2, tokens1):
+        return True
+
+    return False
 
 
 def _get_espn_athlete_id(fighter_name: str) -> Optional[str]:
