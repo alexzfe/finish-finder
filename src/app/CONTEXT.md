@@ -87,9 +87,15 @@ const Component = memo(({ data, onSelect }: ComponentProps) => {
 
 **Responsive Breakpoints:**
 - Mobile-first: base styles for <640px
-- Tablet: `md:` prefix (768px+)
+- Tablet: `md:` prefix (768px+) - sidebar visible, landscape support
 - Desktop: `lg:` prefix (1024px+)
 - Wide: `xl:` prefix (1280px+)
+
+**Responsive Component Patterns:**
+- Fighter avatars use responsive sizing (48px mobile → 64px tablet → 80px desktop)
+- Modal uses `max-w-[calc(100vw-2rem)]` on mobile to prevent overflow on small screens
+- Sidebar displays at `md:` (768px+) for tablet landscape support
+- Fight details modal opens only on screens < 768px; tablet+ uses sidebar
 
 ### Error Handling Strategy
 
@@ -142,14 +148,14 @@ src/app/
 ```
 components/
 ├── ui/                          # UI primitives
-│   ├── EventNavigation.tsx      # Event carousel (prev/next buttons)
+│   ├── EventNavigation.tsx      # Event carousel with swipe gestures & keyboard nav
 │   ├── EventSelector.tsx        # Event dropdown selector
 │   └── Header.tsx               # App header with branding
 ├── fight/                       # Fight card components
-│   ├── FightList.tsx            # Main fight card (memoized)
-│   └── FightDetailsModal.tsx    # Fight analysis modal (mobile)
+│   ├── FightList.tsx            # Main fight card (memoized, skeleton loading)
+│   └── FightDetailsModal.tsx    # Fight analysis modal (mobile <768px)
 ├── fighter/
-│   └── FighterAvatar.tsx        # Avatar with lazy loading
+│   └── FighterAvatar.tsx        # Avatar with Next.js Image, responsive sizing
 └── admin/                       # Admin dashboard components
     ├── PerformanceDashboard.tsx # Query metrics charts
     └── DatabaseManagement.tsx   # DB operations UI
@@ -291,7 +297,35 @@ export function FightDetailsModal({ fight, isOpen, onClose }: Props) {
 }
 ```
 
-**Usage:** Mobile-only (<1024px); desktop uses sidebar
+**Usage:** Mobile-only (<768px); tablet and desktop use sticky sidebar
+
+### 5. Accessibility & Mobile UX Patterns
+
+**Skip Navigation:**
+```typescript
+// src/app/layout.tsx
+<a href="#main-content" className="sr-only focus:not-sr-only ...">
+  Skip to main content
+</a>
+```
+
+**Touch Gesture Support (EventNavigation):**
+```typescript
+// Swipe gestures for mobile event navigation
+const handleTouchStart = (e: React.TouchEvent) => {
+  touchStartX.current = e.touches[0].clientX
+}
+// Swipe left → next event, swipe right → previous event
+```
+
+**Keyboard Navigation:**
+- Arrow keys navigate between events when component focused
+- Tab navigation through interactive elements
+- ARIA roles and labels for screen readers
+
+**Touch Target Sizing:**
+- Event dot indicators use 44×44px touch targets (WCAG minimum)
+- Visual indicators remain small; touch area expanded via wrapper button
 
 ## Integration Points
 
@@ -479,12 +513,13 @@ console.log('[db-events] Query started')
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `src/app/page.tsx` | 288 | Main home page with event/fight display |
-| `src/app/layout.tsx` | 37 | Root layout with Sentry + metadata |
+| `src/app/page.tsx` | ~370 | Main home page with skeleton loading, responsive layout |
+| `src/app/layout.tsx` | 44 | Root layout with Sentry + skip navigation link |
 | `src/app/api/db-events/route.ts` | 136 | Events API with Prisma queries |
-| `src/components/fight/FightList.tsx` | 266 | Memoized fight card component |
-| `src/components/fight/FightDetailsModal.tsx` | 145 | Mobile modal for fight details |
-| `src/components/ui/EventNavigation.tsx` | 101 | Event carousel navigation |
+| `src/components/fight/FightList.tsx` | ~330 | Memoized fight card with skeleton states |
+| `src/components/fight/FightDetailsModal.tsx` | 160 | Mobile modal (<768px) for fight details |
+| `src/components/ui/EventNavigation.tsx` | 186 | Event carousel with swipe/keyboard navigation |
+| `src/components/fighter/FighterAvatar.tsx` | 165 | Next.js Image with responsive sizing |
 | `src/app/admin/page.tsx` | 93 | Performance monitoring dashboard |
 | `src/app/api/health/route.ts` | 296 | System health check endpoint |
 
@@ -507,8 +542,8 @@ console.log('[db-events] Query started')
 **Known Limitations:**
 - Admin password hardcoded (demo only)
 - No authentication on public APIs
-- Fighter images disabled (placeholder only)
-- Mobile modal only (<1024px); desktop uses sidebar
+- Fighter images from ESPN/Wikipedia via database imageUrl field
+- Mobile modal only (<768px); tablet/desktop uses sticky sidebar
 
 **Future Enhancements:**
 - OAuth/JWT authentication for admin

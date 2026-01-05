@@ -102,14 +102,14 @@ Auto-generated file tree for AI agent context loading. This provides a complete 
 │   │
 │   ├── components/                     # React components
 │   │   ├── ui/                         # UI primitives
-│   │   │   ├── EventNavigation.tsx     # Event carousel navigation
+│   │   │   ├── EventNavigation.tsx     # Event carousel with swipe/keyboard navigation
 │   │   │   ├── EventSelector.tsx       # Event dropdown selector
 │   │   │   └── Header.tsx              # App header
 │   │   ├── fight/                      # Fight card components
-│   │   │   ├── FightList.tsx           # Main fight card (memoized)
-│   │   │   └── FightDetailsModal.tsx   # Fight analysis modal
+│   │   │   ├── FightList.tsx           # Main fight card (memoized, skeleton loading)
+│   │   │   └── FightDetailsModal.tsx   # Fight analysis modal (mobile <768px)
 │   │   ├── fighter/                    # Fighter components
-│   │   │   └── FighterAvatar.tsx       # Avatar with lazy loading
+│   │   │   └── FighterAvatar.tsx       # Avatar with Next.js Image, responsive sizing
 │   │   └── admin/                      # Admin dashboard components
 │   │       ├── PerformanceDashboard.tsx # Query metrics charts
 │   │       └── DatabaseManagement.tsx  # DB operations UI
@@ -502,9 +502,10 @@ GitHub Actions workflows for automation.
 - Configuration: ~500 lines
 
 **Key Technologies:**
-- Next.js 15.5.3 (App Router)
+- Next.js 16.1.1 (App Router)
 - React 19.1.0
 - Prisma 6.16.2
+- Sentry 10.32.1 (error tracking)
 - Vitest 3.2.4
 - Tailwind CSS 4
 - OpenAI API (GPT-4o, text-embedding-3-small)
