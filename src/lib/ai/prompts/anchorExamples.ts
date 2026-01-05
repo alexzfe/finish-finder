@@ -86,7 +86,7 @@ export const MEDIUM_ENTERTAINMENT_ANCHORS: AnchorExample[] = [
       brawlPotential: false,
       groundBattleLikely: false,
     },
-    keyFactors: ['Range management', 'Counter striking', 'Technical chess'],
+    keyFactors: ['Range management', 'Counter striking', 'Low output'],
     outcome: { method: 'DEC', round: 5, fightOfTheNight: false },
   },
   {
@@ -101,7 +101,7 @@ export const MEDIUM_ENTERTAINMENT_ANCHORS: AnchorExample[] = [
       brawlPotential: false,
       groundBattleLikely: true,
     },
-    keyFactors: ['Takedown battles', 'Clinch work', 'Cardio test'],
+    keyFactors: ['Cage grinding', 'Takedown battles', 'Cardio test'],
     outcome: { method: 'DEC', round: 5, fightOfTheNight: false },
   },
 ]
@@ -123,7 +123,7 @@ export const LOW_ENTERTAINMENT_ANCHORS: AnchorExample[] = [
       brawlPotential: false,
       groundBattleLikely: true,
     },
-    keyFactors: ['Grappling stalemate', 'Low output', 'Position battles'],
+    keyFactors: ['Lay and pray', 'Low output', 'Position stalemate'],
     outcome: { method: 'DEC', round: 3, fightOfTheNight: false },
   },
   {
@@ -138,7 +138,7 @@ export const LOW_ENTERTAINMENT_ANCHORS: AnchorExample[] = [
       brawlPotential: false,
       groundBattleLikely: true,
     },
-    keyFactors: ['Control time', 'Limited damage', 'Smothering grappling'],
+    keyFactors: ['Smothering control', 'Limited damage', 'No scrambles'],
     outcome: { method: 'DEC', round: 3, fightOfTheNight: false },
   },
 ]

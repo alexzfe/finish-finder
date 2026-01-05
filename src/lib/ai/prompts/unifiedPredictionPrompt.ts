@@ -306,8 +306,8 @@ IMPORTANT: We are NOT predicting who will win. We are only predicting:
     "styleMatchup": "<Tape Watcher view: 2-3 sentences on how styles interact and create action/entertainment>",
     "finalAssessment": "<Synthesizer view: 2-3 sentences on overall finish likelihood and entertainment value>"
   },
-  "finishAnalysis": "<1-2 sentences: Concise explanation of WHY this fight will or won't end in a finish. Focus on the key vulnerability vs offense matchup.>",
-  "funAnalysis": "<1-2 sentences: Concise explanation of WHY this fight will or won't be entertaining. Focus on pace, style clash, and action potential.>",
+  "finishAnalysis": "<1-2 sentences: WHY this fight will/won't be a finish. MUST name fighters and cite specific stats (e.g., '[Name]'s 65% KO rate meets [Name]'s 40% KO loss vulnerability').>",
+  "funAnalysis": "<1-2 sentences: WHY this fight will/won't be entertaining. MUST name fighters and their specific styles (e.g., '[Name]'s pressure striking against [Name]'s counter game').>",
   "narrative": "<3-4 sentence fight simulation - HOW might this fight unfold? Focus on the action and entertainment value, not who wins>",
   "attributes": {
     "pace": <1-5>,
@@ -324,7 +324,7 @@ IMPORTANT: We are NOT predicting who will win. We are only predicting:
 IMPORTANT GUIDELINES:
 1. All percentage stats are UFC-only. Always specify "UFC" when citing them.
 2. The narrative should paint a vivid picture of HOW the fight could unfold - focus on action, not outcome.
-3. keyFactors should be 2-3 words each (e.g., "High KO danger", "Grappling chess", "Cardio battle").
+3. keyFactors should be 2-3 words each (e.g., "High KO danger", "Cardio battle", "Chin concerns"). For grappling, use specific terms: "Scramble battle" (entertaining), "Submission threat", "Ground-and-pound", "Lay and pray" (boring), "Cage grinding", "Top control".
 4. Be honest about uncertainty - lower confidence if the matchup dynamics are unpredictable.
 5. Attribute ratings must be internally consistent:
    - If pace is 1-2, brawlPotential should be false
