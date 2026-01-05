@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/database/prisma'
-import { ScrapedDataSchema, validateScrapedData } from '@/lib/scraper/validation'
+import { ScrapedDataSchema, validateScrapedData, type ScrapedData } from '@/lib/scraper/validation'
 import * as crypto from 'crypto'
 
 /**
@@ -19,11 +19,18 @@ import * as crypto from 'crypto'
  * Ingest scraped data from the Python scraper
  */
 export async function POST(req: NextRequest) {
-  // 1. Authenticate request
+  // 1. Authenticate request with timing-safe comparison
   const authHeader = req.headers.get('authorization')
   const token = authHeader?.replace('Bearer ', '')
+  const expectedToken = process.env.INGEST_API_SECRET || ''
 
-  if (!token || token !== process.env.INGEST_API_SECRET) {
+  // Use timing-safe comparison to prevent timing attacks
+  const tokenBuffer = Buffer.from(token || '')
+  const expectedBuffer = Buffer.from(expectedToken)
+  const tokensMatch = tokenBuffer.length === expectedBuffer.length &&
+    crypto.timingSafeEqual(tokenBuffer, expectedBuffer)
+
+  if (!token || !expectedToken || !tokensMatch) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -31,10 +38,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // 2. Diagnostic logging
-    console.log('Inspecting prisma object. Keys:', Object.keys(prisma || {}))
-
-    // 3. Parse and validate request body
+    // 2. Parse and validate request body
     const body = await req.json()
     const errors = validateScrapedData(body)
 
@@ -63,12 +67,14 @@ export async function POST(req: NextRequest) {
       fightersCreated: data.fighters.length,
     })
   } catch (error) {
+    // Log detailed error for debugging (captured by Sentry)
     console.error('Ingestion error:', error)
 
+    // Return generic error to client without exposing internal details
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        requestId: crypto.randomUUID(),
       },
       { status: 500 }
     )
@@ -78,7 +84,7 @@ export async function POST(req: NextRequest) {
 /**
  * Upsert scraped data to database in a transaction
  */
-async function upsertScrapedData(data: any) {
+async function upsertScrapedData(data: ScrapedData) {
   const startTime = new Date()
   let fightsAdded = 0
   let fightsUpdated = 0
@@ -254,20 +260,53 @@ async function upsertScrapedData(data: any) {
         }
       }
 
-      // Upsert fights
+      // ========================================================
+      // BATCH FETCH: Pre-load all fighters and events for O(1) lookups
+      // This eliminates N+1 queries in the fight upsert loop
+      // ========================================================
+
+      // Build scraped ID -> sourceUrl lookup maps
+      const scrapedFighterIdToSourceUrl = new Map(
+        data.fighters.map((f) => [f.id, f.sourceUrl])
+      )
+      const scrapedEventIdToSourceUrl = new Map(
+        data.events.map((e) => [e.id, e.sourceUrl])
+      )
+
+      // Batch fetch all fighters that were just upserted
+      const fighterSourceUrls = data.fighters.map((f) => f.sourceUrl)
+      const allFighters = await tx.fighter.findMany({
+        where: { sourceUrl: { in: fighterSourceUrls } },
+        select: { id: true, sourceUrl: true }
+      })
+      const fighterBySourceUrl = new Map(
+        allFighters.map((f) => [f.sourceUrl, f])
+      )
+
+      // Batch fetch all events that were just upserted
+      const eventSourceUrls = data.events.map((e) => e.sourceUrl)
+      const allEvents = await tx.event.findMany({
+        where: { sourceUrl: { in: eventSourceUrls } },
+        select: { id: true, sourceUrl: true }
+      })
+      const eventBySourceUrl = new Map(
+        allEvents.map((e) => [e.sourceUrl, e])
+      )
+
+      // ========================================================
+      // Upsert fights (using lookup maps instead of N+1 queries)
+      // ========================================================
       for (const fight of data.fights) {
         const contentHash = calculateContentHash(fight)
 
-        // Find fighter IDs by sourceUrl
-        const fighter1 = await tx.fighter.findUnique({
-          where: { sourceUrl: data.fighters.find((f: any) => f.id === fight.fighter1Id)?.sourceUrl },
-        })
-        const fighter2 = await tx.fighter.findUnique({
-          where: { sourceUrl: data.fighters.find((f: any) => f.id === fight.fighter2Id)?.sourceUrl },
-        })
-        const event = await tx.event.findUnique({
-          where: { sourceUrl: data.events.find((e: any) => e.id === fight.eventId)?.sourceUrl },
-        })
+        // O(1) map lookups instead of database queries
+        const fighter1SourceUrl = scrapedFighterIdToSourceUrl.get(fight.fighter1Id)
+        const fighter2SourceUrl = scrapedFighterIdToSourceUrl.get(fight.fighter2Id)
+        const eventSourceUrl = scrapedEventIdToSourceUrl.get(fight.eventId)
+
+        const fighter1 = fighter1SourceUrl ? fighterBySourceUrl.get(fighter1SourceUrl) : null
+        const fighter2 = fighter2SourceUrl ? fighterBySourceUrl.get(fighter2SourceUrl) : null
+        const event = eventSourceUrl ? eventBySourceUrl.get(eventSourceUrl) : null
 
         if (!fighter1 || !fighter2 || !event) {
           console.warn(`Skipping fight ${fight.id}: missing related records`)

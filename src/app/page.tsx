@@ -128,7 +128,8 @@ export default function Home() {
   const handleFightClick = (fight: Fight) => {
     setSelectedFight(fight)
     // Open modal on mobile, use sidebar on tablet landscape and desktop (768px+)
-    if (window.innerWidth < 768) {
+    // Guard against SSR - window is not available on server
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setIsModalOpen(true)
     }
   }

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
 import { prisma } from '@/lib/database/prisma'
 import { parseJsonArray } from '@/lib/utils/json'
@@ -6,7 +6,60 @@ import { parseJsonArray } from '@/lib/utils/json'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export async function GET() {
+// ========================================================
+// Simple in-memory rate limiting (30 requests/minute per IP)
+// For production scaling, consider @upstash/ratelimit with Vercel KV
+// ========================================================
+const RATE_LIMIT = 30
+const WINDOW_MS = 60000 // 1 minute
+const requestCounts = new Map<string, { count: number; resetTime: number }>()
+
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number; resetIn: number } {
+  const now = Date.now()
+  const record = requestCounts.get(ip)
+
+  // Clean up old entries periodically (every 100 checks)
+  if (Math.random() < 0.01) {
+    for (const [key, value] of requestCounts.entries()) {
+      if (now > value.resetTime) {
+        requestCounts.delete(key)
+      }
+    }
+  }
+
+  if (!record || now > record.resetTime) {
+    requestCounts.set(ip, { count: 1, resetTime: now + WINDOW_MS })
+    return { allowed: true, remaining: RATE_LIMIT - 1, resetIn: WINDOW_MS }
+  }
+
+  if (record.count >= RATE_LIMIT) {
+    return { allowed: false, remaining: 0, resetIn: record.resetTime - now }
+  }
+
+  record.count++
+  return { allowed: true, remaining: RATE_LIMIT - record.count, resetIn: record.resetTime - now }
+}
+
+export async function GET(request: NextRequest) {
+  // Rate limiting check
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+             request.headers.get('x-real-ip') ||
+             'unknown'
+  const rateLimit = checkRateLimit(ip)
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'Rate limit exceeded. Please try again later.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.ceil(rateLimit.resetIn / 1000)),
+          'X-RateLimit-Limit': String(RATE_LIMIT),
+          'X-RateLimit-Remaining': '0',
+        }
+      }
+    )
+  }
   try {
     if (!process.env.DATABASE_URL || !prisma) {
       throw new Error('DATABASE_URL not configured')
