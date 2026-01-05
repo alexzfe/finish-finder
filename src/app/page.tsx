@@ -18,12 +18,12 @@ const formatWeightClass = (weightClass?: string | null): string => {
     .join(' ')
 }
 
-// Fun Score color based on heat scale
-const getFunScoreColor = (score: number): string => {
-  if (score >= 85) return 'var(--score-fire)'
-  if (score >= 75) return 'var(--score-hot)'
-  if (score >= 65) return 'var(--score-warm)'
-  return 'var(--score-cold)'
+// Fun Score style based on heat scale
+const getFunScoreStyle = (score: number): { color: string; textShadow?: string } => {
+  if (score >= 85) return { color: 'var(--score-fire)', textShadow: 'var(--score-fire-glow)' }
+  if (score >= 75) return { color: 'var(--score-hot)' }
+  if (score >= 65) return { color: 'var(--score-warm)' }
+  return { color: 'var(--score-cold)' }
 }
 
 // Finish Probability styling based on likelihood
@@ -307,7 +307,7 @@ export default function Home() {
                     <div className="grid gap-2.5 text-sm uppercase tracking-[0.24em] text-white/80">
                       <div className="rounded-xl bg-white/5 px-4 py-3.5">
                         <span className="block text-[0.7rem] text-white/70">Fun Score</span>
-                        <span className="ufc-condensed text-2xl md:text-3xl" style={{ color: getFunScoreColor(selectedFight.predictedFunScore || 0) }}>{selectedFight.predictedFunScore || 0}</span>
+                        <span className="ufc-condensed text-2xl md:text-3xl" style={getFunScoreStyle(selectedFight.predictedFunScore || 0)}>{selectedFight.predictedFunScore || 0}</span>
                       </div>
                       {(() => {
                         const finishStyles = getFinishProbabilityStyles(selectedFight.finishProbability || 0)

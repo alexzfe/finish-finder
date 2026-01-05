@@ -71,8 +71,8 @@ export const FightCard = React.memo(
 
         {/* Title Fight Indicator */}
         {fight.titleFight && (
-          <div className="absolute top-2 left-2 bg-yellow-600 text-white px-2 py-1 rounded text-xs font-bold">
-            🏆 TITLE
+          <div className="absolute top-2 left-2 bg-amber-500/20 text-amber-400 border border-amber-500/40 px-2 py-1 rounded-full text-xs font-bold ufc-condensed tracking-wider">
+            TITLE
           </div>
         )}
 
@@ -108,13 +108,13 @@ export const FightCard = React.memo(
             <span className="truncate">{formatWeightClass(fight.weightClass)}</span>
 
             {fight.mainEvent && (
-              <span className="bg-red-600 text-white px-2 py-0.5 rounded font-bold whitespace-nowrap">
+              <span className="bg-[var(--ufc-red)]/20 text-[var(--ufc-red)] border border-[var(--ufc-red)]/40 px-2 py-0.5 rounded-full font-bold whitespace-nowrap ufc-condensed tracking-wider text-[0.65rem]">
                 MAIN EVENT
               </span>
             )}
 
             {!fight.mainEvent && fight.titleFight && (
-              <span className="bg-yellow-700 text-white px-2 py-0.5 rounded font-bold whitespace-nowrap">
+              <span className="bg-amber-500/20 text-amber-400 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold whitespace-nowrap ufc-condensed tracking-wider text-[0.65rem]">
                 TITLE FIGHT
               </span>
             )}

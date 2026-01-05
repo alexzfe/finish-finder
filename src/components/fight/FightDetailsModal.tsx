@@ -21,11 +21,11 @@ const formatWeightClass = (weightClass?: string | null): string => {
     .join(' ')
 }
 
-const getFunScoreColor = (score: number): string => {
-  if (score >= 85) return 'var(--score-fire)'
-  if (score >= 75) return 'var(--score-hot)'
-  if (score >= 65) return 'var(--score-warm)'
-  return 'var(--score-cold)'
+const getFunScoreStyle = (score: number): { color: string; textShadow?: string } => {
+  if (score >= 85) return { color: 'var(--score-fire)', textShadow: 'var(--score-fire-glow)' }
+  if (score >= 75) return { color: 'var(--score-hot)' }
+  if (score >= 65) return { color: 'var(--score-warm)' }
+  return { color: 'var(--score-cold)' }
 }
 
 const getFinishProbabilityStyles = (probability: number) => {
@@ -101,7 +101,7 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                 <div className="grid gap-3 mb-5">
                   <div className="rounded-xl bg-white/5 px-4 py-3.5">
                     <span className="block text-[0.7rem] md:text-[0.75rem] text-white/70">Fun Score</span>
-                    <span className="ufc-condensed text-3xl" style={{ color: getFunScoreColor(fight.predictedFunScore || 0) }}>
+                    <span className="ufc-condensed text-3xl" style={getFunScoreStyle(fight.predictedFunScore || 0)}>
                       {fight.predictedFunScore || 0}
                     </span>
                   </div>

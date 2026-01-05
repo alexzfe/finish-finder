@@ -98,7 +98,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
 
   const getFunScoreStyle = (score: number) => {
     // Warm "heat" scale: cold → warm → hot → fire
-    if (score >= 85) return { color: 'var(--score-fire)' }
+    if (score >= 85) return { color: 'var(--score-fire)', textShadow: 'var(--score-fire-glow)' }
     if (score >= 75) return { color: 'var(--score-hot)' }
     if (score >= 65) return { color: 'var(--score-warm)' }
     return { color: 'var(--score-cold)' }
@@ -152,8 +152,13 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
               <span className="ufc-condensed text-xs text-white/70">
                 {fight.cardPosition || 'Fight' }
               </span>
+              {fight.mainEvent && (
+                <span className="ufc-condensed text-[0.6rem] md:text-[0.65rem] lg:text-[0.7rem] tracking-[0.3em] rounded-full px-2 py-0.5 bg-[var(--ufc-red)]/20 text-[var(--ufc-red)] border border-[var(--ufc-red)]/40">
+                  Main
+                </span>
+              )}
               {fight.titleFight && (
-                <span className="ufc-condensed text-[0.6rem] md:text-[0.65rem] lg:text-[0.7rem] tracking-[0.3em] text-white" style={{ backgroundColor: 'rgba(210,10,10,0.15)', padding: '0.15rem 0.55rem', borderRadius: '999px', border: '1px solid rgba(210,10,10,0.35)' }}>
+                <span className="ufc-condensed text-[0.6rem] md:text-[0.65rem] lg:text-[0.7rem] tracking-[0.3em] rounded-full px-2 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/40">
                   Title
                 </span>
               )}

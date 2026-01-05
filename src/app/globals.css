@@ -15,10 +15,11 @@
   --ufc-letter-spacing-wide: 0.08em;
 
   /* Fun Score - Warm "heat" scale (entertainment value) */
-  --score-cold: #64748b;      /* slate-500: <65 - tepid fight */
-  --score-warm: #f59e0b;      /* amber-500: 65-74 - warming up */
+  --score-cold: #94a3b8;      /* slate-400: <65 - tepid fight */
+  --score-warm: #fbbf24;      /* amber-400: 65-74 - warming up */
   --score-hot: #f97316;       /* orange-500: 75-84 - heating up */
-  --score-fire: #ea580c;      /* orange-600: 85+ - on fire */
+  --score-fire: #ef4444;      /* red-500: 85+ - on fire */
+  --score-fire-glow: 0 0 16px rgba(239, 68, 68, 0.6), 0 0 8px rgba(239, 68, 68, 0.4);
 
   /* Finish Probability - Cool analytical scale */
   --finish-high: #22d3ee;     /* cyan-400: 70%+ */

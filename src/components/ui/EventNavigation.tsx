@@ -86,7 +86,7 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
       ref={containerRef}
       className={`relative rounded-xl border px-6 pb-6 pt-6 text-white sm:px-10 md:px-12 transition-all select-none ${
         currentEvent.completed
-          ? 'border-white/10 bg-black/40 opacity-75'
+          ? 'border-white/20 bg-black/40'
           : 'border-white/5 bg-black/55'
       }`}
       onTouchStart={handleTouchStart}
@@ -129,7 +129,7 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
           </h1>
           {currentEvent.completed && (
             <span
-              className="ufc-condensed rounded-full bg-white/10 px-3 py-1 text-[0.65rem] md:text-[0.7rem] uppercase tracking-[0.2em] text-white/70 border border-white/20"
+              className="ufc-condensed rounded-full bg-emerald-500/15 px-3 py-1 text-[0.65rem] md:text-[0.7rem] uppercase tracking-[0.2em] text-emerald-400 border border-emerald-500/30"
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
               Completed
@@ -173,7 +173,7 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
                   index === currentEventIndex
                     ? 'h-3 w-8 bg-[var(--ufc-red)]'
                     : event.completed
-                    ? 'h-3 w-3 bg-white/10 hover:bg-white/20'
+                    ? 'h-3 w-3 bg-emerald-500/30 hover:bg-emerald-500/50'
                     : 'h-3 w-3 bg-white/20 hover:bg-white/40'
                 }`}
               />
