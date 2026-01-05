@@ -9,6 +9,22 @@ const nextConfig: NextConfig = {
   // Vercel deployment configuration (no static export)
   images: {
     unoptimized: false, // Enable image optimization on Vercel
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'a.espncdn.com',
+        pathname: '/combiner/i/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'upload.wikimedia.org',
+        pathname: '/wikipedia/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.espncdn.com',
+      },
+    ],
   },
   eslint: {
     // Ignore ESLint errors during production build to avoid deployment blocks

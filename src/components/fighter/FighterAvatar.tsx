@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, memo } from 'react'
+import Image from 'next/image'
 import { useFighterImage } from '@/lib/hooks/useFighterImage'
 
 interface FighterAvatarProps {
   fighterName: string | undefined
   imageUrl?: string | null  // Direct image URL from database
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'responsive'
   className?: string
   showName?: boolean
   showConfidence?: boolean
@@ -16,14 +17,40 @@ const sizeClasses = {
   sm: 'w-8 h-8',
   md: 'w-12 h-12',
   lg: 'w-16 h-16',
-  xl: 'w-24 h-24'
+  xl: 'w-24 h-24',
+  // Responsive: md on mobile, lg on tablet, xl on desktop
+  responsive: 'w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20'
+}
+
+// Pixel sizes for Next.js Image (use largest size for quality)
+const pixelSizes = {
+  sm: 32,
+  md: 48,
+  lg: 64,
+  xl: 96,
+  responsive: 80 // Use largest responsive size
 }
 
 const textSizeClasses = {
   sm: 'text-xs',
   md: 'text-sm',
   lg: 'text-base',
-  xl: 'text-lg'
+  xl: 'text-lg',
+  responsive: 'text-sm md:text-base lg:text-lg'
+}
+
+// Check if URL is from a configured remote pattern
+const isOptimizableUrl = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url)
+    return (
+      urlObj.hostname.endsWith('espncdn.com') ||
+      urlObj.hostname === 'upload.wikimedia.org' ||
+      url.startsWith('/')
+    )
+  } catch {
+    return url.startsWith('/')
+  }
 }
 
 const FighterAvatarComponent = ({
@@ -74,13 +101,28 @@ const FighterAvatarComponent = ({
       <div className={`${sizeClasses[size]} relative flex items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/10`}>
         {loading && !directImageUrl ? (
           <div className="h-full w-full animate-pulse rounded-full bg-white/10" />
-        ) : shouldShowImage ? (
-          <img
-            src={url}
-            alt={fighterName || 'Fighter'}
-            className="w-full h-full object-cover"
-            onError={handleImageError}
-          />
+        ) : shouldShowImage && url ? (
+          isOptimizableUrl(url) ? (
+            <Image
+              src={url}
+              alt={fighterName || 'Fighter'}
+              width={pixelSizes[size]}
+              height={pixelSizes[size]}
+              className="w-full h-full object-cover"
+              onError={handleImageError}
+              unoptimized={url.startsWith('/images/')} // Don't optimize local placeholders
+            />
+          ) : (
+            // Fallback for non-configured external URLs
+            <img
+              src={url}
+              alt={fighterName || 'Fighter'}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
+              onError={handleImageError}
+            />
+          )
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-black/60">
             <span className={`ufc-condensed text-white/70 ${textSizeClasses[size]}`}>

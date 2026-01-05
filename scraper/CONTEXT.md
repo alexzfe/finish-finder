@@ -55,15 +55,34 @@ Example: Fighter with 5 career losses but only 3 UFC losses (2 KO, 1 SUB) → 10
 
 The scraper (`ufc_scraper/spiders/ufcstats.py`) scrapes both upcoming and completed events:
 - **Upcoming events**: All events (or limited by `limit` parameter)
-- **Completed events**: 2 most recent events (enabled by default via `include_completed=true`)
+- **Completed events**: Configurable via `completed_limit` parameter (default: 2 most recent)
+
+**Spider Arguments:**
+- `limit` (int): Limit number of upcoming events to scrape
+- `include_completed` (str): Enable completed event scraping ('true', '1', 'yes')
+- `completed_limit` (int): Number of completed events to scrape (default: 2)
 
 Completed events provide fight outcome data for cancelled fight detection and reconciliation.
+
+## ID Format and Conversion
+
+The scraper generates 16-character hex IDs extracted from UFCStats.com URLs (e.g., `01641ba5df0c69b0`). The ingestion API (`/api/internal/ingest`) automatically converts these hex IDs to database CUIDs (25 characters) at the API gateway boundary. This conversion applies to fighter IDs and fight winnerId fields.
+
+## Fight Matching Logic
+
+The ingestion API matches incoming fights against existing database records using a multi-step lookup:
+
+1. **Primary lookup**: Composite key (eventId, fighter1Id, fighter2Id) with normalized alphabetical order
+2. **Reversed order fallback**: Check reversed fighter order for fights created before normalization
+3. **sourceUrl fallback**: Match by UFCStats.com source URL
+
+Winner ID resolution maps scraper hex IDs directly to database CUIDs without considering fighter storage order - the winner's identity is independent of how fighters are stored in the database.
 
 ## Integration Points
 
 - **Ingestion API**: `/api/internal/ingest` validates and stores scraped data, performs scoped reconciliation to mark cancelled fights
-- **GitHub Actions**: `.github/workflows/scraper.yml` runs daily at 2 AM UTC with `include_completed=true` default
-- **Database**: Prisma models (Fighter, Event, Fight) receive scraped data
+- **GitHub Actions**: `.github/workflows/scraper.yml` runs daily at 2 AM UTC with `include_completed=true` and `completed_limit=2` defaults
+- **Database**: Prisma models (Fighter, Event, Fight) receive scraped data with CUID identifiers
 
 ---
 

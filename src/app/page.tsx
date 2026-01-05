@@ -127,8 +127,8 @@ export default function Home() {
 
   const handleFightClick = (fight: Fight) => {
     setSelectedFight(fight)
-    // Open modal on mobile/tablet, use sidebar on desktop
-    if (window.innerWidth < 1024) {
+    // Open modal on mobile, use sidebar on tablet landscape and desktop (768px+)
+    if (window.innerWidth < 768) {
       setIsModalOpen(true)
     }
   }
@@ -157,14 +157,91 @@ export default function Home() {
     <div className="min-h-screen bg-[var(--ufc-black-alt)]">
       <Header />
 
-      <main className="mx-auto max-w-sm px-4 pb-16 sm:max-w-md sm:px-6 md:max-w-4xl lg:max-w-6xl xl:max-w-7xl">
+      <main id="main-content" className="mx-auto max-w-sm px-4 pb-16 sm:max-w-md sm:px-6 md:max-w-4xl lg:max-w-6xl xl:max-w-7xl" tabIndex={-1}>
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center text-white">
-            <div className="mb-6 text-6xl">⏳</div>
-            <h2 className="ufc-condensed text-4xl text-white">Loading Events</h2>
-            <p className="mt-4 max-w-xl text-sm uppercase tracking-[0.4em] text-white/60">
-              Fetching the latest fight cards from UFCStats.com and prepping AI-powered predictions
-            </p>
+          <div className="space-y-6">
+            {/* Event Navigation Skeleton */}
+            <section className="ufc-section mt-6 rounded-2xl px-0 pb-6 pt-4">
+              <div className="px-6 md:px-8">
+                <div className="h-6 w-40 animate-pulse rounded bg-white/10" />
+              </div>
+              <div className="mt-4 rounded-2xl border-t border-white/5 bg-black/35 px-4 py-5 md:px-8">
+                <div className="relative rounded-xl border border-white/5 bg-black/55 px-6 pb-6 pt-6 sm:px-10 md:px-12">
+                  {/* Nav buttons skeleton */}
+                  <div className="absolute left-5 top-1/2 h-11 w-11 -translate-y-1/2 animate-pulse rounded-full bg-white/10" />
+                  <div className="absolute right-5 top-1/2 h-11 w-11 -translate-y-1/2 animate-pulse rounded-full bg-white/10" />
+                  {/* Event info skeleton */}
+                  <div className="flex flex-col items-center text-center">
+                    <div className="h-8 w-64 animate-pulse rounded bg-white/10" />
+                    <div className="mt-3 h-4 w-48 animate-pulse rounded bg-white/10" />
+                    <div className="mt-2 h-3 w-36 animate-pulse rounded bg-white/10" />
+                    <div className="mt-4 flex gap-2">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="h-3 w-3 animate-pulse rounded-full bg-white/10" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Fight List Skeleton */}
+            <section className="flex flex-col gap-6 md:flex-row md:items-start">
+              <div className="ufc-section rounded-2xl px-4 py-5 md:flex-[2] md:px-5">
+                <div className="rounded-2xl border border-white/5 bg-black/40">
+                  <div className="flex items-center justify-between border-b border-white/5 px-3 py-3 sm:px-5">
+                    <div className="h-5 w-32 animate-pulse rounded bg-white/10" />
+                    <div className="h-3 w-16 animate-pulse rounded bg-white/10" />
+                  </div>
+                  <div className="p-3 sm:p-5 space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="rounded-xl border border-white/10 overflow-hidden">
+                        <div className="border-b border-white/10 bg-black/60 px-4 py-3">
+                          <div className="flex justify-between">
+                            <div className="h-3 w-20 animate-pulse rounded bg-white/10" />
+                            <div className="h-5 w-10 animate-pulse rounded bg-white/10" />
+                          </div>
+                        </div>
+                        <div className="bg-black/50 p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 md:w-16 md:h-16 animate-pulse rounded-full bg-white/10" />
+                              <div className="space-y-2">
+                                <div className="h-4 w-28 animate-pulse rounded bg-white/10" />
+                                <div className="h-2 w-16 animate-pulse rounded bg-white/10" />
+                              </div>
+                            </div>
+                            <div className="h-3 w-6 animate-pulse rounded bg-white/10" />
+                            <div className="flex items-center gap-3">
+                              <div className="space-y-2 text-right">
+                                <div className="h-4 w-28 animate-pulse rounded bg-white/10" />
+                                <div className="h-2 w-16 animate-pulse rounded bg-white/10 ml-auto" />
+                              </div>
+                              <div className="w-12 h-12 md:w-16 md:h-16 animate-pulse rounded-full bg-white/10" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sidebar Skeleton (desktop only) */}
+              <aside className="hidden md:block rounded-2xl border border-white/5 bg-black/70 p-5 md:flex-[1]">
+                <div className="space-y-4">
+                  <div className="border-l-4 border-white/20 pl-4">
+                    <div className="h-3 w-20 animate-pulse rounded bg-white/10" />
+                    <div className="mt-2 h-6 w-48 animate-pulse rounded bg-white/10" />
+                    <div className="mt-2 h-3 w-32 animate-pulse rounded bg-white/10" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-16 w-full animate-pulse rounded-xl bg-white/5" />
+                    <div className="h-16 w-full animate-pulse rounded-xl bg-white/5" />
+                  </div>
+                </div>
+              </aside>
+            </section>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-24 text-center text-white">
@@ -187,15 +264,15 @@ export default function Home() {
               </div>
             </section>
 
-            <section id="cards" className="flex flex-col gap-6 lg:flex-row lg:items-start">
-              <div className="ufc-section rounded-2xl px-4 py-5 lg:flex-[2] lg:px-5">
+            <section id="cards" className="flex flex-col gap-6 md:flex-row md:items-start">
+              <div className="ufc-section rounded-2xl px-4 py-5 md:flex-[2] md:px-5">
                 <FightList
                   event={currentEvent}
                   onFightClick={handleFightClick}
                 />
               </div>
 
-              <aside className="hidden lg:block lg:self-start rounded-2xl border border-white/5 bg-black/70 p-4 sm:p-5 text-white shadow-2xl lg:sticky lg:top-20 lg:flex-[1] lg:max-h-[calc(100vh-160px)] lg:overflow-y-auto xl:top-24">
+              <aside className="hidden md:block md:self-start rounded-2xl border border-white/5 bg-black/70 p-4 sm:p-5 text-white shadow-2xl md:sticky md:top-20 md:flex-[1] md:max-h-[calc(100vh-160px)] md:overflow-y-auto lg:top-24">
                 {selectedFight ? (
                   <div className="space-y-5">
                     <div className="border-l-4 border-[var(--ufc-red)] pl-4">

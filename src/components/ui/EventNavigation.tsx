@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useEffect, useCallback } from 'react'
 import { UFCEvent } from '@/types'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid'
 
@@ -11,29 +12,90 @@ interface EventNavigationProps {
 
 export function EventNavigation({ events, currentEventIndex, onEventChange }: EventNavigationProps) {
   const currentEvent = events[currentEventIndex]
+  const containerRef = useRef<HTMLDivElement>(null)
+  const touchStartX = useRef<number>(0)
+  const touchEndX = useRef<number>(0)
 
-  const goToPrevEvent = () => {
+  const goToPrevEvent = useCallback(() => {
     if (currentEventIndex > 0) {
       onEventChange(currentEventIndex - 1)
     }
-  }
+  }, [currentEventIndex, onEventChange])
 
-  const goToNextEvent = () => {
+  const goToNextEvent = useCallback(() => {
     if (currentEventIndex < events.length - 1) {
       onEventChange(currentEventIndex + 1)
     }
+  }, [currentEventIndex, events.length, onEventChange])
+
+  // Swipe gesture handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
   }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX
+  }
+
+  const handleTouchEnd = () => {
+    const swipeThreshold = 50 // minimum distance for a swipe
+    const diff = touchStartX.current - touchEndX.current
+
+    if (Math.abs(diff) > swipeThreshold) {
+      if (diff > 0) {
+        // Swiped left -> next event
+        goToNextEvent()
+      } else {
+        // Swiped right -> previous event
+        goToPrevEvent()
+      }
+    }
+    // Reset values
+    touchStartX.current = 0
+    touchEndX.current = 0
+  }
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle if this component or its children are focused
+      if (!containerRef.current?.contains(document.activeElement) &&
+          document.activeElement !== document.body) {
+        return
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        goToPrevEvent()
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        goToNextEvent()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [goToPrevEvent, goToNextEvent])
 
   if (!currentEvent) {
     return null
   }
 
   return (
-    <div className={`relative rounded-xl border px-6 pb-6 pt-6 text-white sm:px-10 md:px-12 transition-all ${
-      currentEvent.completed
-        ? 'border-white/10 bg-black/40 opacity-75'
-        : 'border-white/5 bg-black/55'
-    }`}>
+    <div
+      ref={containerRef}
+      className={`relative rounded-xl border px-6 pb-6 pt-6 text-white sm:px-10 md:px-12 transition-all select-none ${
+        currentEvent.completed
+          ? 'border-white/10 bg-black/40 opacity-75'
+          : 'border-white/5 bg-black/55'
+      }`}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      role="region"
+      aria-label="Event navigation"
+      tabIndex={0}
+    >
       <button
         onClick={goToPrevEvent}
         disabled={currentEventIndex === 0}
@@ -95,20 +157,27 @@ export function EventNavigation({ events, currentEventIndex, onEventChange }: Ev
           📍 {currentEvent.location}
         </p>
 
-        <div className="mt-4 flex items-center justify-center gap-2">
+        <div className="mt-4 flex items-center justify-center gap-0.5" role="tablist" aria-label="Event list">
           {events.map((event, index) => (
             <button
               key={index}
               onClick={() => onEventChange(index)}
-              className={`h-3 rounded-full transition-all duration-200 ${
-                index === currentEventIndex
-                  ? 'w-8 bg-[var(--ufc-red)]'
-                  : event.completed
-                  ? 'w-3 bg-white/10 hover:bg-white/20'
-                  : 'w-3 bg-white/20 hover:bg-white/40'
-              }`}
-              aria-label={`Go to event ${index + 1}${event.completed ? ' (completed)' : ''}`}
-            />
+              className="relative flex h-11 w-11 items-center justify-center"
+              aria-label={`Go to ${event.name}${event.completed ? ' (completed)' : ''}`}
+              aria-selected={index === currentEventIndex}
+              role="tab"
+            >
+              {/* Visual dot indicator */}
+              <span
+                className={`block rounded-full transition-all duration-200 ${
+                  index === currentEventIndex
+                    ? 'h-3 w-8 bg-[var(--ufc-red)]'
+                    : event.completed
+                    ? 'h-3 w-3 bg-white/10 hover:bg-white/20'
+                    : 'h-3 w-3 bg-white/20 hover:bg-white/40'
+                }`}
+              />
+            </button>
           ))}
         </div>
       </div>

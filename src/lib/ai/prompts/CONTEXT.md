@@ -33,6 +33,8 @@ The system uses a **single-call unified architecture** for fight analysis:
 ├─────────────────────────────────────────────────────────────────┤
 │ Chain-of-Thought output (reasoning first):                       │
 │   • reasoning {}         - Step-by-step analysis (FIRST)        │
+│   • finishAnalysis       - Concise 1-2 sentence WHY finish      │
+│   • funAnalysis          - Concise 1-2 sentence WHY entertaining│
 │   • narrative            - Fight simulation story                │
 │   • pace (1-5)           - Action level                         │
 │   • finishDanger (1-5)   - Risk of stoppage (calibrated)        │
@@ -99,6 +101,17 @@ The LLM outputs qualitative ratings (1-5 scales) rather than numerical probabili
 | `styleClash` | enum | Complementary (action), Neutral, Canceling (nullify) |
 | `brawlPotential` | bool | Both fighters willing to stand and trade |
 | `groundBattleLikely` | bool | Grappling exchange expected |
+
+## Concise Analysis Summaries
+
+The LLM outputs focused 1-2 sentence summaries for UI display:
+
+| Field | Purpose | Example |
+|-------|---------|---------|
+| `finishAnalysis` | WHY the fight will/won't be a finish | "High finish likelihood due to Garry's 50% KO rate against Page's absorbed strikes." |
+| `funAnalysis` | WHY the fight will/won't be entertaining | "Striker vs striker matchup with high combined output promises constant action." |
+
+These concise summaries focus on the key vulnerability vs offense matchup (finish) and pace/style clash (fun).
 
 ## Dynamic Probability Anchors
 

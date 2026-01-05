@@ -52,7 +52,7 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform rounded-2xl border border-white/10 bg-black/90 p-6 text-white shadow-2xl transition-all">
+              <Dialog.Panel className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md transform rounded-2xl border border-white/10 bg-black/90 p-4 sm:p-6 text-white shadow-2xl transition-all">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">
                   <Dialog.Title className="ufc-condensed text-xs text-white/70">
@@ -65,6 +65,11 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                     <XMarkIcon className="h-5 w-5" />
                   </button>
                 </div>
+
+                {/* Accessibility Description */}
+                <Dialog.Description className="sr-only">
+                  Fight details for {fight.fighter1?.name || 'TBD'} vs {fight.fighter2?.name || 'TBD'}
+                </Dialog.Description>
 
                 {/* Fight Header */}
                 <div className="border-l-4 border-[var(--ufc-red)] pl-4 mb-6">
