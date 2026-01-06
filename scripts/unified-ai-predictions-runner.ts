@@ -14,11 +14,13 @@
  *   npx ts-node scripts/unified-ai-predictions-runner.ts [options]
  *
  * Options:
- *   --dry-run         Show what would be done without making API calls
- *   --force           Regenerate predictions even if they already exist
- *   --event-id=<id>   Only process fights for a specific event
- *   --limit=<n>       Limit number of fights to process
- *   --no-web-search   Disable web search enrichment
+ *   --dry-run           Show what would be done without making API calls
+ *   --force             Regenerate predictions even if they already exist
+ *   --event-id=<id>     Only process fights for a specific event
+ *   --limit=<n>         Limit number of fights to process
+ *   --web-search        Enable basic web search enrichment (Brave API)
+ *   --structured-search Enable structured entertainment profile extraction (OpenAI API)
+ *   --verbose           Show full LLM reasoning and entertainment profile influence
  *
  * Environment Variables:
  *   AI_PROVIDER             'anthropic' or 'openai' (default: anthropic)
@@ -43,8 +45,12 @@ import {
   calculateRiskLevel,
   type UnifiedFightPrediction,
 } from '../src/lib/ai/unifiedPredictionService'
-import { ImprovedFighterContextService } from '../src/lib/ai/improvedFighterContextService'
+import {
+  ImprovedFighterContextService,
+  FighterEntertainmentService,
+} from '../src/lib/ai/improvedFighterContextService'
 import { getDefaultSearchFunction } from '../src/lib/ai/webSearchWrapper'
+import type { FighterEntertainmentContext } from '../src/lib/ai/schemas/fighterEntertainmentProfile'
 import type { Fighter, Fight, Event } from '@prisma/client'
 
 /**
@@ -71,7 +77,9 @@ interface Args {
   force: boolean
   eventId?: string
   limit?: number
-  noWebSearch?: boolean
+  webSearch: boolean
+  structuredSearch: boolean
+  verbose: boolean
 }
 
 /**
@@ -91,7 +99,9 @@ function parseArgs(): Args {
   return {
     dryRun: args.includes('--dry-run'),
     force: args.includes('--force'),
-    noWebSearch: args.includes('--no-web-search'),
+    webSearch: args.includes('--web-search'),
+    structuredSearch: args.includes('--structured-search'),
+    verbose: args.includes('--verbose'),
     eventId: args.find((arg) => arg.startsWith('--event-id='))?.split('=')[1],
     limit: parseInt(args.find((arg) => arg.startsWith('--limit='))?.split('=')[1] || '0') || undefined,
   }
@@ -240,23 +250,26 @@ async function generatePrediction(
   fight: FightWithRelations,
   versionId: string,
   service: UnifiedPredictionService,
-  contextService?: ImprovedFighterContextService
+  contextService?: ImprovedFighterContextService,
+  entertainmentService?: FighterEntertainmentService,
+  verbose?: boolean
 ): Promise<{
   success: boolean
   tokensUsed: number
   costUsd: number
+  searchCostUsd: number
   error?: string
 }> {
   try {
     const { fighter1, fighter2, event } = fight
 
-    // Fetch recent context if available
+    // Fetch recent context if available (Brave search)
     let fighter1Context: string | undefined
     let fighter2Context: string | undefined
 
     if (contextService) {
       try {
-        console.log('  🔍 Fetching fighter context...')
+        console.log('  🔍 Fetching fighter context (Brave)...')
         const [context1, context2] = await contextService.getFightContext(
           fighter1.name,
           fighter2.name,
@@ -269,7 +282,34 @@ async function generatePrediction(
       }
     }
 
-    // Build unified input
+    // Fetch entertainment profiles if available (OpenAI structured search)
+    let fighter1Profile: FighterEntertainmentContext | undefined
+    let fighter2Profile: FighterEntertainmentContext | undefined
+    let searchCostUsd = 0
+
+    if (entertainmentService) {
+      try {
+        console.log('  🎭 Fetching entertainment profiles (OpenAI)...')
+        const profileResult = await entertainmentService.getFightProfiles(
+          { id: fighter1.id, name: fighter1.name },
+          { id: fighter2.id, name: fighter2.name }
+        )
+        fighter1Profile = profileResult.fighter1Profile ?? undefined
+        fighter2Profile = profileResult.fighter2Profile ?? undefined
+        searchCostUsd = profileResult.totalCostUsd
+
+        if (profileResult.cacheHits > 0) {
+          console.log(`    ✓ Cache hits: ${profileResult.cacheHits}`)
+        }
+        if (profileResult.cacheMisses > 0) {
+          console.log(`    🔍 Fresh profiles: ${profileResult.cacheMisses} ($${searchCostUsd.toFixed(4)})`)
+        }
+      } catch (error) {
+        console.warn(`  ⚠ Entertainment profile fetch failed: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+
+    // Build unified input with all available context
     const input = buildUnifiedInput(
       fighter1,
       fighter2,
@@ -280,11 +320,61 @@ async function generatePrediction(
         mainEvent: fight.mainEvent,
       },
       fighter1Context,
-      fighter2Context
+      fighter2Context,
+      fighter1Profile,
+      fighter2Profile
     )
 
     // Generate prediction
     const prediction = await service.predictFight(input)
+
+    // Verbose output: Show LLM reasoning
+    if (verbose) {
+      console.log('\n  ═══════════════════════════════════════════════════════════')
+      console.log('  📝 LLM REASONING (Chain-of-Thought)')
+      console.log('  ═══════════════════════════════════════════════════════════')
+
+      const reasoning = prediction.simulation.reasoning
+      console.log('\n  [STATISTICIAN - Vulnerability Analysis]')
+      console.log(`  ${reasoning.vulnerabilityAnalysis}`)
+      console.log('\n  [STATISTICIAN - Offense Analysis]')
+      console.log(`  ${reasoning.offenseAnalysis}`)
+      console.log('\n  [TAPE WATCHER - Style Matchup]')
+      console.log(`  ${reasoning.styleMatchup}`)
+      console.log('\n  [SYNTHESIZER - Final Assessment]')
+      console.log(`  ${reasoning.finalAssessment}`)
+
+      console.log('\n  ───────────────────────────────────────────────────────────')
+      console.log('  📊 ENTERTAINMENT PROFILE INFLUENCE')
+      console.log('  ───────────────────────────────────────────────────────────')
+      if (fighter1Profile) {
+        console.log(`\n  ${fighter1.name}:`)
+        console.log(`    Archetype: ${fighter1Profile.primary_archetype}/${fighter1Profile.secondary_archetype || 'none'}`)
+        console.log(`    Mentality: ${fighter1Profile.mentality}`)
+        console.log(`    Entertainment: ${fighter1Profile.entertainment_prediction}`)
+        console.log(`    Tags: ${fighter1Profile.reputation_tags?.join(', ') || 'none'}`)
+      } else {
+        console.log(`\n  ${fighter1.name}: No entertainment profile`)
+      }
+      if (fighter2Profile) {
+        console.log(`\n  ${fighter2.name}:`)
+        console.log(`    Archetype: ${fighter2Profile.primary_archetype}/${fighter2Profile.secondary_archetype || 'none'}`)
+        console.log(`    Mentality: ${fighter2Profile.mentality}`)
+        console.log(`    Entertainment: ${fighter2Profile.entertainment_prediction}`)
+        console.log(`    Tags: ${fighter2Profile.reputation_tags?.join(', ') || 'none'}`)
+      } else {
+        console.log(`\n  ${fighter2.name}: No entertainment profile`)
+      }
+
+      console.log('\n  ───────────────────────────────────────────────────────────')
+      console.log('  🎯 FINAL ANALYSIS')
+      console.log('  ───────────────────────────────────────────────────────────')
+      console.log(`\n  Finish Analysis: ${prediction.simulation.finishAnalysis}`)
+      console.log(`\n  Fun Analysis: ${prediction.simulation.funAnalysis}`)
+      console.log(`\n  Narrative: ${prediction.simulation.narrative}`)
+      console.log(`\n  Key Factors: ${prediction.simulation.keyFactors.join(', ')}`)
+      console.log('\n  ═══════════════════════════════════════════════════════════\n')
+    }
 
     // Save to database
     await prisma.prediction.upsert({
@@ -341,12 +431,14 @@ async function generatePrediction(
       success: true,
       tokensUsed: prediction.tokensUsed,
       costUsd: prediction.costUsd,
+      searchCostUsd,
     }
   } catch (error) {
     return {
       success: false,
       tokensUsed: 0,
       costUsd: 0,
+      searchCostUsd: 0,
       error: error instanceof Error ? error.message : String(error),
     }
   }
@@ -363,7 +455,9 @@ async function main() {
   console.log(`Provider: ${CONFIG.provider}`)
   console.log(`Dry run: ${args.dryRun}`)
   console.log(`Force regenerate: ${args.force}`)
-  console.log(`Web search: ${args.noWebSearch ? 'DISABLED' : 'ENABLED'}`)
+  console.log(`Web search (Brave): ${args.webSearch ? 'ENABLED' : 'DISABLED'}`)
+  console.log(`Structured search (OpenAI): ${args.structuredSearch ? 'ENABLED' : 'DISABLED'}`)
+  if (args.verbose) console.log(`Verbose mode: ENABLED (showing LLM reasoning)`)
   if (args.eventId) console.log(`Event filter: ${args.eventId}`)
   if (args.limit) console.log(`Limit: ${args.limit} fight(s)`)
   console.log('')
@@ -402,13 +496,27 @@ async function main() {
   const service = new UnifiedPredictionService(CONFIG.provider)
 
   let contextService: ImprovedFighterContextService | undefined
-  if (!args.noWebSearch) {
+  if (args.webSearch) {
     try {
       const searchFunction = getDefaultSearchFunction()
       contextService = new ImprovedFighterContextService(searchFunction)
-      console.log('✓ Fighter context service initialized')
+      console.log('✓ Fighter context service initialized (Brave Search)')
     } catch (error) {
-      console.warn(`⚠ Could not initialize web search: ${error instanceof Error ? error.message : String(error)}`)
+      console.warn(`⚠ Could not initialize Brave search: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  let entertainmentService: FighterEntertainmentService | undefined
+  if (args.structuredSearch) {
+    try {
+      entertainmentService = new FighterEntertainmentService()
+      console.log('✓ Entertainment profile service initialized (OpenAI)')
+
+      // Show cache stats
+      const stats = await entertainmentService.getCacheStats()
+      console.log(`  📦 Cache: ${stats.totalProfiles} profiles, ${stats.expiredProfiles} expired, $${stats.totalCostUsd.toFixed(2)} spent`)
+    } catch (error) {
+      console.warn(`⚠ Could not initialize entertainment service: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
   console.log('')
@@ -416,6 +524,7 @@ async function main() {
   // Step 4: Process fights
   let totalTokens = 0
   let totalCost = 0
+  let totalSearchCost = 0
   let successCount = 0
   let errorCount = 0
   const errors: Array<{ fight: string; error: string }> = []
@@ -426,13 +535,22 @@ async function main() {
 
     console.log(`\n[${i + 1}/${fights.length}] ${fightLabel}`)
 
-    const result = await generatePrediction(fight, version.id, service, contextService)
+    const result = await generatePrediction(
+      fight,
+      version.id,
+      service,
+      contextService,
+      entertainmentService,
+      args.verbose
+    )
 
     if (result.success) {
       successCount++
       totalTokens += result.tokensUsed
       totalCost += result.costUsd
-      console.log(`  📊 ${result.tokensUsed} tokens, $${result.costUsd.toFixed(4)}`)
+      totalSearchCost += result.searchCostUsd
+      const searchInfo = result.searchCostUsd > 0 ? ` + $${result.searchCostUsd.toFixed(4)} search` : ''
+      console.log(`  📊 ${result.tokensUsed} tokens, $${result.costUsd.toFixed(4)}${searchInfo}`)
     } else {
       errorCount++
       errors.push({ fight: fightLabel, error: result.error || 'Unknown error' })
@@ -452,9 +570,14 @@ async function main() {
   console.log(`✓ Success: ${successCount}`)
   console.log(`✗ Errors: ${errorCount}`)
   console.log(`Total tokens: ${totalTokens.toLocaleString()}`)
-  console.log(`Total cost: $${totalCost.toFixed(4)}`)
+  console.log(`Prediction cost: $${totalCost.toFixed(4)}`)
+  if (totalSearchCost > 0) {
+    console.log(`Search cost: $${totalSearchCost.toFixed(4)}`)
+    console.log(`Total cost: $${(totalCost + totalSearchCost).toFixed(4)}`)
+  }
   if (successCount > 0) {
-    console.log(`Average cost per fight: $${(totalCost / successCount).toFixed(4)}`)
+    const avgCost = (totalCost + totalSearchCost) / successCount
+    console.log(`Average cost per fight: $${avgCost.toFixed(4)}`)
   }
 
   if (errors.length > 0) {

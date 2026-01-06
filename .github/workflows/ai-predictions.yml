@@ -13,8 +13,8 @@ on:
         options:
           - 'openai'
           - 'anthropic'
-      no_web_search:
-        description: 'Disable web search enrichment'
+      web_search:
+        description: 'Enable web search enrichment'
         required: false
         default: 'false'
         type: choice
@@ -60,11 +60,11 @@ jobs:
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
         run: |
           # Run the unified AI predictions runner (Phase 4)
-          if [ "${{ github.event.inputs.no_web_search }}" = "true" ]; then
-            echo "Running unified predictions with web search disabled..."
-            npx ts-node scripts/unified-ai-predictions-runner.ts --no-web-search
-          else
+          if [ "${{ github.event.inputs.web_search }}" = "true" ]; then
             echo "Running unified predictions with web search enabled..."
+            npx ts-node scripts/unified-ai-predictions-runner.ts --web-search
+          else
+            echo "Running unified predictions (web search disabled by default)..."
             npx ts-node scripts/unified-ai-predictions-runner.ts
           fi
 

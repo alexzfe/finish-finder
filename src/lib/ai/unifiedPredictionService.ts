@@ -24,6 +24,7 @@ import {
   type UnifiedPredictionContext,
   type FightSimulationOutput,
 } from './prompts'
+import type { FighterEntertainmentContext } from './schemas/fighterEntertainmentProfile'
 import {
   calculateAllScores,
   calculateAdjustedConfidence,
@@ -853,7 +854,9 @@ export function buildUnifiedInput(
     }
   },
   fighter1Context?: string,
-  fighter2Context?: string
+  fighter2Context?: string,
+  fighter1Profile?: FighterEntertainmentContext,
+  fighter2Profile?: FighterEntertainmentContext
 ): UnifiedPredictionInput {
   return {
     fighter1: {
@@ -880,6 +883,7 @@ export function buildUnifiedInput(
         submissionAverage: fighter1.submissionAverage,
       }),
       recentContext: fighter1Context,
+      entertainmentProfile: fighter1Profile,
     },
     fighter2: {
       name: fighter2.name,
@@ -905,6 +909,7 @@ export function buildUnifiedInput(
         submissionAverage: fighter2.submissionAverage,
       }),
       recentContext: fighter2Context,
+      entertainmentProfile: fighter2Profile,
     },
     context,
   }

@@ -16,6 +16,7 @@
 
 import { getWeightClassRates, type WeightClassRates } from './weightClassRates'
 import { buildFewShotExamplesSection } from './anchorExamples'
+import type { FighterEntertainmentContext } from '../schemas/fighterEntertainmentProfile'
 
 /**
  * Style clash classification
@@ -63,6 +64,9 @@ export interface UnifiedFighterStats {
 
   // Optional context
   recentContext?: string
+
+  // Structured entertainment profile (from OpenAI web search)
+  entertainmentProfile?: FighterEntertainmentContext
 }
 
 /**
@@ -186,9 +190,10 @@ export function buildUnifiedPredictionPrompt(input: UnifiedPredictionInput): str
   const combinedStrikeRate = fighter1.significantStrikesLandedPerMinute + fighter2.significantStrikesLandedPerMinute
   const avgFinishRate = ((fighter1.finishRate + fighter2.finishRate) / 2) * 100
 
-  // Build context section
+  // Build context sections
   const contextSection = buildContextSection(context)
   const recentContextSection = buildRecentContextSection(fighter1, fighter2)
+  const entertainmentProfileSection = buildEntertainmentProfileSection(fighter1, fighter2)
 
   return `You are an elite MMA analyst who predicts fights by simulating how they will unfold. You will analyze this matchup using THREE distinct perspectives, then synthesize them into a unified prediction.
 
@@ -232,7 +237,7 @@ MATCHUP SUMMARY:
 • Combined strikes/min: ${combinedStrikeRate.toFixed(1)} ${combinedStrikeRate >= 10 ? '(ELITE pace)' : combinedStrikeRate >= 7 ? '(High pace)' : ''}
 • Combined UFC finish rate: ${avgFinishRate.toFixed(1)}%
 • Style matchup: ${fighter1.primaryStyle.toUpperCase()} vs ${fighter2.primaryStyle.toUpperCase()}
-${recentContextSection}
+${recentContextSection}${entertainmentProfileSection}
 
 ═══════════════════════════════════════════════════════════════════
 MULTI-PERSONA ANALYSIS FRAMEWORK
@@ -375,6 +380,84 @@ function buildRecentContextSection(
   }
 
   section += 'Consider recent momentum, injuries, or stylistic changes in your analysis.'
+
+  return section
+}
+
+/**
+ * Format entertainment profile for prompt injection
+ */
+function formatEntertainmentProfile(
+  profile: FighterEntertainmentContext,
+  fighterName: string
+): string {
+  const archetypeLabel = profile.primary_archetype.replace(/_/g, ' ')
+  const secondaryLabel = profile.secondary_archetype
+    ? ` / ${profile.secondary_archetype.replace(/_/g, ' ')}`
+    : ''
+  const mentalityLabel = profile.mentality.replace(/_/g, ' ')
+
+  // Format bonus history
+  const bonuses = profile.bonus_history
+  const bonusText =
+    bonuses.total_bonuses > 0
+      ? `${bonuses.total_bonuses} bonuses (${bonuses.fotn_count} FOTN, ${bonuses.potn_count} POTN)`
+      : 'No recorded bonuses'
+
+  // Format reputation tags (max 5)
+  const tags = profile.reputation_tags.slice(0, 5).join(', ')
+
+  return `${fighterName}:
+  • Archetype: ${archetypeLabel}${secondaryLabel} (${profile.archetype_confidence}% confidence)
+  • Mentality: ${mentalityLabel} (${profile.mentality_confidence}% confidence)
+  • Entertainment Prediction: ${profile.entertainment_prediction.toUpperCase()}
+  • Bonus History: ${bonusText}
+  • Reputation: ${tags || 'Unknown'}`
+}
+
+/**
+ * Build entertainment profile section for prompt
+ */
+function buildEntertainmentProfileSection(
+  fighter1: UnifiedFighterStats,
+  fighter2: UnifiedFighterStats
+): string {
+  if (!fighter1.entertainmentProfile && !fighter2.entertainmentProfile) {
+    return ''
+  }
+
+  let section = `
+
+═══════════════════════════════════════════════════════════════════
+ENTERTAINMENT PROFILES (From Web Search - Qualitative Intelligence)
+═══════════════════════════════════════════════════════════════════
+
+`
+
+  if (fighter1.entertainmentProfile) {
+    section += formatEntertainmentProfile(
+      fighter1.entertainmentProfile,
+      fighter1.name
+    )
+    section += '\n\n'
+  }
+
+  if (fighter2.entertainmentProfile) {
+    section += formatEntertainmentProfile(
+      fighter2.entertainmentProfile,
+      fighter2.name
+    )
+    section += '\n'
+  }
+
+  section += `
+⚠️ ENTERTAINMENT PROFILE GUIDANCE:
+- "finisher" mentality + high bonus count = likely action fighter
+- "coasts_with_lead" or "plays_safe" = may stall when winning
+- "brawler" vs "brawler" archetypes = high brawlPotential
+- "counter_striker" vs "counter_striker" = may be slow-paced
+- "bonus_hunter" = actively seeks finishes for extra pay
+- Use reputation tags to refine pace/technicality assessments`
 
   return section
 }

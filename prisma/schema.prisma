@@ -92,6 +92,7 @@ model Fighter {
   fighter1Fights             Fight[]   @relation("Fighter1")
   fighter2Fights             Fight[]   @relation("Fighter2")
   contextChunks              FighterContextChunk[]
+  entertainmentProfile       FighterEntertainmentProfile?
 
   @@map("fighters")
 }
@@ -457,4 +458,55 @@ model PredictionLog {
   @@index([createdAt])
   @@index([actualFinish])
   @@map("prediction_logs")
+}
+
+// ============================================
+// PHASE 5: FIGHTER ENTERTAINMENT PROFILES
+// Cached web search extractions for prediction enrichment
+// ============================================
+
+model FighterEntertainmentProfile {
+  id                     String   @id @default(cuid())
+  fighterId              String   @unique @map("fighter_id")
+
+  // Archetype classification
+  primaryArchetype       String   @map("primary_archetype")      // brawler, pressure_fighter, counter_striker, etc.
+  secondaryArchetype     String?  @map("secondary_archetype")
+  archetypeReasoning     String   @map("archetype_reasoning") @db.Text
+  archetypeConfidence    Int      @map("archetype_confidence")   // 0-100
+
+  // Entertainment mentality
+  mentality              String                                   // finisher, coasts_with_lead, bonus_hunter, plays_safe
+  mentalityReasoning     String   @map("mentality_reasoning") @db.Text
+  mentalityConfidence    Int      @map("mentality_confidence")   // 0-100
+
+  // Reputation & history (stored as JSON)
+  reputationTags         String[] @map("reputation_tags")        // ["always comes forward", "iron chin", etc.]
+  notableWars            Json?    @map("notable_wars")           // Array of { opponent, event, year, description, result }
+  bonusHistory           Json?    @map("bonus_history")          // { fotn_count, potn_count, total_bonuses, bonus_rate_estimate }
+  knownBoringFights      String[] @map("known_boring_fights")    // ["vs. Opponent (note)", ...]
+  rivalries              Json?                                   // Array of { opponent, is_real_beef, context }
+
+  // Overall assessment
+  entertainmentPrediction String  @map("entertainment_prediction") // high, medium, low, unknown
+  extractionNotes        String?  @map("extraction_notes") @db.Text
+
+  // Search metadata
+  sources                String[] @default([])                   // URLs used for extraction
+  searchTokens           Int      @default(0) @map("search_tokens")
+  extractionTokens       Int      @default(0) @map("extraction_tokens")
+  totalCostUsd           Float    @default(0) @map("total_cost_usd")
+
+  // Lifecycle
+  searchedAt             DateTime @map("searched_at")            // When profile was extracted
+  expiresAt              DateTime @map("expires_at")             // When to refresh (6 months from searchedAt)
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  fighter                Fighter  @relation(fields: [fighterId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([entertainmentPrediction])
+  @@map("fighter_entertainment_profiles")
 }

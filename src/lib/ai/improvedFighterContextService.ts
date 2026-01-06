@@ -7,15 +7,22 @@
  * 3. Recency filtering based on event timeline
  * 4. Better result extraction and summarization
  * 5. Context quality scoring
+ * 6. Entertainment profile extraction via OpenAI Responses API
  *
  * Features:
- * - In-memory caching (1 hour TTL)
+ * - In-memory caching (1 hour TTL for news, 6 months for profiles)
  * - Rate limiting (1 second delay)
  * - Graceful error handling
  * - Search result quality assessment
+ * - Structured entertainment profile extraction
  */
 
 import type { SearchFunction } from './webSearchWrapper'
+import {
+  FighterProfileCacheService,
+  type BatchResult as ProfileBatchResult,
+} from './fighterProfileCache'
+import type { FighterEntertainmentContext } from './schemas/fighterEntertainmentProfile'
 
 /**
  * Fighter context from web search
@@ -444,5 +451,148 @@ export class ImprovedFighterContextService {
       size: this.cache.size,
       entries,
     }
+  }
+}
+
+/**
+ * Entertainment profile result for a fighter
+ */
+export interface EntertainmentProfileResult {
+  profile: FighterEntertainmentContext | null
+  fromCache: boolean
+  costUsd: number
+}
+
+/**
+ * Combined context for a fight matchup
+ */
+export interface FightMatchupContext {
+  fighter1: {
+    recentNews: string | null
+    entertainmentProfile: FighterEntertainmentContext | null
+  }
+  fighter2: {
+    recentNews: string | null
+    entertainmentProfile: FighterEntertainmentContext | null
+  }
+  totalCostUsd: number
+  cacheStats: {
+    newsHits: number
+    profileHits: number
+    profileMisses: number
+  }
+}
+
+/**
+ * Service for fetching structured entertainment profiles
+ *
+ * Uses OpenAI's Responses API with web search for structured extraction.
+ * Profiles are cached in the database for 6 months.
+ */
+export class FighterEntertainmentService {
+  private profileCacheService: FighterProfileCacheService
+
+  constructor(config?: { forceRefresh?: boolean; concurrency?: number }) {
+    this.profileCacheService = new FighterProfileCacheService(config)
+  }
+
+  /**
+   * Get entertainment profile for a single fighter
+   *
+   * @param fighterId - Fighter's database ID
+   * @param fighterName - Fighter's full name
+   * @returns Entertainment context or null if unavailable
+   */
+  async getEntertainmentProfile(
+    fighterId: string,
+    fighterName: string
+  ): Promise<EntertainmentProfileResult> {
+    try {
+      const result = await this.profileCacheService.getOrFetchProfile(
+        fighterId,
+        fighterName
+      )
+
+      // Convert full profile to context (lighter weight for prompts)
+      const { toEntertainmentContext } = await import(
+        './schemas/fighterEntertainmentProfile'
+      )
+
+      return {
+        profile: toEntertainmentContext(result.profile),
+        fromCache: result.fromCache,
+        costUsd: result.costUsd,
+      }
+    } catch (error) {
+      console.warn(
+        `  ⚠ Failed to get entertainment profile for ${fighterName}: ${error instanceof Error ? error.message : String(error)}`
+      )
+      return {
+        profile: null,
+        fromCache: false,
+        costUsd: 0,
+      }
+    }
+  }
+
+  /**
+   * Get entertainment profiles for a fight matchup
+   *
+   * @param fighter1 - First fighter with id and name
+   * @param fighter2 - Second fighter with id and name
+   * @returns Profiles for both fighters with metadata
+   */
+  async getFightProfiles(
+    fighter1: { id: string; name: string },
+    fighter2: { id: string; name: string }
+  ): Promise<{
+    fighter1Profile: FighterEntertainmentContext | null
+    fighter2Profile: FighterEntertainmentContext | null
+    totalCostUsd: number
+    cacheHits: number
+    cacheMisses: number
+  }> {
+    const batchResult = await this.profileCacheService.batchGetProfiles([
+      fighter1,
+      fighter2,
+    ])
+
+    const f1Result = batchResult.results.get(fighter1.id)
+    const f2Result = batchResult.results.get(fighter2.id)
+
+    const { toEntertainmentContext } = await import(
+      './schemas/fighterEntertainmentProfile'
+    )
+
+    return {
+      fighter1Profile: f1Result
+        ? toEntertainmentContext(f1Result.profile)
+        : null,
+      fighter2Profile: f2Result
+        ? toEntertainmentContext(f2Result.profile)
+        : null,
+      totalCostUsd: batchResult.totalCostUsd,
+      cacheHits: batchResult.cacheHits,
+      cacheMisses: batchResult.cacheMisses,
+    }
+  }
+
+  /**
+   * Batch fetch profiles for multiple fighters
+   *
+   * @param fighters - Array of fighters with id and name
+   * @returns Batch result with all profiles
+   */
+  async batchGetProfiles(
+    fighters: Array<{ id: string; name: string }>
+  ): Promise<ProfileBatchResult> {
+    return this.profileCacheService.batchGetProfiles(fighters)
+  }
+
+  /**
+   * Get cache statistics
+   */
+  async getCacheStats() {
+    return this.profileCacheService.getCacheStats()
   }
 }
