@@ -1,8 +1,15 @@
 #!/usr/bin/env node
 /**
- * AI Predictions Runner - Phase 4 (Enhanced)
+ * AI Predictions Runner - Phase 4 (Enhanced) - 🚫 LEGACY RUNNER (DEPRECATED)
  *
- * Generates AI predictions for fights that don't have them yet.
+ * STATUS: LEGACY - Use unified-ai-predictions-runner.ts instead.
+ * Service: EnhancedPredictionService (wraps Phase 3, 4 API calls per fight)
+ * 
+ * This runner uses the older EnhancedPredictionService which wraps
+ * NewPredictionService (Phase 3) making 4 API calls per fight.
+ * 
+ * For new predictions, use: unified-ai-predictions-runner.ts
+ * Which uses: UnifiedPredictionService (1 API call, better results)
  *
  * Features:
  * - Version management: Tracks prompt template changes via SHA256 hashes

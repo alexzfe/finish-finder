@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 /**
- * Unified AI Predictions Runner - Phase 4 (SOTA Architecture)
+ * Unified AI Predictions Runner - Phase 4 (SOTA Architecture) - ✅ CURRENT PRIMARY RUNNER
+ *
+ * STATUS: ACTIVE - This is the recommended script for generating predictions.
+ * Replaces: new-ai-predictions-runner.ts (Phase 3, deprecated)
+ * Service: UnifiedPredictionService (single LLM call, deterministic scoring)
  *
  * Generates AI predictions using the unified prediction service.
  *

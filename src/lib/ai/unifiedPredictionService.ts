@@ -1,8 +1,12 @@
 /**
- * Unified Prediction Service - Phase 4 (SOTA Architecture)
+ * Unified Prediction Service - Phase 4 (SOTA Architecture) - ✅ CURRENT PRIMARY SERVICE
  *
  * Generates AI predictions for UFC fights using a single unified prompt
  * with deterministic score calculation.
+ * 
+ * STATUS: ACTIVE - This is the recommended service for production use.
+ * Replaces: NewPredictionService (Phase 3, 4-call architecture)
+ * Runner: scripts/unified-ai-predictions-runner.ts
  *
  * Key innovations over Phase 3:
  * - Single LLM call instead of 4 (finish + fun + 2 extractions)

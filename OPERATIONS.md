@@ -84,6 +84,37 @@ Python Scrapy Spider → Next.js Ingestion API → PostgreSQL Database
 
 **For detailed scraper operations**, see `/scraper/OPERATIONS.md`
 
+### Fighter Image Backfill
+
+Backfill fighter images from ESPN API and Wikipedia:
+
+```bash
+cd scraper
+
+# Set database connection
+export DATABASE_URL="postgresql://user:pass@host:5432/db"
+
+# Backfill images for fighters without photos (default: 50 at a time)
+python3 scripts/backfill_fighter_images.py
+
+# Process more fighters
+python3 scripts/backfill_fighter_images.py --limit 100
+
+# Force update existing images
+python3 scripts/backfill_fighter_images.py --force
+
+# Dry run (see what would be updated)
+python3 scripts/backfill_fighter_images.py --dry-run
+```
+
+**Image Sources (in priority order):**
+1. **ESPN API** - Most reliable with predictable URLs
+2. **Wikipedia** - Legally safe CC-licensed images
+
+**Current Status:**
+- 188/190 fighters have images (97.7% coverage)
+- Missing: Josh Hokit, Zach Reese (newer fighters without photos)
+
 ### Manual Scrape & Prediction Replay
 
 **Manual Python Scraper Execution:**
@@ -103,35 +134,36 @@ scrapy crawl ufcstats -a limit=1             # Limit to 1 event
 scrapy crawl ufcstats -s LOG_LEVEL=DEBUG     # Verbose logging
 ```
 
-**Manual AI Prediction Generation (New System - Phase 3):**
+**Hybrid Judgment AI Predictions (Current - v3.0):**
 ```bash
 # Set required environment variables
 export DATABASE_URL="postgresql://user:pass@host:5432/db?pgbouncer=true"
-export ANTHROPIC_API_KEY="sk-ant-..."  # or OPENAI_API_KEY
-export AI_PROVIDER="anthropic"        # or "openai"
+export OPENAI_API_KEY="sk-..."
 
-# Dry run: Show what would be done without making API calls
-npx ts-node scripts/new-ai-predictions-runner.ts --dry-run
+# Generate predictions for all fights without v3.0-hybrid predictions
+npx ts-node scripts/generate-hybrid-predictions-all.ts
 
-# Generate predictions for all unpredicted fights
-npx ts-node scripts/new-ai-predictions-runner.ts
-
-# Force regenerate all predictions (including existing)
-npx ts-node scripts/new-ai-predictions-runner.ts --force
-
-# Generate predictions for a specific event only
-npx ts-node scripts/new-ai-predictions-runner.ts --event-id=<event-id>
+# The script automatically:
+# - Finds fights without v3.0-hybrid predictions
+# - Uses single OpenAI call per fight (structured output)
+# - Calculates finish probability deterministically from attributes
+# - AI judges fun score (0-100) holistically
+# - Updates database with predictions and risk levels
 
 # Cost estimates:
-# - ~$0.02-0.04 per fight (2 API calls: finish + fun)
-# - ~13 fights per event = $0.26-0.52 per event
-# - ~4 events per month = $1-2/month total
+# - ~$0.009 per fight (single API call with structured output)
+# - ~13 fights per event = $0.12 per event
+# - ~4 events per month = $0.50/month total
 ```
 
-**Old AI Prediction System (Legacy - Deprecated):**
+**Legacy AI Prediction Systems:**
 ```bash
-# OLD SYSTEM - Will be removed after Phase 5 deployment
-node scripts/ai-predictions-runner.js
+# Unified Predictions (v2.0) - Deterministic scoring for both metrics
+npx ts-node scripts/unified-ai-predictions-runner.ts
+
+# OLD SYSTEMS - Will be removed after migration
+node scripts/ai-predictions-runner.js                    # Original
+npx ts-node scripts/new-ai-predictions-runner.ts         # Phase 3 experimental
 ```
 
 **Monitoring:**

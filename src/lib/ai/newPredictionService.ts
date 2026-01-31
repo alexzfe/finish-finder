@@ -1,9 +1,14 @@
 /**
- * New AI Prediction Service - Phase 3
+ * New AI Prediction Service - Phase 3 - 🚫 LEGACY (DEPRECATED)
  *
+ * STATUS: LEGACY - Kept for backwards compatibility. Use UnifiedPredictionService instead.
+ * 
  * Generates AI predictions for UFC fights using:
  * - Finish Probability: Chain-of-thought reasoning (4 steps)
  * - Fun Score: Weighted factor analysis
+ * 
+ * NOTE: This service makes 4 API calls per fight (expensive). 
+ * The UnifiedPredictionService (Phase 4) makes only 1 call with better results.
  *
  * Supports both Anthropic Claude and OpenAI GPT models.
  * Uses 1 fight per API call for maximum quality (can batch later if needed).

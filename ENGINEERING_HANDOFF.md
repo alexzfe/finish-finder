@@ -101,17 +101,20 @@ Fighter {
 
 ## Current Database State
 
-**As of September 20, 2025:**
-- **11 active events** spanning September 2025 - December 2025
-- **208 fighters** with complete records
-- **104 fights** with AI predictions
+**As of February 1, 2026:**
+- **10 active events** spanning February 2026 - July 2026
+- **190 fighters** with complete records
+- **99 fights** with AI predictions (54 using Hybrid Judgment v3.0)
+- **188 fighters** with images (97.7% coverage)
 - **All events operational** with proper AI scoring
 
 **Key Events Include:**
-- UFC Fight Night 260 - Ulberg vs. Reyes (Sep 27)
-- UFC 320 - Ankalaev vs. Pereira 2 (Oct 4)
-- UFC Fight Night 261 - Oliveira vs. Fiziev (Oct 11)
-- Plus 8 additional upcoming events through December
+- UFC Fight Night: Strickland vs. Hernandez (Feb 15)
+- UFC Fight Night: Moreno vs. Almabayev (Feb 22)
+- UFC 326: Holloway vs. Oliveira 2 (Mar 8)
+- UFC Fight Night: Emmett vs. Vallejos (Mar 15)
+- UFC Fight Night: Adesanya vs. Pyfer (Mar 22)
+- Plus 5 additional upcoming events through July
 
 ---
 
@@ -295,10 +298,14 @@ TAPOLOGY_USER_AGENT="FinishFinderBot/1.0"
 
 #### Core Services
 ```
-src/lib/ai/hybridUFCService.ts          # Main UFC data service
+src/lib/ai/hybridJudgmentService.ts     # Hybrid Judgment AI predictions (v3.0) - ACTIVE
+src/lib/ai/unifiedPredictionService.ts  # Unified predictions (v2.0) - ACTIVE
+src/lib/ai/hybridUFCService.ts          # Legacy UFC data service (DEPRECATED)
 src/lib/images/clientImageService.ts    # Client-side image handling
 scripts/automated-scraper.js            # Automated data updates
 scripts/debug-scraper.js               # Debugging utilities
+scripts/generate-hybrid-predictions-all.ts  # Hybrid Judgment AI predictions
+scraper/scripts/backfill_fighter_images.py  # Fighter image backfill
 ```
 
 #### API Routes
@@ -348,11 +355,11 @@ npm start           # Requires Node.js server
 
 ### Current Issues
 
-1. **Tapology Rate Limiting**
-   - **Issue:** 503 errors when fetching fighter images
-   - **Impact:** Fallback to placeholder images
-   - **Workaround:** Graceful degradation implemented
-   - **Fix:** Add secondary image sources (Phase 1)
+1. **Fighter Images (Mostly Resolved)**
+   - **Status:** 84/86 fighters now have images (97.7% coverage)
+   - **Source:** ESPN API (primary), Wikipedia (fallback)
+   - **Missing:** Josh Hokit, Zach Reese (newer fighters without photos yet)
+   - **Script:** `scraper/scripts/backfill_fighter_images.py`
 
 2. **Scraper Cancellation Logic**
    - **Issue:** Events marked cancelled when temporarily missing

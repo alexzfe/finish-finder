@@ -1,3 +1,13 @@
+/**
+ * Hybrid UFC Service - 🚫 LEGACY (DEPRECATED)
+ * 
+ * STATUS: LEGACY - Basic event scraping service with minimal AI integration.
+ * This was an early prototype for fetching UFC events from multiple sources.
+ * 
+ * For predictions, use UnifiedPredictionService instead.
+ * For event scraping, use the dedicated scraper services directly.
+ */
+
 import OpenAI from 'openai'
 import axios from 'axios'
 import * as cheerio from 'cheerio'

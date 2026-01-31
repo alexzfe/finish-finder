@@ -1,14 +1,17 @@
 /**
- * Enhanced Prediction Service - Phase 4 Integration
+ * Enhanced Prediction Service - Phase 4 Integration - 🚫 LEGACY (DEPRECATED)
  *
- * Wraps the base prediction service with:
+ * STATUS: LEGACY - This wrapper around NewPredictionService (Phase 3) is deprecated.
+ * Use UnifiedPredictionService instead for all new predictions.
+ * 
+ * Originally intended to wrap the base prediction service with:
  * - Platt scaling calibration for finish probability
  * - Conformal prediction intervals for fun score
  * - Enriched fighter context from embeddings
  * - Prediction logging for future calibration
- * - Adaptive ensembling for high-stakes fights
- *
- * This is the recommended service for production predictions.
+ * 
+ * NOTE: This service wraps NewPredictionService (Phase 3) which makes 4 API calls.
+ * The UnifiedPredictionService (Phase 4) is cheaper and more consistent.
  */
 
 import OpenAI from 'openai'
