@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, memo } from 'react'
+
 import Image from 'next/image'
+
 import { useFighterImage } from '@/lib/hooks/useFighterImage'
 
 interface FighterAvatarProps {

@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { queryAnalyzer } from '../query-analyzer'
+
 import { alertManager } from '../alert-rules'
+import { queryAnalyzer } from '../query-analyzer'
 import { structuredLogger } from '../structured-logger'
+
 import type { QueryStats, PerformanceMetrics } from '../monitoring'
 
 // Mock environment variables

@@ -1,10 +1,13 @@
 'use client'
 
-import { useAppStore } from '@/lib/store'
-import { FightCard } from './FightCard'
 import { useCallback } from 'react'
+
 import { Reorder } from 'framer-motion'
-import { Fight } from '@/types'
+
+import { useAppStore } from '@/lib/store'
+import { type Fight } from '@/types'
+
+import { FightCard } from './FightCard'
 
 export function FightCardGrid() {
   const fights = useAppStore((state) => state.getFilteredSortedFights())

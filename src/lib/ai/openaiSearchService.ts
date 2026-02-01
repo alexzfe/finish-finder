@@ -14,6 +14,7 @@
  */
 
 import OpenAI from 'openai'
+
 import {
   createUnknownProfile,
   type FighterEntertainmentProfile as FighterEntertainmentProfileType,

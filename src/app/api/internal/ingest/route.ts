@@ -8,10 +8,15 @@
  * - Only accessible from internal services (scraper)
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/database/prisma'
-import { ScrapedDataSchema, validateScrapedData, type ScrapedData } from '@/lib/scraper/validation'
+import { type NextRequest, NextResponse } from 'next/server'
+
 import * as crypto from 'crypto'
+
+import { ApiError, Errors, errorResponse, successResponse } from '@/lib/api'
+import { getRequestId } from '@/lib/api/middleware'
+import prisma from '@/lib/database/prisma'
+import { apiLogger } from '@/lib/monitoring/logger'
+import { ScrapedDataSchema, validateScrapedData, type ScrapedData } from '@/lib/scraper/validation'
 
 /**
  * POST /api/internal/ingest
@@ -19,72 +24,69 @@ import * as crypto from 'crypto'
  * Ingest scraped data from the Python scraper
  */
 export async function POST(req: NextRequest) {
-  // 1. Authenticate request with timing-safe comparison
-  const authHeader = req.headers.get('authorization')
-  const token = authHeader?.replace('Bearer ', '')
-  const expectedToken = process.env.INGEST_API_SECRET || ''
-
-  // Use timing-safe comparison to prevent timing attacks
-  const tokenBuffer = Buffer.from(token || '')
-  const expectedBuffer = Buffer.from(expectedToken)
-  const tokensMatch = tokenBuffer.length === expectedBuffer.length &&
-    crypto.timingSafeEqual(tokenBuffer, expectedBuffer)
-
-  if (!token || !expectedToken || !tokensMatch) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    )
-  }
+  const requestId = getRequestId(req)
 
   try {
+    // 1. Authenticate request with timing-safe comparison
+    const authHeader = req.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    const expectedToken = process.env.INGEST_API_SECRET || ''
+
+    // Use timing-safe comparison to prevent timing attacks
+    const tokenBuffer = Buffer.from(token || '')
+    const expectedBuffer = Buffer.from(expectedToken)
+    const tokensMatch = tokenBuffer.length === expectedBuffer.length &&
+      crypto.timingSafeEqual(tokenBuffer, expectedBuffer)
+
+    if (!token || !expectedToken || !tokensMatch) {
+      throw Errors.unauthorized('Invalid or missing authentication token')
+    }
+
     // 2. Parse and validate request body
     const body = await req.json()
     const errors = validateScrapedData(body)
 
     if (errors.length > 0) {
-      return NextResponse.json(
-        {
-          error: 'Validation failed',
-          errors,
-        },
-        { status: 400 }
-      )
+      throw Errors.validation('Request validation failed', { errors })
     }
 
     const data = ScrapedDataSchema.parse(body)
 
-    // 4. Upsert data in transaction
-    const scrapeLog = await upsertScrapedData(data)
+    // 3. Upsert data in transaction
+    const scrapeLog = await upsertScrapedData(data, requestId)
 
-    // 5. Return success response
-    return NextResponse.json({
-      success: true,
+    apiLogger.info('Scraper data ingested successfully', {
+      requestId,
+      scrapeLogId: scrapeLog.id,
+      eventsCount: data.events.length,
+      fightsCount: data.fights.length,
+    })
+
+    // 4. Return success response
+    return successResponse({
       scrapeLogId: scrapeLog.id,
       eventsCreated: data.events.length,
       fightsCreated: data.fights.length,
       fightsCancelled: scrapeLog.fightsCancelled,
       fightersCreated: data.fighters.length,
-    })
-  } catch (error) {
-    // Log detailed error for debugging (captured by Sentry)
-    console.error('Ingestion error:', error)
+    }, requestId)
 
-    // Return generic error to client without exposing internal details
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        requestId: crypto.randomUUID(),
-      },
-      { status: 500 }
-    )
+  } catch (error) {
+    // Log error with context
+    if (error instanceof ApiError) {
+      apiLogger.warn('Ingestion failed', { requestId, code: error.code, message: error.message })
+    } else {
+      apiLogger.error('Unexpected ingestion error', { requestId, error: String(error) })
+    }
+
+    return errorResponse(error)
   }
 }
 
 /**
  * Upsert scraped data to database in a transaction
  */
-async function upsertScrapedData(data: ScrapedData) {
+async function upsertScrapedData(data: ScrapedData, requestId: string) {
   const startTime = new Date()
   let fightsAdded = 0
   let fightsUpdated = 0
@@ -112,7 +114,7 @@ async function upsertScrapedData(data: ScrapedData) {
               losses: fighter.losses ?? 0,
               draws: fighter.draws ?? 0,
               weightClass: fighter.weightClass ?? 'Unknown',
-              imageUrl: fighter.imageUrl,  // Fighter headshot from ESPN/Wikipedia
+              imageUrl: fighter.imageUrl,
               sourceUrl: fighter.sourceUrl,
               lastScrapedAt: new Date(),
               contentHash,
@@ -170,7 +172,7 @@ async function upsertScrapedData(data: ScrapedData) {
               wins: fighter.wins ?? existing.wins,
               losses: fighter.losses ?? existing.losses,
               draws: fighter.draws ?? existing.draws,
-              imageUrl: fighter.imageUrl ?? existing.imageUrl,  // Keep existing if not provided
+              imageUrl: fighter.imageUrl ?? existing.imageUrl,
               lastScrapedAt: new Date(),
               contentHash,
 
@@ -309,19 +311,21 @@ async function upsertScrapedData(data: ScrapedData) {
         const event = eventSourceUrl ? eventBySourceUrl.get(eventSourceUrl) : null
 
         if (!fighter1 || !fighter2 || !event) {
-          console.warn(`Skipping fight ${fight.id}: missing related records`)
+          apiLogger.warn('Skipping fight - missing related records', {
+            requestId,
+            fightId: fight.id,
+            hasFighter1: !!fighter1,
+            hasFighter2: !!fighter2,
+            hasEvent: !!event,
+          })
           continue
         }
 
         // Normalize fighter order (alphabetically by ID) to prevent reversed duplicates
-        // This ensures Fighter A vs Fighter B is always stored the same way
         const [normalizedFighter1Id, normalizedFighter2Id] =
-          [fighter1.id, fighter2.id].sort();
+          [fighter1.id, fighter2.id].sort()
 
-        // Track if we swapped fighters (to swap winner ID too)
-        const swapped = normalizedFighter1Id !== fighter1.id;
-
-        // Use composite unique key to find existing fight (with normalized order)
+        // Use composite unique key to find existing fight
         let existing = await tx.fight.findUnique({
           where: {
             eventId_fighter1Id_fighter2Id: {
@@ -332,14 +336,14 @@ async function upsertScrapedData(data: ScrapedData) {
           },
         })
 
-        // Fallback 1: Check REVERSED order (handles fights created before normalization)
+        // Fallback 1: Check REVERSED order
         if (!existing) {
           existing = await tx.fight.findUnique({
             where: {
               eventId_fighter1Id_fighter2Id: {
                 eventId: event.id,
-                fighter1Id: normalizedFighter2Id,  // Reversed
-                fighter2Id: normalizedFighter1Id,  // Reversed
+                fighter1Id: normalizedFighter2Id,
+                fighter2Id: normalizedFighter1Id,
               },
             },
           })
@@ -352,22 +356,18 @@ async function upsertScrapedData(data: ScrapedData) {
           })
         }
 
-        // Resolve winnerId from scraper ID to database CUID
-        // The winner's identity doesn't change based on fighter storage order
-        // We simply need to map the scraper's hex ID to the correct database CUID
-        let normalizedWinnerId: string | null = null;
+        // Resolve winnerId
+        let normalizedWinnerId: string | null = null
         if (fight.winnerId) {
           if (fight.winnerId === fight.fighter1Id) {
-            // Winner is the fighter represented by scraped fighter1
-            normalizedWinnerId = fighter1.id;
+            normalizedWinnerId = fighter1.id
           } else if (fight.winnerId === fight.fighter2Id) {
-            // Winner is the fighter represented by scraped fighter2
-            normalizedWinnerId = fighter2.id;
+            normalizedWinnerId = fighter2.id
           }
         }
 
         if (!existing) {
-          // Create new fight with normalized fighter order
+          // Create new fight
           await tx.fight.create({
             data: {
               fighter1Id: normalizedFighter1Id,
@@ -378,10 +378,9 @@ async function upsertScrapedData(data: ScrapedData) {
               mainEvent: fight.mainEvent ?? false,
               cardPosition: fight.cardPosition ?? 'preliminary',
               scheduledRounds: fight.scheduledRounds ?? 3,
-              // Fight outcome fields (for completed events)
               completed: fight.completed ?? false,
-              isCancelled: false,  // Always false for scraped fights (handles re-booking)
-              winnerId: normalizedWinnerId,  // Normalized winner ID
+              isCancelled: false,
+              winnerId: normalizedWinnerId,
               method: fight.method,
               round: fight.round,
               time: fight.time,
@@ -392,7 +391,7 @@ async function upsertScrapedData(data: ScrapedData) {
           })
           fightsAdded++
         } else if (existing.contentHash !== contentHash) {
-          // Update existing fight (including outcome data when fight completes)
+          // Update existing fight
           await tx.fight.update({
             where: { id: existing.id },
             data: {
@@ -401,9 +400,8 @@ async function upsertScrapedData(data: ScrapedData) {
               mainEvent: fight.mainEvent ?? existing.mainEvent,
               cardPosition: fight.cardPosition ?? existing.cardPosition,
               scheduledRounds: fight.scheduledRounds ?? existing.scheduledRounds,
-              // Update outcome when fight completes (use normalized winner ID)
               completed: fight.completed ?? existing.completed,
-              isCancelled: false,  // Reset to false if fight reappears (re-booked)
+              isCancelled: false,
               winnerId: normalizedWinnerId ?? existing.winnerId,
               method: fight.method ?? existing.method,
               round: fight.round ?? existing.round,
@@ -417,59 +415,46 @@ async function upsertScrapedData(data: ScrapedData) {
       }
 
       // SCOPED RECONCILIATION: Mark cancelled fights
-      // Only check events that were explicitly scraped in this run
       const scrapedEventUrls = data.scrapedEventUrls || []
 
       if (scrapedEventUrls.length > 0) {
-        console.log(`Reconciling fights for ${scrapedEventUrls.length} scraped events`)
+        apiLogger.info('Reconciling fights for scraped events', {
+          requestId,
+          eventCount: scrapedEventUrls.length,
+        })
 
         for (const eventUrl of scrapedEventUrls) {
-          // Find the event in database by sourceUrl
           const event = await tx.event.findUnique({
             where: { sourceUrl: eventUrl },
           })
 
           if (!event) {
-            console.warn(`Event not found for URL: ${eventUrl}`)
+            apiLogger.warn('Event not found for URL during reconciliation', { requestId, eventUrl })
             continue
           }
 
-          // Build set of scraped fight keys for this event
+          // Build set of scraped fight keys
           const scrapedFightKeys = new Set<string>()
 
           for (const fight of data.fights) {
-            // Find the event sourceUrl for this fight
-            const fightEvent = data.events.find((e: any) => e.id === fight.eventId)
-            if (!fightEvent || fightEvent.sourceUrl !== eventUrl) {
-              continue // This fight belongs to a different event
-            }
+            const fightEvent = data.events.find((e: { id: string; sourceUrl: string }) => e.id === fight.eventId)
+            if (!fightEvent || fightEvent.sourceUrl !== eventUrl) continue
 
-            // Find fighter IDs by sourceUrl
-            const fighter1SourceUrl = data.fighters.find((f: any) => f.id === fight.fighter1Id)?.sourceUrl
-            const fighter2SourceUrl = data.fighters.find((f: any) => f.id === fight.fighter2Id)?.sourceUrl
+            const f1SourceUrl = data.fighters.find((f: { id: string; sourceUrl: string }) => f.id === fight.fighter1Id)?.sourceUrl
+            const f2SourceUrl = data.fighters.find((f: { id: string; sourceUrl: string }) => f.id === fight.fighter2Id)?.sourceUrl
 
-            if (!fighter1SourceUrl || !fighter2SourceUrl) {
-              continue
-            }
+            if (!f1SourceUrl || !f2SourceUrl) continue
 
-            const fighter1 = await tx.fighter.findUnique({
-              where: { sourceUrl: fighter1SourceUrl },
-            })
-            const fighter2 = await tx.fighter.findUnique({
-              where: { sourceUrl: fighter2SourceUrl },
-            })
+            const f1 = await tx.fighter.findUnique({ where: { sourceUrl: f1SourceUrl } })
+            const f2 = await tx.fighter.findUnique({ where: { sourceUrl: f2SourceUrl } })
 
-            if (!fighter1 || !fighter2) {
-              continue
-            }
+            if (!f1 || !f2) continue
 
-            // Create normalized key
-            const [normalizedFighter1Id, normalizedFighter2Id] = [fighter1.id, fighter2.id].sort()
-            const fightKey = `${event.id}:${normalizedFighter1Id}:${normalizedFighter2Id}`
-            scrapedFightKeys.add(fightKey)
+            const [nf1, nf2] = [f1.id, f2.id].sort()
+            scrapedFightKeys.add(`${event.id}:${nf1}:${nf2}`)
           }
 
-          // Find all active (not completed, not cancelled) fights in DB for this event
+          // Find and mark cancelled fights
           const dbFights = await tx.fight.findMany({
             where: {
               eventId: event.id,
@@ -479,27 +464,21 @@ async function upsertScrapedData(data: ScrapedData) {
             select: { id: true, eventId: true, fighter1Id: true, fighter2Id: true },
           })
 
-          // Mark fights as cancelled if they're in DB but not in scraped data
           for (const dbFight of dbFights) {
-            // Normalize fighter order to match how scraped keys are built
-            const [normalizedDbFighter1Id, normalizedDbFighter2Id] = [
-              dbFight.fighter1Id,
-              dbFight.fighter2Id,
-            ].sort()
-            const dbFightKey = `${dbFight.eventId}:${normalizedDbFighter1Id}:${normalizedDbFighter2Id}`
+            const [nf1, nf2] = [dbFight.fighter1Id, dbFight.fighter2Id].sort()
+            const dbKey = `${dbFight.eventId}:${nf1}:${nf2}`
 
-            if (!scrapedFightKeys.has(dbFightKey)) {
+            if (!scrapedFightKeys.has(dbKey)) {
               await tx.fight.update({
                 where: { id: dbFight.id },
                 data: { isCancelled: true, lastScrapedAt: new Date() },
               })
               fightsCancelled++
-              console.log(`Marked fight as cancelled: ${dbFightKey}`)
             }
           }
         }
 
-        console.log(`Reconciliation complete: ${fightsCancelled} fights cancelled`)
+        apiLogger.info('Reconciliation complete', { requestId, fightsCancelled })
       }
     })
 
@@ -519,10 +498,11 @@ async function upsertScrapedData(data: ScrapedData) {
     })
 
     return scrapeLog
+
   } catch (error) {
     // Log failure
     const endTime = new Date()
-    const scrapeLog = await prisma.scrapeLog.create({
+    await prisma.scrapeLog.create({
       data: {
         startTime,
         endTime,
@@ -542,13 +522,8 @@ async function upsertScrapedData(data: ScrapedData) {
 
 /**
  * Calculate SHA256 hash of data for change detection
- *
- * IMPORTANT: This function hashes ALL fields in the data object,
- * including outcome fields (completed, winnerId, method, round, time).
- * When a fight completes, these fields change, causing the hash to change,
- * which triggers a database update. This is critical for outcome tracking!
  */
-function calculateContentHash(data: any): string {
+function calculateContentHash(data: Record<string, unknown>): string {
   // Sort keys for consistent hashing
   const content = JSON.stringify(data, Object.keys(data).sort())
   return crypto.createHash('sha256').update(content).digest('hex')

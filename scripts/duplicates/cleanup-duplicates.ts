@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Script to clean up duplicate events identified in the production database
-const { PrismaClient } = require('@prisma/client')
+import { PrismaClient } from '@prisma/client'
 
 async function cleanupDuplicates() {
   console.log('🧹 Cleaning Up Duplicate Events')

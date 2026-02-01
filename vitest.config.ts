@@ -1,10 +1,12 @@
-import { defineConfig } from 'vitest/config'
 import { resolve } from 'path'
+
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    exclude: ['node_modules', 'archive', '.next', 'out'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -16,7 +18,8 @@ export default defineConfig({
         'src/lib/**/*.test.ts',
         'src/lib/**/*.spec.ts',
         'src/lib/**/__tests__/**',
-        'src/lib/**/__mocks__/**'
+        'src/lib/**/__mocks__/**',
+        'archive/**'
       ],
       thresholds: {
         statements: 60,

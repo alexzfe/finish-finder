@@ -12,8 +12,7 @@
  * high-quality, relevant context for each fight prediction.
  */
 
-import OpenAI from 'openai'
-import { prisma } from '../../database/prisma'
+
 import {
   getEnrichedFighterContext,
   getMatchupContext,
@@ -23,6 +22,9 @@ import {
   TIME_DECAY_HALF_LIVES,
   type EnrichedFighterContext,
 } from './hybridRetrieval'
+import { prisma } from '../../database/prisma'
+
+import type OpenAI from 'openai'
 
 /**
  * Context prepared for a single fight prediction

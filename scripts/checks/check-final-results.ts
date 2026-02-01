@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client')
+import { PrismaClient } from '@prisma/client'
 
 async function checkFinalResults() {
   const prisma = new PrismaClient()
@@ -48,7 +48,7 @@ async function checkFinalResults() {
     console.log('✅ Database verification complete!')
 
   } catch (error) {
-    console.error('❌ Error checking results:', error.message)
+    console.error('❌ Error checking results:', error instanceof Error ? error.message : String(error))
   } finally {
     await prisma.$disconnect()
   }

@@ -14,8 +14,9 @@
  * Output: Structured JSON with qualitative attributes and reasoning
  */
 
-import { getWeightClassRates, type WeightClassRates } from './weightClassRates'
 import { buildFewShotExamplesSection } from './anchorExamples'
+import { getWeightClassRates, type WeightClassRates } from './weightClassRates'
+
 import type { FighterEntertainmentContext } from '../schemas/fighterEntertainmentProfile'
 
 /**

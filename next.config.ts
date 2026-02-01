@@ -1,5 +1,6 @@
-import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+
+import type { NextConfig } from "next";
 
 // Kept for future base path configuration
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

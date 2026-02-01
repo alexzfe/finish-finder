@@ -17,12 +17,13 @@
  * - Structured entertainment profile extraction
  */
 
-import type { SearchFunction } from './webSearchWrapper'
 import {
   FighterProfileCacheService,
   type BatchResult as ProfileBatchResult,
 } from './fighterProfileCache'
+
 import type { FighterEntertainmentContext } from './schemas/fighterEntertainmentProfile'
+import type { SearchFunction } from './webSearchWrapper'
 
 /**
  * Fighter context from web search

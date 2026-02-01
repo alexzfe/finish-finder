@@ -8,8 +8,8 @@
  * Output: Structured JSON with probability, confidence, and reasoning
  */
 
-import { getWeightClassRates } from './weightClassRates'
 import { DSPY_FINISH_EXAMPLES } from './anchorExamples'
+import { getWeightClassRates } from './weightClassRates'
 
 /**
  * Fighter statistics for finish probability prediction

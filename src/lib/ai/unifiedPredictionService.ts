@@ -20,20 +20,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
-import {
-  buildUnifiedPredictionPrompt,
-  classifyFighterStyle,
-  type UnifiedFighterStats,
-  type UnifiedPredictionInput,
-  type UnifiedPredictionContext,
-  type FightSimulationOutput,
-} from './prompts'
-import type { FighterEntertainmentContext } from './schemas/fighterEntertainmentProfile'
-import {
-  calculateAllScores,
-  calculateAdjustedConfidence,
-  type CalculatedScores,
-} from './scoreCalculator'
+
 import {
   validateConsistency,
   buildCritiquePrompt,
@@ -42,6 +29,21 @@ import {
   formatValidationResult,
   type ValidationResult,
 } from './consistencyValidator'
+import {
+  buildUnifiedPredictionPrompt,
+  classifyFighterStyle,
+  type UnifiedFighterStats,
+  type UnifiedPredictionInput,
+  type UnifiedPredictionContext,
+  type FightSimulationOutput,
+} from './prompts'
+import {
+  calculateAllScores,
+  calculateAdjustedConfidence,
+  type CalculatedScores,
+} from './scoreCalculator'
+
+import type { FighterEntertainmentContext } from './schemas/fighterEntertainmentProfile'
 
 /**
  * Configuration for retry logic

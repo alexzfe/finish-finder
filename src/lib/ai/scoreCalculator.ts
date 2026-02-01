@@ -10,12 +10,6 @@
  */
 
 import {
-  type FightAttributes,
-  type FightSimulationOutput,
-  type StyleClash,
-} from './prompts/unifiedPredictionPrompt'
-import { getWeightClassRates } from './prompts/weightClassRates'
-import {
   type MLTierPrediction,
   type PredictionComparison,
   comparePredictions,
@@ -26,6 +20,12 @@ import {
   getExpectedFunScore,
   getExpectedFinishProbability,
 } from './mlTierIntegration'
+import {
+  type FightAttributes,
+  type FightSimulationOutput,
+  type StyleClash,
+} from './prompts/unifiedPredictionPrompt'
+import { getWeightClassRates } from './prompts/weightClassRates'
 
 /**
  * Configuration for score calculation
@@ -100,7 +100,7 @@ export function calculateFinishProbability(
   const styleMultiplier = config.styleClashMultipliers[attributes.styleClash]
 
   // Calculate raw probability
-  let probability = baseline * finishDangerMultiplier * styleMultiplier
+  const probability = baseline * finishDangerMultiplier * styleMultiplier
 
   // Note: We no longer adjust based on method prediction since
   // we're not predicting fight outcomes, just finish likelihood.

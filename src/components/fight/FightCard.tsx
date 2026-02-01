@@ -1,9 +1,11 @@
 'use client'
 
 import React, { useState } from 'react'
+
 import { Reorder } from 'framer-motion'
-import { Fight } from '@/types'
+
 import { FighterAvatar } from '@/components/fighter/FighterAvatar'
+import { type Fight } from '@/types'
 
 interface FightCardProps {
   fight: Fight

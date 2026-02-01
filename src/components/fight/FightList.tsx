@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useMemo, memo, useCallback } from 'react'
-import { UFCEvent, Fight, WeightClass } from '@/types'
+
 import { FighterAvatar } from '@/components/fighter/FighterAvatar'
+import { type UFCEvent, type Fight, type WeightClass } from '@/types'
 
 interface FightListProps {
   event: UFCEvent

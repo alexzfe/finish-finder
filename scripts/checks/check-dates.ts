@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client')
+import { PrismaClient } from '@prisma/client'
 
 async function main() {
   const prisma = new PrismaClient()
@@ -11,12 +11,12 @@ async function main() {
     })
 
     events.forEach(event => {
-      console.log(`- ${event.name}: ${event.date} (${event.source})`)
+      console.log(`- ${event.name}: ${event.date}`)
     })
 
     console.log(`\nTotal events: ${events.length}`)
   } catch (error) {
-    console.error('Error:', error.message)
+    console.error('Error:', error instanceof Error ? error.message : String(error))
   } finally {
     await prisma.$disconnect()
   }

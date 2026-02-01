@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
+import type { WeightClass } from '@/types/unified'
+
 import {
   WEIGHT_CLASSES,
   isValidWeightClass,
   toWeightClass,
   getWeightClassDisplayName
 } from '../weight-class'
-import type { WeightClass } from '@/types/unified'
 
 describe('Weight Class Utilities', () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>

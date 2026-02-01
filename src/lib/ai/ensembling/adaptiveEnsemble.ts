@@ -18,6 +18,7 @@ import {
   NewPredictionService,
   type FightPrediction,
 } from '../newPredictionService'
+
 import type { FinishProbabilityInput, FunScoreInput } from '../prompts'
 
 /**

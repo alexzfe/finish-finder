@@ -11,16 +11,17 @@
  * - Graceful degradation on errors
  */
 
-import { prisma } from '../database/prisma'
 import {
   OpenAIFighterSearchService,
   type ExtractionResult,
 } from './openaiSearchService'
+import { prisma } from '../database/prisma'
 import {
   type FighterEntertainmentProfile as FighterEntertainmentProfileType,
   toEntertainmentContext,
   type FighterEntertainmentContext,
 } from './schemas/fighterEntertainmentProfile'
+
 import type { Fighter, FighterEntertainmentProfile } from '@prisma/client'
 
 /**

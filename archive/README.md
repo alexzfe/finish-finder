@@ -1,42 +1,42 @@
-# Archive - Old Scraper Implementation (2025-01)
+# Archive
 
-## Purpose
-This directory contains the archived scraper implementation that was replaced as part of the complete scraper redesign. The old implementation had reliability issues with Wikipedia/Tapology/Sherdog multi-source architecture.
+This directory contains deprecated code and documentation preserved for reference.
 
-## What's Archived
+## Archive Structure
 
-### Code (`scrapers-old-2025-01/`)
-- `wikipediaService.ts` - Wikipedia UFC event scraper (primary source)
-- `tapologyService.ts` - Tapology fighter enrichment service
+### `scrapers-old-2025-01/` - TypeScript Scraper Implementation
+**Date**: January 2025  
+**Reason**: Replaced by Python/Scrapy implementation
+- `wikipediaService.ts` - Wikipedia UFC event scraper
+- `tapologyService.ts` - Tapology fighter enrichment service  
 - `requestPolicy.ts` - Rate limiting and request headers
 
-### Documentation (`docs-old-2025-01/`)
+### `docs-old-2025-01/` - Old Documentation
+**Date**: January 2025
 - `scrapers-CONTEXT.md` - Component context for old scraper subsystem
 - `TAPOLOGY_SCRAPER_PLAN.md` - Deprecated Tapology-first scraper plan
 
-## Why Archived
-The old implementation suffered from:
-- Intermittent failures despite extensive debugging
-- Complex multi-source deduplication logic
-- Aggressive anti-scraping from Tapology/Sherdog
-- Site structure changes breaking scrapers
-- TypeScript complexity for web scraping tasks
+### `inactive-legacy-2025-09/` - Legacy AI & Scraping Code
+**Date**: September 2025  
+**Reason**: Superseded by unified prediction service and Python scraper
+- `ufcAiService.ts` - Old AI prediction service
+- `funPredictor.ts` - Legacy fun score predictor
+- `scraping/ufcScraper.ts` - Old TypeScript UFC scraper
+- `scraping/ufcStatsCollector.ts` - Legacy stats collector
+- `app-api/api/` - Old API route implementations
 
-## New Approach
-Starting fresh with:
-- **UFCStats.com as primary target** (recommended by research)
-- **Python-based implementation** (industry standard for scraping)
-- **Simpler, more maintainable architecture**
-- **Content hash-based change detection**
-- **Better anti-blocking strategies**
+### `scripts-deprecated/` - Deprecated Scripts
+**Date**: February 2025  
+**Reason**: Consolidated into unified prediction runner
+- `ai-predictions-runner.js` - Original AI runner
+- `new-ai-predictions-runner.ts` - Phase 3 experimental runner
+- `generate-ai-predictions.js` - Old generation script
+- `test-enhanced-prediction.ts` - Test script for enhanced service
 
-## Reference Materials Kept
-- `Building a comprehensive.md` - Comprehensive UFC scraper research guide (kept in root)
-- Existing database schema (Prisma)
-- AI prediction pipeline (unchanged)
-
-## Date Archived
-January 2025
+## Current Implementation
+- **Scraping**: `scraper/ufc_scraper/` (Python/Scrapy with UFCStats.com)
+- **AI Predictions**: `src/lib/ai/unifiedPredictionService.ts` + `scripts/unified-ai-predictions-runner.ts`
+- **API**: `src/app/api/internal/ingest/route.ts`
 
 ## Git History
 All files are preserved in git history. Use `git log` to view complete implementation history.

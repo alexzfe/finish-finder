@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import PerformanceDashboard from '@/components/admin/PerformanceDashboard'
+
 import DatabaseManagement from '@/components/admin/DatabaseManagement'
+import PerformanceDashboard from '@/components/admin/PerformanceDashboard'
 
 /**
  * Admin Dashboard Page

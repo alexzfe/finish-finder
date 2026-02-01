@@ -8,8 +8,10 @@
  * Cost: ~$0.00002 per 1K tokens (~$0.02 per 1000 fighters)
  */
 
-import OpenAI from 'openai'
 import { prisma } from '../../database/prisma'
+
+import type OpenAI from 'openai'
+
 
 /**
  * Configuration for embedding service

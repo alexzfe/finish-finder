@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client')
+import { PrismaClient } from '@prisma/client'
 
 async function main() {
   const prisma = new PrismaClient()
@@ -34,7 +34,7 @@ async function main() {
 
     console.log(`\n✨ Total: ${events.length} events, ${events.reduce((sum, e) => sum + e.fights.length, 0)} fights`)
   } catch (error) {
-    console.error('Error:', error.message)
+    console.error('Error:', error instanceof Error ? error.message : String(error))
   } finally {
     await prisma.$disconnect()
   }

@@ -1,8 +1,10 @@
 'use client'
 
 import { useRef, useEffect, useCallback } from 'react'
-import { UFCEvent } from '@/types'
+
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid'
+
+import { type UFCEvent } from '@/types'
 
 interface EventNavigationProps {
   events: UFCEvent[]

@@ -1,4 +1,4 @@
-import { UFCEvent } from '@/types'
+import { type UFCEvent } from '@/types'
 
 interface EventSelectorProps {
   events: UFCEvent[]

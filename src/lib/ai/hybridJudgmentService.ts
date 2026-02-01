@@ -8,6 +8,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
+
 import {
   buildJudgmentPredictionPrompt,
   classifyFighterStyle,
@@ -56,7 +57,7 @@ export function calculateFinishProbability(
   const styleMultiplier = styleMultipliers[attributes.styleClash]
   
   // Calculate
-  let probability = baseline * finishDangerMultiplier * styleMultiplier
+  const probability = baseline * finishDangerMultiplier * styleMultiplier
   
   // Clamp
   return Math.min(0.85, Math.max(0.15, probability))

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+
 import { Geist, Geist_Mono } from "next/font/google";
+
 import "@fontsource-variable/roboto-condensed";
 import "@fontsource-variable/karla";
 import * as Sentry from "@sentry/nextjs";

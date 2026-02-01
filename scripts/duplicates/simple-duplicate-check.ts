@@ -1,11 +1,6 @@
 #!/usr/bin/env node
 
-// Simple script to check for duplicate events using raw SQL
-require('ts-node').register({
-  project: './tsconfig.node.json'
-})
-
-const { PrismaClient } = require('@prisma/client')
+import { PrismaClient } from '@prisma/client'
 
 async function checkDuplicates() {
   console.log('🔍 Simple Duplicate Check')

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { UFCEvent, Fight } from '@/types'
+
+import { type UFCEvent, type Fight } from '@/types'
 
 interface AppState {
   // Real data from API

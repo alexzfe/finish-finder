@@ -2,28 +2,32 @@
   "name": "finish-finder",
   "version": "0.1.0",
   "private": true,
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml}": [
+      "prettier --write"
+    ]
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "prisma generate && next build",
     "start": "next start",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && husky install",
+    "prepare": "husky install",
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "predict:event": "node scripts/generate-event-predictions.js",
-    "predict:list": "node scripts/generate-predictions-only.js list",
-    "predict:all": "node scripts/generate-predictions-only.js all",
-    "predict:single": "node scripts/generate-predictions-only.js event",
+    "predict:all": "npx ts-node scripts/unified-ai-predictions-runner.ts",
     "pages:build": "node scripts/prepare-github-pages.js",
-    "scraper:check": "node scripts/automated-scraper.js check",
-    "scraper:status": "node scripts/automated-scraper.js status",
-    "scraper:schedule": "node scripts/automated-scraper.js schedule",
     "sherdog:test:local": "node scripts/test-sherdog-local.js",
     "db:migrate": "npx prisma migrate dev",
     "db:push": "npx prisma db push",
     "db:reset": "npx prisma migrate reset",
-    "db:test": "node scripts/test-scraper-simple.js"
+    "db:check": "npx ts-node scripts/checks/check-all-events.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",

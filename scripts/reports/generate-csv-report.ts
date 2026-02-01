@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client')
-const fs = require('fs')
+import { PrismaClient } from '@prisma/client'
+import fs from 'fs'
 
 async function generateCSVReport() {
   const prisma = new PrismaClient()

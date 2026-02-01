@@ -10,6 +10,7 @@
  */
 
 import { getWeightClassRates } from './weightClassRates'
+
 import type { FighterEntertainmentContext } from '../schemas/fighterEntertainmentProfile'
 
 export type FighterStyle = 'striker' | 'wrestler' | 'grappler' | 'balanced'

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
 import { validateJsonField, validateFightData, validateFighterData } from '../validation'
 
 describe('Database Validation Utilities', () => {

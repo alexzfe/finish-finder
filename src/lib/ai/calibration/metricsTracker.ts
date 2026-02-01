@@ -9,8 +9,8 @@
  * - Fun Score correlation with FOTN awards
  */
 
-import { prisma } from '../../database/prisma'
 import { calculateCalibrationMetrics, type CalibrationMetrics } from './plattScaling'
+import { prisma } from '../../database/prisma'
 
 /**
  * Fun score evaluation metrics

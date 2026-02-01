@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { EventNavigation } from '@/components/ui/EventNavigation'
-import { FightList } from '@/components/fight/FightList'
+
 import { FightDetailsModal } from '@/components/fight/FightDetailsModal'
+import { FightList } from '@/components/fight/FightList'
+import { EventNavigation } from '@/components/ui/EventNavigation'
 import { Header } from '@/components/ui/Header'
-import { UFCEvent, Fight } from '@/types'
+import { type UFCEvent, type Fight } from '@/types'
 
 // Utility function to format weight class names
 const formatWeightClass = (weightClass?: string | null): string => {

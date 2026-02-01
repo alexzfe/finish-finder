@@ -72,12 +72,18 @@ class Logger {
   }
 }
 
+// Factory function for creating loggers
+export function createLogger(serviceName: string): Logger {
+  return new Logger(serviceName)
+}
+
 // Service-specific loggers
-export const scraperLogger = new Logger('SCRAPER')
-export const imageLogger = new Logger('IMAGE_SERVICE')
-export const apiLogger = new Logger('API')
-export const uiLogger = new Logger('UI')
-export const dbLogger = new Logger('DATABASE')
+export const scraperLogger = createLogger('SCRAPER')
+export const imageLogger = createLogger('IMAGE_SERVICE')
+export const apiLogger = createLogger('API')
+export const uiLogger = createLogger('UI')
+export const dbLogger = createLogger('DATABASE')
+export const predictionLogger = createLogger('PREDICTION')
 
 // Performance monitoring
 export class PerformanceMonitor {

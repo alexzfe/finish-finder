@@ -9,8 +9,9 @@
  */
 
 import { PrismaClient } from '@prisma/client'
-import { structuredLogger } from './structured-logger'
+
 import { alertManager } from './alert-rules'
+import { structuredLogger } from './structured-logger'
 
 // Lazy-loaded prisma instance to avoid circular dependencies
 let prismaInstance: PrismaClient | null = null

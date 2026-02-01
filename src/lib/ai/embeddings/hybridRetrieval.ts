@@ -10,10 +10,13 @@
  * Research reference: Reciprocal Rank Fusion with k=60 (standard constant)
  */
 
-import OpenAI from 'openai'
-import { prisma } from '../../database/prisma'
 import { Prisma } from '@prisma/client'
+
+
 import { getQueryEmbedding } from './embeddingService'
+import { prisma } from '../../database/prisma'
+
+import type OpenAI from 'openai'
 
 /**
  * Time decay half-lives by content type (in days)

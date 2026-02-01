@@ -1,11 +1,26 @@
 #!/usr/bin/env node
 
-// Script to analyze specific duplicate events found in Supabase
-require('ts-node').register({
-  project: './tsconfig.node.json'
-})
+import { PrismaClient } from '@prisma/client'
 
-const { PrismaClient } = require('@prisma/client')
+interface DuplicateByDate {
+  date: Date
+  count: number
+  event_names: string[]
+  event_ids: string[]
+}
+
+interface EventInfo {
+  id: string
+  name: string
+  date: Date
+  createdAt: Date
+}
+
+interface SimilarEvent {
+  similarity: number
+  event1: EventInfo
+  event2: EventInfo
+}
 
 async function analyzeSpecificDuplicates() {
   console.log('🔍 Analyzing Specific Duplicate Events')
@@ -55,7 +70,7 @@ async function analyzeSpecificDuplicates() {
     // Check for other potential duplicates with similar logic
     console.log('🔍 Checking for other date-based duplicates...\n')
 
-    const duplicatesByDate = await prisma.$queryRaw`
+    const duplicatesByDate = await prisma.$queryRaw<DuplicateByDate[]>`
       SELECT date, COUNT(*) as count,
              array_agg(name) as event_names,
              array_agg(id) as event_ids
@@ -67,9 +82,9 @@ async function analyzeSpecificDuplicates() {
 
     console.log(`📅 Found ${duplicatesByDate.length} dates with multiple events:\n`)
 
-    duplicatesByDate.forEach((row, i) => {
+    duplicatesByDate.forEach((row: DuplicateByDate, i: number) => {
       console.log(`${i + 1}. Date: ${row.date} (${row.count} events)`)
-      row.event_names.forEach((name, j) => {
+      row.event_names.forEach((name: string, j: number) => {
         console.log(`   - "${name}" (ID: ${row.event_ids[j]})`)
       })
       console.log('')
@@ -88,7 +103,7 @@ async function analyzeSpecificDuplicates() {
       orderBy: { date: 'desc' }
     })
 
-    const similarEvents = []
+    const similarEvents: SimilarEvent[] = []
 
     for (let i = 0; i < allEvents.length; i++) {
       for (let j = i + 1; j < allEvents.length; j++) {
@@ -98,7 +113,7 @@ async function analyzeSpecificDuplicates() {
         // Same date check
         if (event1.date.getTime() === event2.date.getTime()) {
           // Normalize names for comparison
-          const normalize = (name) => name.toLowerCase()
+          const normalize = (name: string): string => name.toLowerCase()
             .replace(/ufc\s*/i, '')
             .replace(/fight night\s*\d*/i, 'fight night')
             .replace(/[^a-z0-9\s]/g, '')
@@ -125,7 +140,7 @@ async function analyzeSpecificDuplicates() {
     if (similarEvents.length > 0) {
       console.log(`🎯 Found ${similarEvents.length} potentially similar events:\n`)
 
-      similarEvents.sort((a, b) => b.similarity - a.similarity).forEach((match, i) => {
+      similarEvents.sort((a: SimilarEvent, b: SimilarEvent) => b.similarity - a.similarity).forEach((match: SimilarEvent, i: number) => {
         console.log(`${i + 1}. Similarity: ${(match.similarity * 100).toFixed(1)}%`)
         console.log(`   Event 1: "${match.event1.name}" (ID: ${match.event1.id})`)
         console.log(`   Event 2: "${match.event2.name}" (ID: ${match.event2.id})`)
@@ -135,13 +150,14 @@ async function analyzeSpecificDuplicates() {
     }
 
   } catch (error) {
-    console.error('❌ Analysis failed:', error.message)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('❌ Analysis failed:', errorMessage)
   } finally {
     await prisma.$disconnect()
   }
 }
 
-function calculateSimilarity(str1, str2) {
+function calculateSimilarity(str1: string, str2: string): number {
   const longer = str1.length > str2.length ? str1 : str2
   const shorter = str1.length > str2.length ? str2 : str1
 
@@ -151,8 +167,8 @@ function calculateSimilarity(str1, str2) {
   return (longer.length - editDistance) / longer.length
 }
 
-function levenshteinDistance(str1, str2) {
-  const matrix = []
+function levenshteinDistance(str1: string, str2: string): number {
+  const matrix: number[][] = []
 
   for (let i = 0; i <= str2.length; i++) {
     matrix[i] = [i]
@@ -184,4 +200,7 @@ async function main() {
   console.log('✅ Specific duplicate analysis complete!')
 }
 
-main().catch(console.error)
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})

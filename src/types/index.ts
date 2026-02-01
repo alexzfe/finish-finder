@@ -1,4 +1,6 @@
-// Core types for the Finish Finder app
+/**
+ * Core types for the Finish Finder app
+ */
 
 export interface Fighter {
   id: string;

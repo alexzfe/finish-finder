@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Fresh approach to check duplicates without connection conflicts
-const { PrismaClient } = require('@prisma/client')
+import { PrismaClient } from '@prisma/client'
 
 async function main() {
   console.log('🔍 Fresh Duplicate Analysis')
