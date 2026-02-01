@@ -15,8 +15,8 @@
     "dev": "next dev --turbopack",
     "build": "prisma generate && next build",
     "start": "next start",
-    "postinstall": "prisma generate && husky install",
-    "prepare": "husky install",
+    "postinstall": "prisma generate",
+    "prepare": "husky || true",
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
@@ -51,7 +51,9 @@
     "puppeteer": "^24.22.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
