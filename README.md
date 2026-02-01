@@ -174,13 +174,27 @@ Recommended production topology:
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`OPERATIONS.md`](OPERATIONS.md) for deeper diagrams, runbooks, and deployment checklists.
 
 ## Documentation
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) – Context, containers, components, and key data flows.
+
+### Core Guides
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) – System architecture, data flows, and component overview.
+- [`docs/DEVELOPER_GUIDE.md`](docs/DEVELOPER_GUIDE.md) – Complete setup, development workflow, and troubleshooting.
+- [`OPERATIONS.md`](OPERATIONS.md) – Runbooks for daily operations, incident response, and maintenance.
+- [`DEPLOYMENT.md`](DEPLOYMENT.md) – Deployment procedures for Vercel, database setup, and monitoring.
+
+### Standards & Practices
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) – Branch strategy, code review expectations, and required checks.
-- [`OPERATIONS.md`](OPERATIONS.md) – Runbooks for scrapes, predictions, migrations, and incident response.
 - [`TESTING.md`](TESTING.md) – Testing philosophy, coverage targets, and how to add new suites.
 - [`STYLEGUIDE.md`](STYLEGUIDE.md) – UI, TypeScript, and logging conventions.
 - [`SECURITY.md`](SECURITY.md) – Threat model, secrets policy, and dependency hygiene.
-- [`docs/handbook/README.md`](docs/handbook/README.md) – Legacy handbook retained for reference; superseded by the documents above.
+- [`ROADMAP.md`](ROADMAP.md) – Project roadmap and planned features.
+
+### Specialized Documentation
+- [`docs/scraper/ARCHITECTURE.md`](docs/scraper/ARCHITECTURE.md) – Complete scraper guide (Python/Scrapy).
+- [`docs/ai/RESEARCH.md`](docs/ai/RESEARCH.md) – AI prediction research findings and best practices.
+- [`docs/AI_DOCUMENTATION_INDEX.md`](docs/AI_DOCUMENTATION_INDEX.md) – AI system documentation hub.
+
+### Historical Archives
+- Completed migrations, old handoffs, and superseded research in [`archive/docs-historical/`](archive/docs-historical/)
 
 ## Project Status
 - Active prototype with production aspirations; database migrations for Supabase live under `prisma/migrations/`.
