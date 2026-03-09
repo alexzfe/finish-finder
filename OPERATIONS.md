@@ -156,15 +156,9 @@ npx ts-node scripts/generate-hybrid-predictions-all.ts
 # - ~4 events per month = $0.50/month total
 ```
 
-**Legacy AI Prediction Systems:**
-```bash
-# Unified Predictions (v2.0) - Deterministic scoring for both metrics
-npx ts-node scripts/unified-ai-predictions-runner.ts
-
-# OLD SYSTEMS - Will be removed after migration
-node scripts/ai-predictions-runner.js                    # Original
-npx ts-node scripts/new-ai-predictions-runner.ts         # Phase 3 experimental
-```
+**Legacy AI Prediction Systems (deprecated):**
+All older services (`unifiedPredictionService`, `enhancedPredictionService`, `newPredictionService`) are deprecated.
+The hybrid judgment service above is the only active prediction service.
 
 **Monitoring:**
 ```bash

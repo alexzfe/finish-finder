@@ -10,9 +10,9 @@ The system predicts **entertainment value**, not fight outcomes:
 
 The system does NOT predict winners or methods.
 
-## Unified Prompt Architecture
+## Prompt Architecture
 
-The system uses a **single-call unified architecture** for fight analysis:
+The active prediction service is **HybridJudgmentService** (`hybridJudgmentService.ts`), which uses a single-call architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -70,16 +70,13 @@ The system uses a **single-call unified architecture** for fight analysis:
 
 | File | Purpose |
 |------|---------|
-| `unifiedPredictionPrompt.ts` | Multi-persona prompt with dynamic anchors and reasoning-first output |
-| `anchorExamples.ts` | Few-shot calibration anchors (HIGH/MEDIUM/LOW entertainment) + DSPy examples |
-| `scoreCalculator.ts` | Deterministic TypeScript score calculation from attributes |
-| `consistencyValidator.ts` | Rule-based validation with optional LLM critique |
-| `../unifiedPredictionService.ts` | Service with structured output mode (Tool Use/Structured Outputs) |
-| `../enhancedPredictionService.ts` | Production service with Platt calibration, embeddings context, prediction logging |
+| `hybridJudgmentPrompt.ts` | Prompt template for hybrid judgment predictions |
+| `../hybridJudgmentService.ts` | **Active service** — deterministic finish probability + AI fun score |
 | `weightClassRates.ts` | Statistical finish rate baselines by weight class |
+| `anchorExamples.ts` | Few-shot calibration anchors (HIGH/MEDIUM/LOW entertainment) |
+| `scoreCalculator.ts` | Deterministic TypeScript score calculation from attributes |
 | `../calibration/plattScaling.ts` | Log-odds Platt scaling for finish probability calibration |
-| `../embeddings/hybridRetrieval.ts` | Hybrid vector + time-decay context retrieval |
-| `../embeddings/predictionContextService.ts` | Enriched fighter context for predictions |
+| `../unifiedPredictionService.ts` | **Deprecated** — former primary service |
 
 ## Multi-Persona Analysis
 
@@ -201,10 +198,9 @@ If validation fails or confidence is low, an optional LLM critique (cheap model)
 
 ## Integration Points
 
-- **`unifiedPredictionService.ts`**: Orchestrates single LLM call, deterministic calculation, and validation
-- **`unified-ai-predictions-runner.ts`**: Script for batch prediction generation
-- **`bootstrap-calibration.ts`**: Script to initialize calibration from historical data
-- **GitHub Actions**: `ai-predictions.yml` runs predictions daily at 1:30 AM UTC
+- **`hybridJudgmentService.ts`**: Active service — single LLM call, deterministic finish probability, AI fun score
+- **`generate-hybrid-predictions-all.ts`**: Batch runner script
+- **GitHub Actions**: `ai-predictions.yml` runs predictions daily at 4:30 AM UTC (after scraper)
 
 ## Calibration Infrastructure
 

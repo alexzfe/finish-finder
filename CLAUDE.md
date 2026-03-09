@@ -26,14 +26,10 @@ Backfilled 84 fighter images from ESPN API:
 - **Script**: `scraper/scripts/backfill_fighter_images.py`
 
 #### 3. Legacy Service Cleanup ✅
-Marked 3 legacy AI prediction services as deprecated:
-- `hybridUFCService.ts` - Old hybrid approach
-- `enhancedPredictionService.ts` - Enhanced single-call approach  
-- `newPredictionService.ts` - Phase 3 experimental
-
-Current active service:
-- `unifiedPredictionService.ts` - Production v2.0-unified
-- `hybridJudgmentService.ts` - New v3.0-hybrid (deterministic + AI fun)
+All older prediction services are deprecated. The active service is:
+- `hybridJudgmentService.ts` - Deterministic finish probability + AI-judged fun score
+- Runner: `scripts/generate-hybrid-predictions-all.ts`
+- Automated: GitHub Actions daily at 4:30 AM UTC (after scraper)
 
 ---
 
@@ -47,14 +43,8 @@ Current active service:
 
 ### AI Predictions
 ```bash
-# Generate hybrid judgment predictions for all fights without predictions
+# Generate predictions for all fights missing them (or use npm run predict:all)
 npx ts-node scripts/generate-hybrid-predictions-all.ts
-
-# Dry run to see what would be processed
-npx ts-node scripts/generate-hybrid-predictions-all.ts --dry-run
-
-# Legacy unified predictions (v2.0)
-npx ts-node scripts/unified-ai-predictions-runner.ts
 ```
 
 ### Fighter Images

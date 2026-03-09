@@ -210,6 +210,8 @@ MATCHUP SUMMARY:
 • Style matchup: ${fighter1.primaryStyle.toUpperCase()} vs ${fighter2.primaryStyle.toUpperCase()}
 ${recentContextSection}${entertainmentProfileSection}
 
+IMPORTANT: You are an MMA expert with deep knowledge of UFC fighters. USE your knowledge of these fighters — their reputations, famous fights, tendencies, rivalries, training camps, and public personas. Reference specific past fights, known tendencies, and fighter narratives in your analysis. Generic statistical summaries are not acceptable.
+
 ═══════════════════════════════════════════════════════════════════
 YOUR TASK: Analyze this fight from TWO perspectives
 ═══════════════════════════════════════════════════════════════════
@@ -257,19 +259,22 @@ This is YOUR judgment as an MMA expert. Consider:
 - Fight context: title fight stakes, rivalry, main event pressure
 - Intangibles: known for wars, chin reputation, cardio concerns
 
-FUN SCORE RUBRIC (use the full range):
-• 90-100 = Legendary potential - must-watch, all-time classic material
-• 80-89  = Certified banger - highly likely to deliver action
-• 70-79  = Very promising - solid entertainment expected
-• 60-69  = Above average - should be enjoyable
-• 50-59  = Average - typical UFC fight, may surprise
-• 40-49  = Below average - concerns about excitement
-• 30-39  = Low potential - likely to underwhelm
-• 20-29  = Very low - significant boring risk
-• 0-19   = Avoid - lay-and-pray or stall-fest likely
+FUN SCORE CALIBRATION (median should be ~55, use the FULL range):
+• 90-100: All-time classic potential (e.g., Gaethje vs Chandler, Holloway vs Kattar)
+• 80-89: Card highlight, high action guaranteed (e.g., Poirier vs Hooker, Zhang vs Joanna)
+• 70-79: Strong matchup, likely delivers (e.g., Burns vs Chimaev, Whittaker vs Cannonier)
+• 55-69: Solid but not special — typical competitive UFC fight
+• 40-54: Middling — could go either way, some stalling risk
+• 25-39: Likely underwhelming — heavy grappling, low output, or stylistic mismatch
+• 10-24: Probable snoozefest — lay-and-pray, point fighting, or extreme skill gap
+• 0-9: Unwatchable — clear mismatch or known stalling specialists
 
-Be honest. Use the full scale. A grindfest between two wrestlers might be 25.
-A striker war between two knockout artists might be 85.
+DISTRIBUTION GUIDE: On a typical 12-fight card, expect roughly:
+  - 1-2 fights above 80
+  - 3-4 fights in 60-79
+  - 4-5 fights in 35-59
+  - 1-2 fights below 35
+If you're rating most fights 70+, you're being too generous.
 
 ═══════════════════════════════════════════════════════════════════
 OUTPUT FORMAT (JSON only, no markdown)
@@ -277,14 +282,14 @@ OUTPUT FORMAT (JSON only, no markdown)
 
 {
   "reasoning": {
-    "vulnerabilityAnalysis": "<Statistician: 2-3 sentences on defensive vulnerabilities and finish susceptibility>",
-    "offenseAnalysis": "<Statistician: 2-3 sentences on finish capabilities and offensive threats>",
+    "vulnerabilityAnalysis": "<Statistician: 2-3 sentences on defensive vulnerabilities and finish susceptibility. Reference specific past losses or known weaknesses>",
+    "offenseAnalysis": "<Statistician: 2-3 sentences on finish capabilities and offensive threats. Reference specific signature techniques or famous KOs>",
     "styleMatchup": "<Tape Watcher: 2-3 sentences on how styles interact for entertainment>",
-    "entertainmentJudgment": "<Your holistic assessment: what makes this fight exciting or boring? Consider stats, profiles, context, intangibles>"
+    "entertainmentJudgment": "<Your holistic assessment: what makes this fight exciting or boring? Reference specific comparable past fights>"
   },
   "finishAnalysis": "<1-2 sentences: WHY this fight will/won't finish. Cite specific stats>",
-  "funAnalysis": "<1-2 sentences: WHY this fight is/isn't entertaining. Cite styles, profiles, or intangibles>",
-  "narrative": "<3-4 sentence fight simulation - focus on action, not outcome>",
+  "funAnalysis": "<1-2 sentences: WHY this fight is/isn't entertaining. Compare to specific past fights for calibration>",
+  "narrative": "<3-4 sentence fight simulation referencing each fighter's known tendencies and signature moves>",
   "attributes": {
     "pace": <1-5>,
     "finishDanger": <1-5>,
@@ -298,12 +303,15 @@ OUTPUT FORMAT (JSON only, no markdown)
   "confidence": <0.0-1.0>
 }
 
-IMPORTANT:
-1. funScore is YOUR judgment based on ALL context. Be decisive.
+CRITICAL INSTRUCTIONS:
+1. funScore is YOUR expert judgment. Be decisive and USE THE FULL RANGE.
 2. Attributes are objective ratings for finish probability calculation.
-3. Consider entertainment profiles heavily if available - they reveal fighter mentality.
-4. Be willing to use extreme scores (0-20 or 80-100) when warranted.
-5. Confidence should reflect uncertainty in your analysis, not the funScore value.
+3. Reference SPECIFIC fighters, past fights, and known tendencies in ALL text fields.
+4. Generic analysis like "both fighters have finishing ability" is NOT acceptable.
+5. A boring fight deserves a boring score. Don't inflate scores to be nice.
+6. If both fighters have high decision rates and low finish rates, score below 50.
+7. If styles cancel out (wrestler vs wrestler, counter-striker vs counter-striker), score 25-45.
+8. Confidence reflects uncertainty in your analysis, not the funScore value.
 
 Provide only valid JSON output.`
 }
@@ -407,15 +415,14 @@ ENTERTAINMENT PROFILES (Critical for Fun Score Judgment)
   }
 
   section += `
-⚠️ PROFILE GUIDANCE FOR FUN SCORE:
-• "finisher" mentality + high bonus count = likely action fighter (+15-25 fun points)
-• "coasts_with_lead" or "plays_safe" = may stall when winning (-20-30 fun points)
-• "brawler" vs "brawler" = very high entertainment potential (+20-30 fun points)
-• "counter_striker" vs "counter_striker" = may be slow-paced (-15-20 fun points)
-• "bonus_hunter" = actively seeks finishes for extra pay (+10-15 fun points)
-• Use reputation tags: "always comes forward", "iron chin", "cardio issues", etc.
-
-These profiles are EXPERT ASSESSMENTS from web research - weight them heavily.`
+PROFILE GUIDANCE (adjust fun score, don't let it dominate):
+• "finisher" + bonus history → nudge up 5-10 points
+• "brawler" vs "brawler" → nudge up 10-15 points
+• "bonus_hunter" → nudge up 5 points
+• "coasts_with_lead" or "plays_safe" → nudge down 10-20 points
+• "counter_striker" vs "counter_striker" → nudge down 10-15 points
+• "wrestler" vs "wrestler" with low finish rates → nudge down 15-25 points
+• Use reputation tags for specificity, not just score adjustment`
 
   return section
 }

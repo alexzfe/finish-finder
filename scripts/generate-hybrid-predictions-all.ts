@@ -24,6 +24,38 @@ import {
   buildJudgmentInput,
   type JudgmentPredictionResult,
 } from '../src/lib/ai/hybridJudgmentService'
+import type { FighterEntertainmentContext } from '../src/lib/ai/schemas/fighterEntertainmentProfile'
+
+/**
+ * Transform a DB entertainment profile record into the FighterEntertainmentContext
+ * shape expected by the hybrid judgment prompt.
+ */
+function toEntertainmentContext(dbProfile: {
+  primaryArchetype: string
+  secondaryArchetype: string | null
+  archetypeConfidence: number
+  mentality: string
+  mentalityConfidence: number
+  reputationTags: string[]
+  bonusHistory: any
+  entertainmentPrediction: string
+}): FighterEntertainmentContext {
+  return {
+    primary_archetype: dbProfile.primaryArchetype as any,
+    secondary_archetype: (dbProfile.secondaryArchetype as any) ?? null,
+    archetype_confidence: dbProfile.archetypeConfidence,
+    mentality: dbProfile.mentality as any,
+    mentality_confidence: dbProfile.mentalityConfidence,
+    reputation_tags: dbProfile.reputationTags,
+    bonus_history: dbProfile.bonusHistory ?? {
+      fotn_count: 0,
+      potn_count: 0,
+      total_bonuses: 0,
+      bonus_rate_estimate: null,
+    },
+    entertainment_prediction: dbProfile.entertainmentPrediction as any,
+  }
+}
 
 // Hash file for version tracking
 function hashFile(filePath: string): string {
@@ -75,12 +107,6 @@ async function generateAllHybridPredictions() {
   const fightsNeedingPredictions = await prisma.fight.findMany({
     where: {
       isCancelled: false,
-      event: {
-        completed: false,
-        date: {
-          gte: new Date(),
-        },
-      },
       predictions: {
         none: {
           versionId: version.id,
@@ -88,8 +114,24 @@ async function generateAllHybridPredictions() {
       },
     },
     include: {
-      fighter1: true,
-      fighter2: true,
+      fighter1: {
+        include: {
+          entertainmentProfile: true,
+          contextChunks: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
+      },
+      fighter2: {
+        include: {
+          entertainmentProfile: true,
+          contextChunks: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
+      },
       event: true,
     },
     orderBy: [
@@ -138,7 +180,26 @@ async function generateAllHybridPredictions() {
     console.log(`    ${fight.fighter1.name} vs ${fight.fighter2.name}`)
 
     try {
-      // Build input
+      // Extract entertainment profiles if available
+      const f1Profile = fight.fighter1.entertainmentProfile
+        ? toEntertainmentContext(fight.fighter1.entertainmentProfile)
+        : undefined
+      const f2Profile = fight.fighter2.entertainmentProfile
+        ? toEntertainmentContext(fight.fighter2.entertainmentProfile)
+        : undefined
+
+      // Extract most recent context chunk if available
+      const f1Context = fight.fighter1.contextChunks?.[0]?.content
+      const f2Context = fight.fighter2.contextChunks?.[0]?.content
+
+      const hasF1Profile = !!f1Profile
+      const hasF2Profile = !!f2Profile
+      const hasF1Context = !!f1Context
+      const hasF2Context = !!f2Context
+      console.log(`    Profiles: ${hasF1Profile ? '✓' : '✗'} ${fight.fighter1.name} | ${hasF2Profile ? '✓' : '✗'} ${fight.fighter2.name}`)
+      console.log(`    Context:  ${hasF1Context ? '✓' : '✗'} ${fight.fighter1.name} | ${hasF2Context ? '✓' : '✗'} ${fight.fighter2.name}`)
+
+      // Build input with profiles and context
       const input = buildJudgmentInput(
         fight.fighter1,
         fight.fighter2,
@@ -147,7 +208,11 @@ async function generateAllHybridPredictions() {
           weightClass: fight.weightClass,
           titleFight: fight.titleFight,
           mainEvent: fight.mainEvent,
-        }
+        },
+        f1Context,
+        f2Context,
+        f1Profile,
+        f2Profile
       )
 
       // Get prediction

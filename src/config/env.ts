@@ -32,10 +32,6 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
 
-  // Admin
-  ADMIN_PASSWORD: z.string().default('admin123'),
-  ALLOW_PRODUCTION_WIPE: z.enum(['true', 'false']).default('false'),
-
   // AI Configuration
   AI_PROVIDER: z.enum(['openai', 'anthropic']).default('anthropic'),
   OPENAI_PREDICTION_CHUNK_SIZE: z.coerce.number().default(6),
@@ -79,10 +75,6 @@ export const env = parseEnv()
  * Feature flags derived from environment
  */
 export const FEATURES = {
-  // Admin features
-  ADMIN_DEV_PASSWORD: env.NODE_ENV === 'development',
-  ALLOW_PRODUCTION_WIPE: env.ALLOW_PRODUCTION_WIPE === 'true',
-
   // AI features
   WEB_SEARCH: !!env.BRAVE_SEARCH_API_KEY,
   ANTHROPIC_AI: !!env.ANTHROPIC_API_KEY,

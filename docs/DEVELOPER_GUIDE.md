@@ -328,14 +328,11 @@ pytest -v
 ### Running Predictions Manually
 
 ```bash
-# Run unified AI predictions for all upcoming events
-npx ts-node scripts/unified-ai-predictions-runner.ts
+# Generate hybrid judgment predictions for all fights missing them
+npx ts-node scripts/generate-hybrid-predictions-all.ts
 
-# Force regenerate predictions
-npx ts-node scripts/unified-ai-predictions-runner.ts --force
-
-# Specific event only
-npx ts-node scripts/unified-ai-predictions-runner.ts --event "UFC 299"
+# Or via npm script
+npm run predict:all
 ```
 
 ### Calibration Training
@@ -372,9 +369,9 @@ npx ts-node scripts/generate-dspy-eval-data.ts --limit 50
 7. **Output**: Calibrated predictions with confidence intervals
 
 Key files:
-- `src/lib/ai/unifiedPredictionService.ts` - Main service
-- `src/lib/ai/scoreCalculator.ts` - Score formulas
-- `src/lib/ai/prompts/unifiedPredictionPrompt.ts` - LLM prompt
+- `src/lib/ai/hybridJudgmentService.ts` - Active prediction service
+- `src/lib/ai/prompts/hybridJudgmentPrompt.ts` - Prompt template
+- `scripts/generate-hybrid-predictions-all.ts` - Batch runner
 
 ---
 

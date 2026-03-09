@@ -1,21 +1,9 @@
 /**
- * Unified Prediction Service - Phase 4 (SOTA Architecture) - ✅ CURRENT PRIMARY SERVICE
+ * @deprecated Replaced by HybridJudgmentService (src/lib/ai/hybridJudgmentService.ts).
+ * Runner: scripts/generate-hybrid-predictions-all.ts
  *
- * Generates AI predictions for UFC fights using a single unified prompt
- * with deterministic score calculation.
- * 
- * STATUS: ACTIVE - This is the recommended service for production use.
- * Replaces: NewPredictionService (Phase 3, 4-call architecture)
- * Runner: scripts/unified-ai-predictions-runner.ts
- *
- * Key innovations over Phase 3:
- * - Single LLM call instead of 4 (finish + fun + 2 extractions)
- * - Qualitative attributes (1-5) instead of direct numbers
- * - Deterministic TypeScript calculation ensures consistency
- * - Multi-persona analysis (Statistician, Tape Watcher, Synthesizer)
- * - Consistency validation with optional LLM critique
- *
- * Supports both Anthropic Claude and OpenAI GPT models.
+ * Unified Prediction Service — formerly the primary prediction service.
+ * Kept for reference. Do not use for new predictions.
  */
 
 import Anthropic from '@anthropic-ai/sdk'

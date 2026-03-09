@@ -155,7 +155,7 @@ export class HybridJudgmentService {
     } else {
       const apiKey = process.env.OPENAI_API_KEY
       if (!apiKey) throw new Error('OPENAI_API_KEY required')
-      this.client = new OpenAI({ apiKey })
+      this.client = new OpenAI({ apiKey, timeout: 60_000 })
       this.modelName = 'gpt-4o'
     }
   }
@@ -304,21 +304,16 @@ export class HybridJudgmentService {
    */
   private adjustConfidence(output: JudgmentPredictionOutput): number {
     let adjusted = output.confidence
-    
-    // Reduce confidence for extreme fun scores (AI might be overconfident)
-    if (output.funScore < 20 || output.funScore > 85) {
-      adjusted *= 0.9
-    }
-    
+
     // Reduce confidence for inconsistent attributes vs fun score
     const { attributes } = output
     const highPace = attributes.pace >= 4
     const highFinish = attributes.finishDanger >= 4
     const lowFun = output.funScore < 40
     const highFun = output.funScore > 75
-    
+
     if ((highPace && highFinish && lowFun) || (!highPace && !highFinish && highFun)) {
-      adjusted *= 0.85  // Inconsistency between attributes and fun score
+      adjusted *= 0.9  // Inconsistency between attributes and fun score
     }
     
     return Math.min(1.0, Math.max(0.3, adjusted))

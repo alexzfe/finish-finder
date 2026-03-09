@@ -2,13 +2,12 @@
 
 ## Purpose
 
-The `src/app/` directory implements the **Next.js 15 App Router** frontend layer for Finish Finder, providing a mobile-first UFC-themed interface for browsing upcoming fight events, viewing AI-powered entertainment predictions, and accessing admin performance monitoring.
+The `src/app/` directory implements the **Next.js 15 App Router** frontend layer for Finish Finder, providing a mobile-first UFC-themed interface for browsing upcoming fight events and viewing AI-powered entertainment predictions.
 
 **Key Responsibilities:**
 - Render UFC event schedules with fight cards organized by position (main/preliminary/early preliminary)
 - Fetch and display AI predictions (fun factor, finish probability, entertainment analysis)
 - Manage client-side application state (event selection, fight modals, loading/error states)
-- Provide admin dashboard for database performance monitoring (`/admin`)
 - Handle graceful degradation (API → static JSON fallback)
 
 ## Current Status: Production-Ready (Nov 2025)
@@ -17,7 +16,6 @@ The `src/app/` directory implements the **Next.js 15 App Router** frontend layer
 - Sep 2024: Initial Next.js 15 migration with Turbopack
 - Sep 2024: Sentry error tracking integration (client/server/edge)
 - Sep 2024: Database API connection established with fallback logic
-- Oct 2024: Admin dashboard with query performance monitoring
 - **Current**: Stable production deployment on Vercel with static GitHub Pages mirror
 
 **Status Indicators:**
@@ -25,7 +23,6 @@ The `src/app/` directory implements the **Next.js 15 App Router** frontend layer
 - ✅ Sentry error boundary active in root layout
 - ✅ API fallback to static JSON functional
 - ✅ Mobile-responsive with UFC-themed design (Tailwind CSS 4)
-- ⚠️ Admin dashboard uses demo password (not production-secure)
 - ⚠️ No authentication on public API endpoints
 
 ## Component-Specific Development Guidelines
@@ -131,15 +128,11 @@ src/app/
 ├── page.tsx                     # Main home page (client component)
 ├── layout.tsx                   # Root layout with Sentry + metadata
 ├── globals.css                  # Tailwind base + UFC theme variables
-├── admin/
-│   └── page.tsx                 # Admin dashboard (password-protected)
 ├── api/
 │   ├── db-events/route.ts       # Events API (force-dynamic)
 │   ├── health/route.ts          # System health check
 │   ├── performance/route.ts     # Query performance metrics
-│   ├── fighter-image/route.ts   # Fighter images (disabled)
-│   └── admin/
-│       └── wipe-database/route.ts  # DB reset utility (admin)
+│   └── fighter-image/route.ts   # Fighter images (disabled)
 └── favicon.ico                  # Site icon
 ```
 
@@ -156,9 +149,6 @@ components/
 │   └── FightDetailsModal.tsx    # Fight analysis modal (mobile <768px)
 ├── fighter/
 │   └── FighterAvatar.tsx        # Avatar with Next.js Image, responsive sizing
-└── admin/                       # Admin dashboard components
-    ├── PerformanceDashboard.tsx # Query metrics charts
-    └── DatabaseManagement.tsx   # DB operations UI
 ```
 
 ## Architectural Patterns
@@ -390,26 +380,6 @@ scripts/export-static-data.js
 2. Static JSON (`/data/events.json`)
 3. Error message
 
-### Admin Dashboard
-
-**Authentication:**
-```typescript
-// src/app/admin/page.tsx:21
-if (password !== 'admin123') {
-  return <div>Access denied</div>
-}
-```
-
-**⚠️ Security Note:** Hardcoded password for demo only. Production should use OAuth/JWT.
-
-**Metrics Displayed:**
-- Query performance (slow/critical queries)
-- Database connection status
-- Recent query history
-- Alert threshold violations
-
-**Data Source:** `/api/performance` endpoint queries `QueryMetric` table
-
 ## Development Patterns
 
 ### Adding a New Page
@@ -502,13 +472,6 @@ console.log('[db-events] Query started')
 // View at: https://vercel.com/project/logs
 ```
 
-**Performance:**
-```typescript
-// Visit admin dashboard
-// http://localhost:3000/admin (password: admin123)
-// View slow queries and connection pool status
-```
-
 ## Key Files Reference
 
 | File | Lines | Purpose |
@@ -520,7 +483,6 @@ console.log('[db-events] Query started')
 | `src/components/fight/FightDetailsModal.tsx` | 160 | Mobile modal (<768px) for fight details |
 | `src/components/ui/EventNavigation.tsx` | 186 | Event carousel with swipe/keyboard navigation |
 | `src/components/fighter/FighterAvatar.tsx` | 165 | Next.js Image with responsive sizing |
-| `src/app/admin/page.tsx` | 93 | Performance monitoring dashboard |
 | `src/app/api/health/route.ts` | 296 | System health check endpoint |
 
 ## Related Documentation
@@ -535,18 +497,15 @@ console.log('[db-events] Query started')
 
 **Regular Updates:**
 - Review Sentry errors weekly
-- Monitor admin dashboard for slow queries
 - Update static JSON export after scraper runs
 - Test fallback chain monthly
 
 **Known Limitations:**
-- Admin password hardcoded (demo only)
 - No authentication on public APIs
 - Fighter images from ESPN/Wikipedia via database imageUrl field
 - Mobile modal only (<768px); tablet/desktop uses sticky sidebar
 
 **Future Enhancements:**
-- OAuth/JWT authentication for admin
 - WebSocket real-time updates
 - Progressive Web App (PWA) support
 - Fighter profile pages

@@ -1,31 +1,14 @@
-name: AI Predictions Generator (v3 - Unified)
+name: AI Predictions Generator
 
 on:
   schedule:
-    - cron: '30 1 * * *'  # Run daily at 1:30 AM UTC (after scraper at 12:00 AM)
+    - cron: '30 4 * * *'  # Run daily at 4:30 AM UTC (after scraper at 2:00 AM)
   workflow_dispatch:        # Allow manual trigger
-    inputs:
-      ai_provider:
-        description: 'AI Provider to use (openai or anthropic)'
-        required: false
-        default: 'openai'
-        type: choice
-        options:
-          - 'openai'
-          - 'anthropic'
-      web_search:
-        description: 'Enable web search enrichment'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'false'
-          - 'true'
 
 jobs:
   generate-predictions:
     runs-on: ubuntu-latest
-    timeout-minutes: 45  # Longer timeout for AI processing
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -46,27 +29,11 @@ jobs:
 
       - name: Run AI predictions generator
         env:
-          # AI-specific environment variables
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          BRAVE_SEARCH_API_KEY: ${{ secrets.BRAVE_SEARCH_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-          # AI provider (openai or anthropic)
-          AI_PROVIDER: ${{ github.event.inputs.ai_provider || 'openai' }}
-
-          # Monitoring and logging
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
         run: |
-          # Run the unified AI predictions runner (Phase 4)
-          if [ "${{ github.event.inputs.web_search }}" = "true" ]; then
-            echo "Running unified predictions with web search enabled..."
-            npx ts-node scripts/unified-ai-predictions-runner.ts --web-search
-          else
-            echo "Running unified predictions (web search disabled by default)..."
-            npx ts-node scripts/unified-ai-predictions-runner.ts
-          fi
+          echo "Running hybrid judgment predictions..."
+          npx ts-node scripts/generate-hybrid-predictions-all.ts
 
       - name: Check AI predictions health (if failed)
         if: failure()
@@ -74,13 +41,6 @@ jobs:
           echo "❌ AI predictions failed. Check logs above for details."
           echo ""
           echo "Common issues:"
-          echo "  - API rate limits (OpenAI/Anthropic/Brave Search)"
-          echo "  - Database connection issues"
-          echo "  - Missing API keys in secrets"
+          echo "  - OpenAI API rate limits or missing OPENAI_API_KEY secret"
+          echo "  - Database connection issues (DATABASE_URL)"
           echo "  - Invalid fight data"
-          echo ""
-          echo "To debug:"
-          echo "  1. Check if BRAVE_SEARCH_API_KEY secret is set"
-          echo "  2. Verify DATABASE_URL is correct"
-          echo "  3. Check API provider key (OPENAI_API_KEY or ANTHROPIC_API_KEY)"
-          echo "  4. Review rate limits on your API keys"
