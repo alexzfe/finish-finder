@@ -48,14 +48,20 @@ logger = logging.getLogger(__name__)
 
 
 def get_database_url() -> str:
-    """Get database URL from environment."""
+    """Get database URL from environment, stripping Prisma-specific params."""
     url = os.environ.get('DATABASE_URL')
     if not url:
         raise ValueError(
             "DATABASE_URL environment variable not set. "
             "Example: postgresql://user:pass@host:port/dbname"
         )
-    return url
+    # Strip Prisma-specific query params that psycopg2 doesn't understand
+    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query)
+    params.pop('pgbouncer', None)
+    cleaned_query = urlencode(params, doseq=True)
+    return urlunparse(parsed._replace(query=cleaned_query))
 
 
 def get_fighters_without_images(
