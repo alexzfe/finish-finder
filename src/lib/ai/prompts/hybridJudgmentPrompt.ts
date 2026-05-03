@@ -29,33 +29,17 @@ export interface FightAttributes {
 }
 
 /**
- * AI Judgment Output - Now includes direct fun score
+ * Raw structured output the LLM produces for the prompt above. The Predictor
+ * derives the user-facing Prediction from this.
  */
 export interface JudgmentPredictionOutput {
-  // Chain-of-thought reasoning
-  reasoning: {
-    vulnerabilityAnalysis: string    // Statistician view
-    offenseAnalysis: string          // Statistician view  
-    styleMatchup: string             // Tape Watcher view
-    entertainmentJudgment: string    // AI's holistic entertainment assessment
-  }
-  
-  // Concise analysis
-  finishAnalysis: string             // 1-2 sentences on finish likelihood
-  funAnalysis: string                // 1-2 sentences on entertainment value
-  narrative: string                  // 3-4 sentence fight story
-  
-  // Attributes for deterministic finish probability
+  /** Internal qualitative ratings consumed by the deterministic finishProbability math. */
   attributes: FightAttributes
-  
-  // AI JUDGMENT: Direct fun score (0-100)
-  // The AI evaluates ALL factors and assigns a holistic score
+  /** AI-judged 1-10 entertainment score. */
   funScore: number
-  
-  // Key factors
+  /** 3-5 short phrases summarising what drives the fight. */
   keyFactors: string[]
-  
-  // Confidence in this analysis
+  /** 0-1 confidence in the overall analysis. */
   confidence: number
 }
 
@@ -84,9 +68,10 @@ export function classifyFighterStyle(fighter: {
 }
 
 /**
- * Build the hybrid judgment prediction prompt
- * 
- * Key difference: AI directly outputs funScore (0-100) instead of attributes
+ * Build the hybrid judgment prediction prompt.
+ *
+ * Output: qualitative attributes (drive deterministic finishProbability),
+ * a 1-10 funScore (direct AI judgment), keyFactors, and confidence.
  */
 export function buildJudgmentPredictionPrompt(input: FightSnapshot): string {
   const { fighter1, fighter2, context } = input
@@ -157,7 +142,7 @@ MATCHUP SUMMARY:
 • Style matchup: ${fighter1.primaryStyle.toUpperCase()} vs ${fighter2.primaryStyle.toUpperCase()}
 ${recentContextSection}${entertainmentProfileSection}
 
-IMPORTANT: You are an MMA expert with deep knowledge of UFC fighters. USE your knowledge of these fighters — their reputations, famous fights, tendencies, rivalries, training camps, and public personas. Reference specific past fights, known tendencies, and fighter narratives in your analysis. Generic statistical summaries are not acceptable.
+IMPORTANT: You are an MMA expert with deep knowledge of UFC fighters. USE your knowledge of these fighters — their reputations, famous fights, tendencies, rivalries, training camps, and public personas — to inform your numeric ratings. Don't be timid: a known wrestler-vs-wrestler matchup deserves a low funScore even if the stats look balanced.
 
 ═══════════════════════════════════════════════════════════════════
 YOUR TASK: Analyze this fight from TWO perspectives
@@ -196,7 +181,7 @@ Rate these attributes objectively based on the data:
 
 **PART 2: FUN SCORE JUDGMENT (Your Holistic Assessment)**
 
-Based on ALL available information, assign a **funScore** from 0-100.
+Based on ALL available information, assign a **funScore** from 1 to 10 (integer).
 
 This is YOUR judgment as an MMA expert. Consider:
 - Statistical factors (finish rates, pace, volume)
@@ -206,37 +191,30 @@ This is YOUR judgment as an MMA expert. Consider:
 - Fight context: title fight stakes, rivalry, main event pressure
 - Intangibles: known for wars, chin reputation, cardio concerns
 
-FUN SCORE CALIBRATION (median should be ~55, use the FULL range):
-• 90-100: All-time classic potential (e.g., Gaethje vs Chandler, Holloway vs Kattar)
-• 80-89: Card highlight, high action guaranteed (e.g., Poirier vs Hooker, Zhang vs Joanna)
-• 70-79: Strong matchup, likely delivers (e.g., Burns vs Chimaev, Whittaker vs Cannonier)
-• 55-69: Solid but not special — typical competitive UFC fight
-• 40-54: Middling — could go either way, some stalling risk
-• 25-39: Likely underwhelming — heavy grappling, low output, or stylistic mismatch
-• 10-24: Probable snoozefest — lay-and-pray, point fighting, or extreme skill gap
-• 0-9: Unwatchable — clear mismatch or known stalling specialists
+FUN SCORE CALIBRATION (median should be ~5, use the FULL 1-10 range):
+• 10 — All-time classic potential (rare; Gaethje vs Chandler, Holloway vs Kattar tier)
+• 9  — Card highlight, high action guaranteed (Poirier vs Hooker tier)
+• 8  — Strong matchup, likely delivers (Burns vs Chimaev tier)
+• 7  — Above average, action-leaning, solid bonus candidate
+• 6  — Solid but not special — typical competitive UFC fight
+• 5  — Middling — could go either way, some stalling risk
+• 4  — Likely underwhelming — heavy grappling, low output, or stylistic mismatch
+• 3  — Probable snoozefest — lay-and-pray, point fighting, extreme skill gap
+• 2  — Unwatchable — clear mismatch or known stalling specialists
+• 1  — Worst-case — both fighters infamously dull, no redeeming dynamics
 
 DISTRIBUTION GUIDE: On a typical 12-fight card, expect roughly:
-  - 1-2 fights above 80
-  - 3-4 fights in 60-79
-  - 4-5 fights in 35-59
-  - 1-2 fights below 35
-If you're rating most fights 70+, you're being too generous.
+  - 0-1 fights at 9-10
+  - 2-3 fights at 7-8
+  - 4-5 fights at 4-6
+  - 1-2 fights at 1-3
+If you're rating most fights ≥7, you're being too generous.
 
 ═══════════════════════════════════════════════════════════════════
 OUTPUT FORMAT (JSON only, no markdown)
 ═══════════════════════════════════════════════════════════════════
 
 {
-  "reasoning": {
-    "vulnerabilityAnalysis": "<Statistician: 2-3 sentences on defensive vulnerabilities and finish susceptibility. Reference specific past losses or known weaknesses>",
-    "offenseAnalysis": "<Statistician: 2-3 sentences on finish capabilities and offensive threats. Reference specific signature techniques or famous KOs>",
-    "styleMatchup": "<Tape Watcher: 2-3 sentences on how styles interact for entertainment>",
-    "entertainmentJudgment": "<Your holistic assessment: what makes this fight exciting or boring? Reference specific comparable past fights>"
-  },
-  "finishAnalysis": "<1-2 sentences: WHY this fight will/won't finish. Cite specific stats>",
-  "funAnalysis": "<1-2 sentences: WHY this fight is/isn't entertaining. Compare to specific past fights for calibration>",
-  "narrative": "<3-4 sentence fight simulation referencing each fighter's known tendencies and signature moves>",
   "attributes": {
     "pace": <1-5>,
     "finishDanger": <1-5>,
@@ -245,20 +223,19 @@ OUTPUT FORMAT (JSON only, no markdown)
     "brawlPotential": <true|false>,
     "groundBattleLikely": <true|false>
   },
-  "funScore": <0-100>,
+  "funScore": <1-10>,
   "keyFactors": ["<factor 1>", "<factor 2>", "<factor 3>"],
   "confidence": <0.0-1.0>
 }
 
 CRITICAL INSTRUCTIONS:
-1. funScore is YOUR expert judgment. Be decisive and USE THE FULL RANGE.
-2. Attributes are objective ratings for finish probability calculation.
-3. Reference SPECIFIC fighters, past fights, and known tendencies in ALL text fields.
-4. Generic analysis like "both fighters have finishing ability" is NOT acceptable.
-5. A boring fight deserves a boring score. Don't inflate scores to be nice.
-6. If both fighters have high decision rates and low finish rates, score below 50.
-7. If styles cancel out (wrestler vs wrestler, counter-striker vs counter-striker), score 25-45.
-8. Confidence reflects uncertainty in your analysis, not the funScore value.
+1. funScore is YOUR expert judgment. Be decisive and USE THE FULL 1-10 RANGE.
+2. Attributes are objective ratings used to compute finish probability deterministically — pick them based on the data, not on your funScore.
+3. A boring fight deserves a boring score. Don't inflate scores to be nice.
+4. If both fighters have high decision rates and low finish rates, score ≤ 5.
+5. If styles cancel out (wrestler vs wrestler, counter-striker vs counter-striker), score 3-4.
+6. Confidence (0.0-1.0) reflects uncertainty in your overall analysis, independent of the funScore value.
+7. keyFactors: 3-5 short phrases such as "knockout power", "scramble heavy", "wrestling stalemate".
 
 Provide only valid JSON output.`
 }

@@ -19,11 +19,12 @@ import { Predictor } from '../src/lib/ai/predictor'
 import { buildSnapshot, type FightWithRelations } from '../src/lib/ai/snapshot'
 import { prisma } from '../src/lib/database/prisma'
 
-const PREDICTION_VERSION = 'v3.0-hybrid'
+const PREDICTION_VERSION = 'v4.0-funscore-1to10'
 const PREDICTION_VERSION_DESCRIPTION = `Hybrid Judgment Architecture
 - Finish Probability: Deterministic (from attributes)
-- Fun Score: AI Judgment (direct 0-100 holistic assessment)
-- Producer: Predictor + LLMAdapter`
+- Fun Score: AI Judgment (1-10 integer)
+- Producer: Predictor + LLMAdapter
+- Output: attributes + funScore + keyFactors + confidence (no reasoning)`
 
 const RATE_LIMIT_DELAY_MS = 2000
 
@@ -78,7 +79,7 @@ async function main() {
       successfulFinishProbs.push(prediction.finishProbability)
 
       console.log(
-        `  ✅ Saved: Finish ${(prediction.finishProbability * 100).toFixed(0)}% | Fun ${prediction.funScore}/100`
+        `  ✅ Saved: Finish ${(prediction.finishProbability * 100).toFixed(0)}% | Fun ${prediction.funScore}/10 | Conf ${prediction.finishConfidence.toFixed(2)}`
       )
     } catch (error) {
       failedCount += 1
@@ -191,16 +192,16 @@ function printSummary({
   console.log(`Total cost: $${totalCost.toFixed(4)}`)
   if (successCount > 0) {
     console.log(`Average cost per fight: $${(totalCost / successCount).toFixed(4)}`)
-    console.log(`Average fun score: ${avgFun.toFixed(1)}/100`)
+    console.log(`Average fun score: ${avgFun.toFixed(1)}/10`)
     console.log(`Average finish probability: ${(avgFinish * 100).toFixed(1)}%`)
 
-    const high = funScores.filter((s) => s >= 70).length
-    const med = funScores.filter((s) => s >= 50 && s < 70).length
-    const low = funScores.filter((s) => s < 50).length
+    const high = funScores.filter((s) => s >= 7).length
+    const med = funScores.filter((s) => s >= 5 && s < 7).length
+    const low = funScores.filter((s) => s < 5).length
     console.log('\nFun Score Distribution:')
-    console.log(`  🔥 High (70-100): ${high} fights (${pct(high, successCount)})`)
-    console.log(`  ⚖️  Medium (50-69): ${med} fights (${pct(med, successCount)})`)
-    console.log(`  😴 Low (0-49): ${low} fights (${pct(low, successCount)})`)
+    console.log(`  🔥 High (7-10): ${high} fights (${pct(high, successCount)})`)
+    console.log(`  ⚖️  Medium (5-6): ${med} fights (${pct(med, successCount)})`)
+    console.log(`  😴 Low (1-4): ${low} fights (${pct(low, successCount)})`)
   }
 
   console.log(`\nVersion: ${version}`)

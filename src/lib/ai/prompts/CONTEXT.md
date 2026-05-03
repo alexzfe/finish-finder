@@ -2,7 +2,7 @@
 
 The system predicts **entertainment value**, not fight outcomes:
 - **Finish Probability (0-100%)**: Likelihood the fight ends via stoppage (KO/TKO/SUB) vs decision
-- **Fun Score (0-100)**: How entertaining the fight will be for viewers
+- **Fun Score (1-10)**: Integer entertainment rating for viewers
 
 The system does NOT predict winners or methods.
 
@@ -22,19 +22,14 @@ The active producer is **`Predictor`** (`src/lib/ai/predictor.ts`). The Predicto
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │             SINGLE LLM CALL (Structured Output)                  │
-│ Multi-persona prompt (Statistician, Tape Watcher, Synthesizer)  │
 ├─────────────────────────────────────────────────────────────────┤
 │ Output:                                                          │
-│   • reasoning {}         - Step-by-step analysis                │
-│   • finishAnalysis       - 1-2 sentence WHY finish              │
-│   • funAnalysis          - 1-2 sentence WHY entertaining        │
-│   • narrative            - Fight simulation story               │
-│   • pace (1-5)                                                   │
-│   • finishDanger (1-5)   - calibrated per weight class          │
-│   • technicality (1-5)                                           │
-│   • styleClash           - Complementary/Neutral/Canceling      │
-│   • funScore (0-100)     - direct AI judgment                   │
-│   • confidence (0-1)                                             │
+│   • attributes:           pace, finishDanger, technicality (1-5),│
+│                           styleClash, brawlPotential,            │
+│                           groundBattleLikely                     │
+│   • funScore (1-10 int)  - direct AI judgment                   │
+│   • keyFactors           - 3-5 short phrases                    │
+│   • confidence (0-1)     - the model's stated certainty         │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -53,14 +48,6 @@ The active producer is **`Predictor`** (`src/lib/ai/predictor.ts`). The Predicto
 | `judgmentResponseSchema.ts` | The `StructuredOutputSchema` paired with the prompt — passed through to whichever `LLMAdapter` runs the call |
 | `weightClassRates.ts` | Statistical finish-rate baselines used both inside the prompt (for `finishDanger` calibration) and by `math/finishProbability.ts` |
 | `index.ts` | Barrel re-export |
-
-## Multi-Persona Analysis
-
-The prompt uses three analytical perspectives:
-
-1. **The Statistician** — pure numbers: vulnerability vs offense matchups, decision rates, weight-class baselines.
-2. **The Tape Watcher** — fighting habits, tendencies, style interactions, cardio, chin reputation.
-3. **The Synthesizer** — reconciles both views into final qualitative ratings.
 
 ## Qualitative Attributes
 

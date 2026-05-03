@@ -11,7 +11,7 @@ export interface Prediction {
   /** 0-1 confidence applied to both finish and fun (post-adjusted). */
   finishConfidence: number
 
-  /** AI-judged 0-100 entertainment score, clamped to that range. */
+  /** AI-judged 1-10 integer entertainment score, clamped to that range. */
   funScore: number
   funConfidence: number
 

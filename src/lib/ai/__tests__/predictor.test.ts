@@ -7,15 +7,6 @@ import type { FightSnapshot } from '../snapshot'
 import type { JudgmentPredictionOutput } from '../prompts/hybridJudgmentPrompt'
 
 const baseOutput: JudgmentPredictionOutput = {
-  reasoning: {
-    vulnerabilityAnalysis: 'v',
-    offenseAnalysis: 'o',
-    styleMatchup: 's',
-    entertainmentJudgment: 'e',
-  },
-  finishAnalysis: 'fa',
-  funAnalysis: 'fua',
-  narrative: 'n',
   attributes: {
     pace: 3,
     finishDanger: 3,
@@ -24,7 +15,7 @@ const baseOutput: JudgmentPredictionOutput = {
     brawlPotential: false,
     groundBattleLikely: false,
   },
-  funScore: 60,
+  funScore: 6,
   keyFactors: ['power', 'pace'],
   confidence: 0.8,
 }
@@ -92,7 +83,7 @@ describe('Predictor', () => {
     expect(prediction.modelUsed).toBe('fake-model-1')
     expect(prediction.tokensUsed).toBe(1234)
     expect(prediction.costUsd).toBe(0.0042)
-    expect(prediction.funScore).toBe(60)
+    expect(prediction.funScore).toBe(6)
     expect(prediction.output).toBe(baseOutput)
   })
 
@@ -125,12 +116,12 @@ describe('Predictor', () => {
     expect(adapter.calls[0].output.name).toBe('fight_judgment')
   })
 
-  it('clamps the funScore into [0, 100] when the LLM returns out-of-range values', async () => {
-    const high = new FakeAdapter({ responder: () => ({ ...baseOutput, funScore: 150 }) })
-    const low = new FakeAdapter({ responder: () => ({ ...baseOutput, funScore: -20 }) })
+  it('clamps the funScore into [1, 10] when the LLM returns out-of-range values', async () => {
+    const high = new FakeAdapter({ responder: () => ({ ...baseOutput, funScore: 99 }) })
+    const low = new FakeAdapter({ responder: () => ({ ...baseOutput, funScore: -5 }) })
 
-    expect((await new Predictor(high).predict(baseSnapshot)).funScore).toBe(100)
-    expect((await new Predictor(low).predict(baseSnapshot)).funScore).toBe(0)
+    expect((await new Predictor(high).predict(baseSnapshot)).funScore).toBe(10)
+    expect((await new Predictor(low).predict(baseSnapshot)).funScore).toBe(1)
   })
 
   it('applies the inconsistency penalty when high pace+finishDanger pair with a lowFun score', async () => {
@@ -138,7 +129,7 @@ describe('Predictor', () => {
       responder: () => ({
         ...baseOutput,
         attributes: { ...baseOutput.attributes, pace: 5, finishDanger: 5 },
-        funScore: 30,
+        funScore: 3,
         confidence: 0.9,
       }),
     })
@@ -146,7 +137,7 @@ describe('Predictor', () => {
       responder: () => ({
         ...baseOutput,
         attributes: { ...baseOutput.attributes, pace: 5, finishDanger: 5 },
-        funScore: 80,
+        funScore: 8,
         confidence: 0.9,
       }),
     })

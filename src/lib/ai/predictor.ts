@@ -7,11 +7,13 @@ import type { Prediction } from './prediction'
 import type { JudgmentPredictionOutput } from './prompts/hybridJudgmentPrompt'
 import type { FightSnapshot } from './snapshot'
 
-const FUN_SCORE_FLOOR = 0
-const FUN_SCORE_CEILING = 100
+const FUN_SCORE_FLOOR = 1
+const FUN_SCORE_CEILING = 10
 const CONFIDENCE_FLOOR = 0.3
 const CONFIDENCE_CEILING = 1.0
 const INCONSISTENCY_PENALTY = 0.9
+const LOW_FUN_THRESHOLD = 4
+const HIGH_FUN_THRESHOLD = 7
 
 export class Predictor {
   constructor(private readonly adapter: LLMAdapter) {}
@@ -55,8 +57,8 @@ function adjustConfidence(output: JudgmentPredictionOutput): number {
   const { attributes, funScore } = output
   const highPace = attributes.pace >= 4
   const highFinish = attributes.finishDanger >= 4
-  const lowFun = funScore < 40
-  const highFun = funScore > 75
+  const lowFun = funScore <= LOW_FUN_THRESHOLD
+  const highFun = funScore >= HIGH_FUN_THRESHOLD
 
   const inconsistent =
     (highPace && highFinish && lowFun) || (!highPace && !highFinish && highFun)

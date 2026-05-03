@@ -20,7 +20,7 @@ A Predictor instance is parameterised by an LLM adapter; swapping providers mean
 
 ## Prediction (the produced object)
 
-The in-memory result returned by a Predictor — distinct from the Prisma `Prediction` row that's later persisted. Carries the user-facing fields (`funScore`, `finishProbability`, `keyFactors`, `confidence`) plus model metadata (model used, tokens, cost).
+The in-memory result returned by a Predictor — distinct from the Prisma `Prediction` row that's later persisted. Carries the user-facing fields (`funScore` 1-10 integer, `finishProbability` 0-1, `keyFactors`, `confidence` 0-1) plus model metadata (model used, tokens, cost). `riskLevel` no longer surfaces in the contract; `confidence` replaces it. The repository still writes a derived `Fight.riskLevel` as a transitional alias until the read side migrates.
 
 ## PredictionVersion
 

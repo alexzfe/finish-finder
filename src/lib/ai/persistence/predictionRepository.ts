@@ -34,18 +34,10 @@ export class PredictionRepository {
 
 function buildPersistedShape(prediction: Prediction) {
   const { output } = prediction
-  const finishReasoning: Prisma.InputJsonValue = {
-    vulnerabilityAnalysis: output.reasoning.vulnerabilityAnalysis,
-    offenseAnalysis: output.reasoning.offenseAnalysis,
-    styleMatchup: output.reasoning.styleMatchup,
-    finalAssessment: output.reasoning.entertainmentJudgment,
-    finishAnalysis: output.finishAnalysis,
-    keyFactors: output.keyFactors,
-  }
+  // finishReasoning column is retained for schema compatibility; the new
+  // contract surfaces no chain-of-thought, so this is intentionally empty.
+  const finishReasoning: Prisma.InputJsonValue = {}
   const funBreakdown: Prisma.InputJsonValue = {
-    aiJudgment: output.reasoning.entertainmentJudgment,
-    funAnalysis: output.funAnalysis,
-    narrative: output.narrative,
     attributes: { ...output.attributes },
     keyFactors: output.keyFactors,
   }

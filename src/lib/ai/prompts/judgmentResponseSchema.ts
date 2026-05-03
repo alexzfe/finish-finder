@@ -3,35 +3,16 @@ import type { StructuredOutputSchema } from '../adapters/llmAdapter'
 export const JUDGMENT_RESPONSE_SCHEMA: StructuredOutputSchema = {
   name: 'fight_judgment',
   description:
-    'Generate fight analysis with deterministic attributes and AI fun-score judgment.',
+    'Generate fight analysis with deterministic attributes and a 1-10 AI fun-score judgment.',
   schema: {
     type: 'object',
     properties: {
-      reasoning: {
-        type: 'object',
-        properties: {
-          vulnerabilityAnalysis: { type: 'string' },
-          offenseAnalysis: { type: 'string' },
-          styleMatchup: { type: 'string' },
-          entertainmentJudgment: { type: 'string' },
-        },
-        required: [
-          'vulnerabilityAnalysis',
-          'offenseAnalysis',
-          'styleMatchup',
-          'entertainmentJudgment',
-        ],
-        additionalProperties: false,
-      },
-      finishAnalysis: { type: 'string' },
-      funAnalysis: { type: 'string' },
-      narrative: { type: 'string' },
       attributes: {
         type: 'object',
         properties: {
-          pace: { type: 'integer' },
-          finishDanger: { type: 'integer' },
-          technicality: { type: 'integer' },
+          pace: { type: 'integer', minimum: 1, maximum: 5 },
+          finishDanger: { type: 'integer', minimum: 1, maximum: 5 },
+          technicality: { type: 'integer', minimum: 1, maximum: 5 },
           styleClash: {
             type: 'string',
             enum: ['Complementary', 'Neutral', 'Canceling'],
@@ -49,23 +30,14 @@ export const JUDGMENT_RESPONSE_SCHEMA: StructuredOutputSchema = {
         ],
         additionalProperties: false,
       },
-      funScore: { type: 'integer' },
+      funScore: { type: 'integer', minimum: 1, maximum: 10 },
       keyFactors: {
         type: 'array',
         items: { type: 'string' },
       },
-      confidence: { type: 'number' },
+      confidence: { type: 'number', minimum: 0, maximum: 1 },
     },
-    required: [
-      'reasoning',
-      'finishAnalysis',
-      'funAnalysis',
-      'narrative',
-      'attributes',
-      'funScore',
-      'keyFactors',
-      'confidence',
-    ],
+    required: ['attributes', 'funScore', 'keyFactors', 'confidence'],
     additionalProperties: false,
   },
 }
