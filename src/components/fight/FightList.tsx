@@ -42,19 +42,16 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
   }
 
   const normalizeFight = (fight: Fight, cardPosition: CardBucket, index: number): Fight => {
-    const funFactorScore = (fight.funFactor ?? 0) * 10
-    const predictedFunScore = fight.predictedFunScore ?? Math.min(100, Math.round(funFactorScore))
     const funFactors = Array.isArray(fight.funFactors) ? fight.funFactors : []
 
     return {
       ...fight,
       cardPosition: fight.cardPosition || cardPosition,
       fightNumber: fight.fightNumber ?? index + 1,
-      predictedFunScore,
+      predictedFunScore: fight.predictedFunScore ?? 0,
       funFactors,
-      aiDescription: fight.aiDescription || fight.entertainmentReason || '',
       finishProbability: fight.finishProbability ?? 0,
-      riskLevel: fight.riskLevel ?? null,
+      finishConfidence: fight.finishConfidence ?? 0,
       weightClass: prettifyWeightClass(
         fight.weightClass || fight.fighter1?.weightClass || fight.fighter2?.weightClass
       ) as WeightClass,
@@ -98,10 +95,10 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
   }, [event])
 
   const getFunScoreStyle = (score: number) => {
-    // Warm "heat" scale: cold → warm → hot → fire
-    if (score >= 85) return { color: 'var(--score-fire)', textShadow: 'var(--score-fire-glow)' }
-    if (score >= 75) return { color: 'var(--score-hot)' }
-    if (score >= 65) return { color: 'var(--score-warm)' }
+    // Warm "heat" scale on the 1-10 funScore axis: cold → warm → hot → fire
+    if (score >= 9) return { color: 'var(--score-fire)', textShadow: 'var(--score-fire-glow)' }
+    if (score >= 7) return { color: 'var(--score-hot)' }
+    if (score >= 6) return { color: 'var(--score-warm)' }
     return { color: 'var(--score-cold)' }
   }
 

@@ -34,12 +34,45 @@ const parseJsonArray = (value, fallback = []) => {
   return fallback.length ? fallback : [value]
 }
 
+const clampFunScore = (score) => Math.min(10, Math.max(0, Math.round(score)))
+
+const extractKeyFactors = (prediction) => {
+  if (!prediction?.funBreakdown) return null
+  try {
+    const breakdown =
+      typeof prediction.funBreakdown === 'string'
+        ? JSON.parse(prediction.funBreakdown)
+        : prediction.funBreakdown
+    if (Array.isArray(breakdown?.keyFactors)) {
+      return breakdown.keyFactors.filter((f) => typeof f === 'string')
+    }
+  } catch {
+    // fall through
+  }
+  return null
+}
+
 const serializeEvents = (events) =>
   events.map((event) => {
     const sortedFights = [...event.fights].sort((a, b) => (a.fightNumber || 0) - (b.fightNumber || 0))
 
     const fightCard = sortedFights.map((fight) => {
-      const predictedFunScore = Math.min(100, Math.round((fight.funFactor || 0) * 10))
+      const prediction = fight.predictions?.[0]
+      const predictedFunScore =
+        prediction && typeof prediction.funScore === 'number'
+          ? clampFunScore(prediction.funScore)
+          : typeof fight.funFactor === 'number'
+            ? clampFunScore(fight.funFactor)
+            : 0
+      const finishProbability =
+        prediction && typeof prediction.finishProbability === 'number'
+          ? prediction.finishProbability
+          : fight.finishProbability || 0
+      const finishConfidence =
+        prediction && typeof prediction.finishConfidence === 'number'
+          ? prediction.finishConfidence
+          : 0
+      const keyFactors = extractKeyFactors(prediction) ?? parseJsonArray(fight.keyFactors)
 
       return {
         id: fight.id,
@@ -110,11 +143,9 @@ const serializeEvents = (events) =>
           venue: event.venue || ''
         },
         predictedFunScore,
-        funFactor: fight.funFactor || 0,
-        finishProbability: fight.finishProbability || 0,
-        funFactors: parseJsonArray(fight.keyFactors),
-        aiDescription: fight.entertainmentReason || '',
-        riskLevel: fight.riskLevel || null,
+        finishProbability,
+        finishConfidence,
+        funFactors: keyFactors,
         prediction: fight.fightPrediction || '',
         bookingDate: fight.bookingDate,
         completed: fight.completed
@@ -140,12 +171,21 @@ const serializeEvents = (events) =>
 
 async function main() {
   try {
+    const activeVersion = await prisma.predictionVersion.findFirst({
+      where: { active: true },
+      orderBy: { createdAt: 'desc' },
+    })
+
     const events = await prisma.event.findMany({
       include: {
         fights: {
           include: {
             fighter1: true,
-            fighter2: true
+            fighter2: true,
+            predictions: {
+              where: activeVersion ? { versionId: activeVersion.id } : undefined,
+              take: 1,
+            }
           }
         }
       },

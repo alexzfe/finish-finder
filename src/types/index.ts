@@ -41,16 +41,12 @@ export interface Fight {
   cardPosition?: 'main' | 'preliminary' | 'early-preliminary';
   fightNumber?: number;
   event: UFCEvent;
-  predictedFunScore: number; // 0-100
+  predictedFunScore: number; // 1-10 integer
   funFactors: Array<FunFactor | string>;
-  aiDescription: string;
-  funReasoning?: string; // Fun score analysis text from AI
-  funFactor?: number; // Raw 1-10 scale from AI predictions
-  finishProbability?: number;
-  riskLevel?: 'high' | 'medium' | 'low' | null;
+  finishProbability?: number; // 0-1
+  finishConfidence?: number;  // 0-1
   fightPrediction?: string;
   prediction?: string;
-  entertainmentReason?: string;
   scheduledRounds?: number;
   bookingDate: Date;
   completed: boolean;

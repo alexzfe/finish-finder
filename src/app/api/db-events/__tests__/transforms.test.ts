@@ -1,10 +1,11 @@
 /**
- * Tests for db-events route transformations
+ * Tests for db-events route transformations.
  *
  * Critical functionality:
  * - Card position ordering (Main Event → Early Prelims)
- * - Fun score extraction (new predictions table + legacy fallback)
- * - Fight data transformation consistency
+ * - 1-10 fun score extraction (active prediction + legacy fallback)
+ * - Finish probability + finish confidence extraction
+ * - keyFactors extraction with legacy fallback
  */
 
 import { describe, it, expect } from 'vitest'
@@ -12,36 +13,24 @@ import { describe, it, expect } from 'vitest'
 import { CARD_POSITION_ORDER } from '@/config/constants'
 import { parseJsonArray } from '@/lib/utils/json'
 
-/**
- * Extract predicted fun score from fight data
- */
 function extractPredictedFunScore(fight: {
   predictions: Array<{ funScore: number | null }>
-  predictedFunScore: number | null
   funFactor: number | null
 }): number {
   const prediction = fight.predictions[0]
   if (prediction && typeof prediction.funScore === 'number') {
-    return Math.min(100, Math.max(0, Math.round(prediction.funScore)))
+    return clampFunScore(prediction.funScore)
   }
-
-  const rawScore = fight.predictedFunScore
-  if (typeof rawScore === 'number') {
-    const scaled = rawScore <= 10 ? Math.round(rawScore * 10) : Math.round(rawScore)
-    return Math.min(100, Math.max(0, scaled))
-  }
-
   if (typeof fight.funFactor === 'number') {
-    const fallback = Math.round(fight.funFactor * 10)
-    return Math.min(100, Math.max(0, fallback))
+    return clampFunScore(fight.funFactor)
   }
-
   return 0
 }
 
-/**
- * Extract finish probability from fight data
- */
+function clampFunScore(score: number): number {
+  return Math.min(10, Math.max(0, Math.round(score)))
+}
+
 function extractFinishProbability(fight: {
   predictions: Array<{ finishProbability: number | null }>
   finishProbability: number | null
@@ -53,63 +42,39 @@ function extractFinishProbability(fight: {
   return fight.finishProbability || 0
 }
 
-/**
- * Extract AI description from fight predictions
- */
-function extractAiDescription(fight: {
-  predictions: Array<{ finishReasoning: unknown }>
-  aiDescription: string | null
-  entertainmentReason: string | null
-}): string | null {
+function extractFinishConfidence(fight: {
+  predictions: Array<{ finishConfidence: number | null }>
+}): number {
   const prediction = fight.predictions[0]
-  if (prediction?.finishReasoning) {
-    try {
-      const reasoning = typeof prediction.finishReasoning === 'string'
-        ? JSON.parse(prediction.finishReasoning)
-        : prediction.finishReasoning
-      return reasoning.finishAnalysis || reasoning.finalAssessment || null
-    } catch {
-      return typeof prediction.finishReasoning === 'string'
-        ? prediction.finishReasoning
-        : null
-    }
+  if (prediction && typeof prediction.finishConfidence === 'number') {
+    return prediction.finishConfidence
   }
-  return fight.aiDescription || fight.entertainmentReason || null
+  return 0
 }
 
-/**
- * Extract fun factors from fight predictions
- */
 function extractFunFactors(fight: {
-  predictions: Array<{ finishReasoning: unknown; funBreakdown: unknown }>
+  predictions: Array<{ funBreakdown: unknown }>
   keyFactors: string | null
   funFactors: string | null
 }): string[] {
   const prediction = fight.predictions[0]
-  if (prediction?.finishReasoning && prediction?.funBreakdown) {
+  if (prediction?.funBreakdown) {
     try {
-      const finishReasoning = typeof prediction.finishReasoning === 'string'
-        ? JSON.parse(prediction.finishReasoning)
-        : prediction.finishReasoning
-      const funBreakdown = typeof prediction.funBreakdown === 'string'
+      const breakdown = typeof prediction.funBreakdown === 'string'
         ? JSON.parse(prediction.funBreakdown)
         : prediction.funBreakdown
-
-      const finishFactors = Array.isArray(finishReasoning.keyFactors) ? finishReasoning.keyFactors : []
-      const funFactors = Array.isArray(funBreakdown.keyFactors) ? funBreakdown.keyFactors : []
-      const allFactors = [...finishFactors, ...funFactors]
-
-      return Array.from(new Set(allFactors))
+      if (Array.isArray(breakdown?.keyFactors)) {
+        return breakdown.keyFactors.filter((f: unknown): f is string => typeof f === 'string')
+      }
     } catch {
-      return parseJsonArray(fight.keyFactors ?? fight.funFactors)
+      // fall through
     }
   }
-  return parseJsonArray(fight.keyFactors ?? fight.funFactors)
+  return parseJsonArray(fight.keyFactors ?? fight.funFactors).filter(
+    (f): f is string => typeof f === 'string'
+  )
 }
 
-/**
- * Sort fights by card position
- */
 function sortFightsByCardPosition<T extends { cardPosition: string }>(fights: T[]): T[] {
   return [...fights].sort((a, b) => {
     const orderA = CARD_POSITION_ORDER[a.cardPosition] ?? 999
@@ -130,7 +95,7 @@ describe('Card Position Ordering', () => {
 
     const sorted = sortFightsByCardPosition(fights)
 
-    expect(sorted.map(f => f.cardPosition)).toEqual([
+    expect(sorted.map((f) => f.cardPosition)).toEqual([
       'Main Event',
       'Co-Main Event',
       'Main Card',
@@ -153,270 +118,134 @@ describe('Card Position Ordering', () => {
     expect(sorted[2].cardPosition).toBe('Unknown Position')
   })
 
-  it('should handle preliminary fallback value', () => {
-    const fights = [
-      { id: '1', cardPosition: 'preliminary' },
-      { id: '2', cardPosition: 'Main Event' },
-    ]
-
-    const sorted = sortFightsByCardPosition(fights)
-
-    expect(sorted[0].cardPosition).toBe('Main Event')
-    expect(sorted[1].cardPosition).toBe('preliminary')
-  })
-
   it('should not mutate original array', () => {
     const fights = [
       { id: '1', cardPosition: 'Prelims' },
       { id: '2', cardPosition: 'Main Event' },
     ]
-    const originalOrder = fights.map(f => f.cardPosition)
+    const originalOrder = fights.map((f) => f.cardPosition)
 
     sortFightsByCardPosition(fights)
 
-    expect(fights.map(f => f.cardPosition)).toEqual(originalOrder)
+    expect(fights.map((f) => f.cardPosition)).toEqual(originalOrder)
   })
 })
 
-describe('Predicted Fun Score Extraction', () => {
-  it('should use new predictions table data when available', () => {
-    const fight = {
-      predictions: [{ funScore: 75.5 }],
-      predictedFunScore: null,
-      funFactor: null,
-    }
-
-    expect(extractPredictedFunScore(fight)).toBe(76) // rounded
+describe('Predicted Fun Score Extraction (1-10)', () => {
+  it('uses the active prediction funScore when present', () => {
+    const fight = { predictions: [{ funScore: 7 }], funFactor: null }
+    expect(extractPredictedFunScore(fight)).toBe(7)
   })
 
-  it('should clamp fun score to 0-100 range', () => {
-    const fight = {
-      predictions: [{ funScore: 150 }],
-      predictedFunScore: null,
-      funFactor: null,
-    }
-
-    expect(extractPredictedFunScore(fight)).toBe(100)
-
-    const fight2 = {
-      predictions: [{ funScore: -10 }],
-      predictedFunScore: null,
-      funFactor: null,
-    }
-
-    expect(extractPredictedFunScore(fight2)).toBe(0)
+  it('rounds non-integer funScore values', () => {
+    const fight = { predictions: [{ funScore: 7.6 }], funFactor: null }
+    expect(extractPredictedFunScore(fight)).toBe(8)
   })
 
-  it('should fall back to predictedFunScore when predictions unavailable', () => {
-    const fight = {
-      predictions: [],
-      predictedFunScore: 8.5, // 0-10 scale
-      funFactor: null,
-    }
-
-    expect(extractPredictedFunScore(fight)).toBe(85) // scaled to 0-100
+  it('clamps funScore to [0, 10]', () => {
+    expect(extractPredictedFunScore({ predictions: [{ funScore: 99 }], funFactor: null })).toBe(10)
+    expect(extractPredictedFunScore({ predictions: [{ funScore: -3 }], funFactor: null })).toBe(0)
   })
 
-  it('should handle predictedFunScore already on 0-100 scale', () => {
-    const fight = {
-      predictions: [],
-      predictedFunScore: 75, // already 0-100
-      funFactor: null,
-    }
-
-    expect(extractPredictedFunScore(fight)).toBe(75)
+  it('falls back to the legacy funFactor column when no prediction exists', () => {
+    expect(extractPredictedFunScore({ predictions: [], funFactor: 6 })).toBe(6)
   })
 
-  it('should fall back to funFactor when other sources unavailable', () => {
-    const fight = {
-      predictions: [],
-      predictedFunScore: null,
-      funFactor: 7.5, // 0-10 scale
-    }
-
-    expect(extractPredictedFunScore(fight)).toBe(75) // scaled to 0-100
-  })
-
-  it('should return 0 when no prediction data available', () => {
-    const fight = {
-      predictions: [],
-      predictedFunScore: null,
-      funFactor: null,
-    }
-
-    expect(extractPredictedFunScore(fight)).toBe(0)
+  it('returns 0 when neither source is present', () => {
+    expect(extractPredictedFunScore({ predictions: [], funFactor: null })).toBe(0)
   })
 })
 
 describe('Finish Probability Extraction', () => {
-  it('should use new predictions table data when available', () => {
-    const fight = {
-      predictions: [{ finishProbability: 0.75 }],
-      finishProbability: 0.5,
-    }
-
-    expect(extractFinishProbability(fight)).toBe(0.75)
+  it('uses the active prediction value when present', () => {
+    expect(
+      extractFinishProbability({ predictions: [{ finishProbability: 0.75 }], finishProbability: 0.5 })
+    ).toBe(0.75)
   })
 
-  it('should fall back to fight.finishProbability when predictions unavailable', () => {
-    const fight = {
-      predictions: [],
-      finishProbability: 0.6,
-    }
-
-    expect(extractFinishProbability(fight)).toBe(0.6)
+  it('falls back to the legacy fight column', () => {
+    expect(extractFinishProbability({ predictions: [], finishProbability: 0.6 })).toBe(0.6)
   })
 
-  it('should return 0 when no probability data available', () => {
-    const fight = {
-      predictions: [],
-      finishProbability: null,
-    }
-
-    expect(extractFinishProbability(fight)).toBe(0)
+  it('returns 0 when nothing is set', () => {
+    expect(extractFinishProbability({ predictions: [], finishProbability: null })).toBe(0)
   })
 })
 
-describe('AI Description Extraction', () => {
-  it('should extract finishAnalysis from JSON reasoning', () => {
-    const fight = {
-      predictions: [{
-        finishReasoning: JSON.stringify({
-          finishAnalysis: 'High finish probability due to striking matchup',
-          finalAssessment: 'Should be an exciting fight',
-        }),
-      }],
-      aiDescription: null,
-      entertainmentReason: null,
-    }
-
-    expect(extractAiDescription(fight)).toBe('High finish probability due to striking matchup')
+describe('Finish Confidence Extraction', () => {
+  it('reads finishConfidence from the active prediction', () => {
+    expect(extractFinishConfidence({ predictions: [{ finishConfidence: 0.82 }] })).toBe(0.82)
   })
 
-  it('should fall back to finalAssessment if finishAnalysis unavailable', () => {
-    const fight = {
-      predictions: [{
-        finishReasoning: JSON.stringify({
-          finalAssessment: 'Should be an exciting fight',
-        }),
-      }],
-      aiDescription: null,
-      entertainmentReason: null,
-    }
-
-    expect(extractAiDescription(fight)).toBe('Should be an exciting fight')
+  it('returns 0 when no prediction is present', () => {
+    expect(extractFinishConfidence({ predictions: [] })).toBe(0)
   })
 
-  it('should handle string reasoning directly', () => {
-    const fight = {
-      predictions: [{
-        finishReasoning: 'Raw string reasoning',
-      }],
-      aiDescription: null,
-      entertainmentReason: null,
-    }
-
-    expect(extractAiDescription(fight)).toBe('Raw string reasoning')
-  })
-
-  it('should fall back to aiDescription when predictions unavailable', () => {
-    const fight = {
-      predictions: [],
-      aiDescription: 'Legacy AI description',
-      entertainmentReason: null,
-    }
-
-    expect(extractAiDescription(fight)).toBe('Legacy AI description')
-  })
-
-  it('should fall back to entertainmentReason when aiDescription unavailable', () => {
-    const fight = {
-      predictions: [],
-      aiDescription: null,
-      entertainmentReason: 'Legacy entertainment reason',
-    }
-
-    expect(extractAiDescription(fight)).toBe('Legacy entertainment reason')
-  })
-
-  it('should return null when no description available', () => {
-    const fight = {
-      predictions: [],
-      aiDescription: null,
-      entertainmentReason: null,
-    }
-
-    expect(extractAiDescription(fight)).toBeNull()
+  it('returns 0 when the prediction lacks finishConfidence', () => {
+    expect(extractFinishConfidence({ predictions: [{ finishConfidence: null }] })).toBe(0)
   })
 })
 
 describe('Fun Factors Extraction', () => {
-  it('should combine key factors from both predictions', () => {
+  it('reads keyFactors from funBreakdown when the prediction is present', () => {
     const fight = {
-      predictions: [{
-        finishReasoning: JSON.stringify({
-          keyFactors: ['Striker vs Striker', 'High finish rate'],
-        }),
-        funBreakdown: JSON.stringify({
-          keyFactors: ['Fan favorites', 'High finish rate'], // duplicate
-        }),
-      }],
+      predictions: [{ funBreakdown: { keyFactors: ['knockout power', 'scramble heavy'] } }],
       keyFactors: null,
       funFactors: null,
     }
-
-    const factors = extractFunFactors(fight)
-    expect(factors).toContain('Striker vs Striker')
-    expect(factors).toContain('High finish rate')
-    expect(factors).toContain('Fan favorites')
-    expect(factors).toHaveLength(3) // no duplicates
+    expect(extractFunFactors(fight)).toEqual(['knockout power', 'scramble heavy'])
   })
 
-  it('should fall back to keyFactors JSON when predictions unavailable', () => {
+  it('handles funBreakdown stored as a JSON string', () => {
     const fight = {
-      predictions: [],
-      keyFactors: '["Legacy factor 1", "Legacy factor 2"]',
+      predictions: [{ funBreakdown: JSON.stringify({ keyFactors: ['cardio gap'] }) }],
+      keyFactors: null,
       funFactors: null,
     }
-
-    const factors = extractFunFactors(fight)
-    expect(factors).toEqual(['Legacy factor 1', 'Legacy factor 2'])
+    expect(extractFunFactors(fight)).toEqual(['cardio gap'])
   })
 
-  it('should fall back to funFactors when keyFactors unavailable', () => {
+  it('falls back to legacy keyFactors JSON when no prediction is available', () => {
+    const fight = {
+      predictions: [],
+      keyFactors: '["legacy a", "legacy b"]',
+      funFactors: null,
+    }
+    expect(extractFunFactors(fight)).toEqual(['legacy a', 'legacy b'])
+  })
+
+  it('falls back to legacy funFactors JSON when keyFactors is missing', () => {
     const fight = {
       predictions: [],
       keyFactors: null,
-      funFactors: '["Fun factor 1"]',
+      funFactors: '["only fun"]',
     }
-
-    const factors = extractFunFactors(fight)
-    expect(factors).toEqual(['Fun factor 1'])
+    expect(extractFunFactors(fight)).toEqual(['only fun'])
   })
 
-  it('should return empty array when no factors available', () => {
-    const fight = {
-      predictions: [],
-      keyFactors: null,
-      funFactors: null,
-    }
-
-    const factors = extractFunFactors(fight)
-    expect(factors).toEqual([])
+  it('returns an empty array when nothing is set', () => {
+    expect(
+      extractFunFactors({ predictions: [], keyFactors: null, funFactors: null })
+    ).toEqual([])
   })
 
-  it('should handle invalid JSON gracefully', () => {
-    const fight = {
-      predictions: [{
-        finishReasoning: 'invalid json',
-        funBreakdown: '{"keyFactors": ["Valid factor"]}',
-      }],
-      keyFactors: null,
-      funFactors: null,
-    }
+  it('drops non-string entries from legacy JSON', () => {
+    expect(
+      extractFunFactors({
+        predictions: [],
+        keyFactors: '["valid", 42, null, "also valid"]',
+        funFactors: null,
+      })
+    ).toEqual(['valid', 'also valid'])
+  })
 
-    // Should fall back to parseJsonArray which returns [] for invalid
-    const factors = extractFunFactors(fight)
-    expect(Array.isArray(factors)).toBe(true)
+  it('handles invalid funBreakdown JSON gracefully', () => {
+    expect(
+      extractFunFactors({
+        predictions: [{ funBreakdown: 'not json' }],
+        keyFactors: '["fallback"]',
+        funFactors: null,
+      })
+    ).toEqual(['fallback'])
   })
 })

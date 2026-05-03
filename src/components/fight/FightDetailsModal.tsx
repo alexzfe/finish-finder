@@ -24,9 +24,10 @@ const formatWeightClass = (weightClass?: string | null): string => {
 }
 
 const getFunScoreStyle = (score: number): { color: string; textShadow?: string } => {
-  if (score >= 85) return { color: 'var(--score-fire)', textShadow: 'var(--score-fire-glow)' }
-  if (score >= 75) return { color: 'var(--score-hot)' }
-  if (score >= 65) return { color: 'var(--score-warm)' }
+  // 1-10 heat scale: cold → warm → hot → fire
+  if (score >= 9) return { color: 'var(--score-fire)', textShadow: 'var(--score-fire-glow)' }
+  if (score >= 7) return { color: 'var(--score-hot)' }
+  if (score >= 6) return { color: 'var(--score-warm)' }
   return { color: 'var(--score-cold)' }
 }
 
@@ -120,52 +121,28 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                       )
                     })()}
                     <div className="rounded-xl bg-white/5 px-4 py-3">
-                      <span className="block text-[0.7rem] md:text-[0.75rem] text-white/70">Risk Profile</span>
+                      <span className="block text-[0.7rem] md:text-[0.75rem] text-white/70">Confidence</span>
                       <span className="ufc-condensed text-lg text-white">
-                        {fight.riskLevel || 'Balanced'}
+                        {Math.round((fight.finishConfidence ?? 0) * 100)}%
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* AI Analysis */}
-                {(fight.aiDescription || fight.funReasoning) && (
-                  <div className="mb-5 space-y-3">
-                    {/* Finish Probability Analysis */}
-                    {fight.aiDescription && (
-                      <div>
-                        <p className="ufc-condensed text-xs text-white/70 mb-2">Finish Probability Analysis</p>
-                        <p className="text-sm leading-relaxed text-white/80">
-                          {fight.aiDescription}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Fun Score Analysis */}
-                    {fight.funReasoning && (
-                      <div>
-                        <p className="ufc-condensed text-xs text-white/70 mb-2">Fun Score Analysis</p>
-                        <p className="text-sm leading-relaxed text-white/80 mb-3">
-                          {fight.funReasoning}
-                        </p>
-                        {/* Key Factors as Bubbles */}
-                        {Array.isArray(fight.funFactors) && fight.funFactors.length > 0 && (
-                          <div>
-                            <p className="ufc-condensed text-[0.65rem] md:text-[0.7rem] uppercase tracking-[0.3em] text-white/50 mb-2">Key Factors</p>
-                            <div className="flex flex-wrap gap-2">
-                              {fight.funFactors.map((factor, idx) => (
-                                <span
-                                  key={idx}
-                                  className="inline-block rounded-full bg-[var(--ufc-red)]/20 px-3 py-1 text-xs font-medium text-white/90 border border-[var(--ufc-red)]/30"
-                                >
-                                  {typeof factor === 'string' ? factor : factor.type}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                {/* Key Factors */}
+                {Array.isArray(fight.funFactors) && fight.funFactors.length > 0 && (
+                  <div className="mb-5">
+                    <p className="ufc-condensed text-[0.65rem] md:text-[0.7rem] uppercase tracking-[0.3em] text-white/50 mb-2">Key Factors</p>
+                    <div className="flex flex-wrap gap-2">
+                      {fight.funFactors.map((factor, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-block rounded-full bg-[var(--ufc-red)]/20 px-3 py-1 text-xs font-medium text-white/90 border border-[var(--ufc-red)]/30"
+                        >
+                          {typeof factor === 'string' ? factor : factor.type}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
 
