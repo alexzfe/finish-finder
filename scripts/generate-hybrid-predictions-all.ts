@@ -28,17 +28,34 @@ const PREDICTION_VERSION_DESCRIPTION = `Hybrid Judgment Architecture
 
 const RATE_LIMIT_DELAY_MS = 2000
 
+function parseLimit(): number | null {
+  const arg = process.argv.find((a) => a.startsWith('--limit'))
+  if (!arg) return null
+  const value = arg.includes('=') ? arg.split('=')[1] : process.argv[process.argv.indexOf(arg) + 1]
+  const parsed = Number.parseInt(value ?? '', 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
 async function main() {
   console.log('🤖 Generating Hybrid Judgment Predictions for All Fights')
   console.log('='.repeat(60))
 
+  const limit = parseLimit()
+  if (limit) {
+    console.log(`⚠️  --limit ${limit} — capping this run`)
+  }
+
   const version = await ensurePredictionVersion()
   console.log(`✅ Version: ${version.version}`)
 
-  const fights = await findFightsMissingPredictions(version.id)
-  if (fights.length === 0) {
+  const allFights = await findFightsMissingPredictions(version.id)
+  const fights = limit ? allFights.slice(0, limit) : allFights
+  if (allFights.length === 0) {
     console.log('✅ All fights already have predictions for this version.')
     return
+  }
+  if (limit && allFights.length > limit) {
+    console.log(`📊 ${allFights.length} fight(s) need predictions; processing the first ${limit}.`)
   }
 
   console.log(`\n📝 Found ${fights.length} fights needing predictions`)
