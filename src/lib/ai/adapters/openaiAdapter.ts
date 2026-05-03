@@ -1,0 +1,68 @@
+import OpenAI from 'openai'
+
+import type { LLMAdapter, LLMCallArgs, LLMCallResult } from './llmAdapter'
+
+const PRICING_PER_MILLION_TOKENS = {
+  'gpt-4o': { input: 2.5, output: 10.0 },
+  'gpt-4o-mini': { input: 0.15, output: 0.6 },
+} as const
+
+export type OpenAIModel = keyof typeof PRICING_PER_MILLION_TOKENS
+
+export interface OpenAIAdapterOptions {
+  apiKey?: string
+  model?: OpenAIModel
+  temperature?: number
+  maxTokens?: number
+  timeoutMs?: number
+}
+
+export class OpenAIAdapter implements LLMAdapter {
+  private readonly client: OpenAI
+  private readonly model: OpenAIModel
+  private readonly temperature: number
+  private readonly maxTokens: number
+
+  constructor(opts: OpenAIAdapterOptions = {}) {
+    const apiKey = opts.apiKey ?? process.env.OPENAI_API_KEY
+    if (!apiKey) throw new Error('OPENAI_API_KEY required')
+    this.client = new OpenAI({ apiKey, timeout: opts.timeoutMs ?? 60_000 })
+    this.model = opts.model ?? 'gpt-4o'
+    this.temperature = opts.temperature ?? 0.4
+    this.maxTokens = opts.maxTokens ?? 2000
+  }
+
+  async call({ prompt, output }: LLMCallArgs): Promise<LLMCallResult> {
+    const completion = await this.client.chat.completions.create({
+      model: this.model,
+      max_tokens: this.maxTokens,
+      temperature: this.temperature,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: output.name,
+          strict: true,
+          schema: output.schema,
+        },
+      },
+    })
+
+    const text = completion.choices[0]?.message?.content
+    if (!text) throw new Error('Empty response from OpenAI')
+
+    const parsed: unknown = JSON.parse(text)
+    const inputTokens = completion.usage?.prompt_tokens ?? 0
+    const outputTokens = completion.usage?.completion_tokens ?? 0
+    const pricing = PRICING_PER_MILLION_TOKENS[this.model]
+
+    return {
+      output: parsed,
+      tokensUsed: inputTokens + outputTokens,
+      costUsd:
+        (inputTokens / 1_000_000) * pricing.input +
+        (outputTokens / 1_000_000) * pricing.output,
+      modelUsed: this.model,
+    }
+  }
+}

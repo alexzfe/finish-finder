@@ -12,62 +12,9 @@
 import { getWeightClassRates } from './weightClassRates'
 
 import type { FighterEntertainmentContext } from '../schemas/fighterEntertainmentProfile'
+import type { FightContext, FighterSnapshot, FightSnapshot } from '../snapshot'
 
 export type FighterStyle = 'striker' | 'wrestler' | 'grappler' | 'balanced'
-
-export interface JudgmentFighterStats {
-  name: string
-  record: string
-
-  // Defensive metrics
-  significantStrikesAbsorbedPerMinute: number
-  strikingDefensePercentage: number
-  takedownDefensePercentage: number
-
-  // Loss vulnerability
-  lossFinishRate: number
-  koLossPercentage: number
-  submissionLossPercentage: number
-
-  // Offensive metrics
-  finishRate: number
-  koPercentage: number
-  submissionPercentage: number
-  significantStrikesLandedPerMinute: number
-  submissionAverage: number
-  takedownAverage: number
-
-  // Fight averages
-  averageFightTimeSeconds: number
-  winsByDecision: number
-  totalWins: number
-
-  // Derived style
-  primaryStyle: FighterStyle
-
-  // Optional context
-  recentContext?: string
-  entertainmentProfile?: FighterEntertainmentContext
-}
-
-export interface JudgmentPredictionContext {
-  eventName: string
-  weightClass: string
-  titleFight: boolean
-  mainEvent: boolean
-  rankings?: {
-    fighter1Rank: number | null
-    fighter2Rank: number | null
-  }
-  rivalry?: boolean
-  rematch?: boolean
-}
-
-export interface JudgmentPredictionInput {
-  fighter1: JudgmentFighterStats
-  fighter2: JudgmentFighterStats
-  context: JudgmentPredictionContext
-}
 
 /**
  * Qualitative attributes for finish probability calculation
@@ -141,7 +88,7 @@ export function classifyFighterStyle(fighter: {
  * 
  * Key difference: AI directly outputs funScore (0-100) instead of attributes
  */
-export function buildJudgmentPredictionPrompt(input: JudgmentPredictionInput): string {
+export function buildJudgmentPredictionPrompt(input: FightSnapshot): string {
   const { fighter1, fighter2, context } = input
   const weightClassRates = getWeightClassRates(context.weightClass)
 
@@ -317,26 +264,18 @@ Provide only valid JSON output.`
 }
 
 // Helper functions (same as unified prompt)
-function buildContextSection(context: JudgmentPredictionContext): string {
+function buildContextSection(context: FightContext): string {
   const parts: string[] = []
 
   if (context.titleFight) parts.push('🏆 TITLE FIGHT')
   if (context.mainEvent) parts.push('🌟 MAIN EVENT')
-  if (context.rivalry) parts.push('⚔️ RIVALRY')
-  if (context.rematch) parts.push('🔄 REMATCH')
-
-  if (context.rankings) {
-    const r1 = context.rankings.fighter1Rank ? `#${context.rankings.fighter1Rank}` : 'Unranked'
-    const r2 = context.rankings.fighter2Rank ? `#${context.rankings.fighter2Rank}` : 'Unranked'
-    parts.push(`Rankings: ${r1} vs ${r2}`)
-  }
 
   return parts.length > 0 ? parts.join(' | ') : ''
 }
 
 function buildRecentContextSection(
-  fighter1: JudgmentFighterStats,
-  fighter2: JudgmentFighterStats
+  fighter1: FighterSnapshot,
+  fighter2: FighterSnapshot
 ): string {
   if (!fighter1.recentContext && !fighter2.recentContext) {
     return ''
@@ -383,8 +322,8 @@ function formatEntertainmentProfile(
 }
 
 function buildEntertainmentProfileSection(
-  fighter1: JudgmentFighterStats,
-  fighter2: JudgmentFighterStats
+  fighter1: FighterSnapshot,
+  fighter2: FighterSnapshot
 ): string {
   if (!fighter1.entertainmentProfile && !fighter2.entertainmentProfile) {
     return ''

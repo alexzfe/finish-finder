@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 /**
- * Generate Hybrid Judgment Predictions for All Fights Without Predictions
- * 
- * Uses the hybrid approach:
- * - Deterministic finish probability
- * - AI judgment fun score
+ * Generate predictions for every upcoming fight that doesn't already have one
+ * for the active PredictionVersion. Bump PREDICTION_VERSION whenever the
+ * prompt, deterministic math, or output contract changes.
  */
 
 import { config } from 'dotenv'
@@ -15,345 +13,206 @@ if (existsSync(envPath)) {
   config({ path: envPath })
 }
 
-import { createHash } from 'crypto'
-import { readFileSync } from 'fs'
-import { join } from 'path'
+import { OpenAIAdapter } from '../src/lib/ai/adapters'
+import { PredictionRepository } from '../src/lib/ai/persistence/predictionRepository'
+import { Predictor } from '../src/lib/ai/predictor'
+import { buildSnapshot, type FightWithRelations } from '../src/lib/ai/snapshot'
 import { prisma } from '../src/lib/database/prisma'
-import {
-  HybridJudgmentService,
-  buildJudgmentInput,
-  type JudgmentPredictionResult,
-} from '../src/lib/ai/hybridJudgmentService'
-import type { FighterEntertainmentContext } from '../src/lib/ai/schemas/fighterEntertainmentProfile'
 
-/**
- * Transform a DB entertainment profile record into the FighterEntertainmentContext
- * shape expected by the hybrid judgment prompt.
- */
-function toEntertainmentContext(dbProfile: {
-  primaryArchetype: string
-  secondaryArchetype: string | null
-  archetypeConfidence: number
-  mentality: string
-  mentalityConfidence: number
-  reputationTags: string[]
-  bonusHistory: any
-  entertainmentPrediction: string
-}): FighterEntertainmentContext {
-  return {
-    primary_archetype: dbProfile.primaryArchetype as any,
-    secondary_archetype: (dbProfile.secondaryArchetype as any) ?? null,
-    archetype_confidence: dbProfile.archetypeConfidence,
-    mentality: dbProfile.mentality as any,
-    mentality_confidence: dbProfile.mentalityConfidence,
-    reputation_tags: dbProfile.reputationTags,
-    bonus_history: dbProfile.bonusHistory ?? {
-      fotn_count: 0,
-      potn_count: 0,
-      total_bonuses: 0,
-      bonus_rate_estimate: null,
-    },
-    entertainment_prediction: dbProfile.entertainmentPrediction as any,
-  }
-}
-
-// Hash file for version tracking
-function hashFile(filePath: string): string {
-  const absolutePath = join(process.cwd(), filePath)
-  const content = readFileSync(absolutePath, 'utf8')
-  return createHash('sha256').update(content).digest('hex')
-}
-
-async function generateAllHybridPredictions() {
-  console.log('🤖 Generating Hybrid Judgment Predictions for All Fights')
-  console.log('=' .repeat(60))
-
-  // Get or create prediction version for hybrid judgment
-  const promptHash = hashFile('src/lib/ai/prompts/hybridJudgmentPrompt.ts')
-  const serviceHash = hashFile('src/lib/ai/hybridJudgmentService.ts')
-  const compositeHash = createHash('sha256')
-    .update(promptHash + serviceHash)
-    .digest('hex')
-    .substring(0, 16)
-
-  let version = await prisma.predictionVersion.findFirst({
-    where: {
-      finishPromptHash: promptHash,
-      funScorePromptHash: serviceHash,
-    },
-  })
-
-  if (!version) {
-    version = await prisma.predictionVersion.create({
-      data: {
-        version: `v3.0-hybrid-${compositeHash}`,
-        finishPromptHash: promptHash,
-        funScorePromptHash: serviceHash,
-        description: `Hybrid Judgment Architecture
+const PREDICTION_VERSION = 'v3.0-hybrid'
+const PREDICTION_VERSION_DESCRIPTION = `Hybrid Judgment Architecture
 - Finish Probability: Deterministic (from attributes)
 - Fun Score: AI Judgment (direct 0-100 holistic assessment)
-- Service: HybridJudgmentService`,
-        active: true,
-      },
-    })
-    console.log(`✅ Created new version: ${version.version}`)
-  } else {
-    console.log(`✅ Using existing version: ${version.version}`)
+- Producer: Predictor + LLMAdapter`
+
+const RATE_LIMIT_DELAY_MS = 2000
+
+async function main() {
+  console.log('🤖 Generating Hybrid Judgment Predictions for All Fights')
+  console.log('='.repeat(60))
+
+  const version = await ensurePredictionVersion()
+  console.log(`✅ Version: ${version.version}`)
+
+  const fights = await findFightsMissingPredictions(version.id)
+  if (fights.length === 0) {
+    console.log('✅ All fights already have predictions for this version.')
+    return
   }
 
-  // Find all fights needing predictions (upcoming events, no predictions for this version)
-  console.log('\n🔍 Finding fights without predictions...')
-  
-  const fightsNeedingPredictions = await prisma.fight.findMany({
+  console.log(`\n📝 Found ${fights.length} fights needing predictions`)
+  for (const [eventName, count] of Object.entries(groupByEvent(fights))) {
+    console.log(`  📅 ${eventName}: ${count} fights`)
+  }
+
+  const adapter = new OpenAIAdapter()
+  const predictor = new Predictor(adapter)
+  const repository = new PredictionRepository(prisma)
+  console.log('\n🧠 Using OpenAIAdapter (default model) with hybrid judgment\n')
+
+  let totalTokens = 0
+  let totalCost = 0
+  let successCount = 0
+  let failedCount = 0
+  const successfulFunScores: number[] = []
+  const successfulFinishProbs: number[] = []
+
+  for (let i = 0; i < fights.length; i++) {
+    const fight = fights[i]
+    console.log(`\n[${i + 1}/${fights.length}] ${fight.event.name}`)
+    console.log(`    ${fight.fighter1.name} vs ${fight.fighter2.name}`)
+
+    try {
+      const snapshot = buildSnapshot(fight)
+      const prediction = await predictor.predict(snapshot)
+      await repository.save({
+        fightId: fight.id,
+        versionId: version.id,
+        prediction,
+      })
+
+      totalTokens += prediction.tokensUsed
+      totalCost += prediction.costUsd
+      successCount += 1
+      successfulFunScores.push(prediction.funScore)
+      successfulFinishProbs.push(prediction.finishProbability)
+
+      console.log(
+        `  ✅ Saved: Finish ${(prediction.finishProbability * 100).toFixed(0)}% | Fun ${prediction.funScore}/100`
+      )
+    } catch (error) {
+      failedCount += 1
+      console.error(`  ❌ Error: ${error instanceof Error ? error.message : String(error)}`)
+    }
+
+    if (i < fights.length - 1) {
+      await sleep(RATE_LIMIT_DELAY_MS)
+    }
+  }
+
+  printSummary({
+    total: fights.length,
+    successCount,
+    failedCount,
+    totalTokens,
+    totalCost,
+    funScores: successfulFunScores,
+    finishProbs: successfulFinishProbs,
+    version: version.version,
+  })
+}
+
+async function ensurePredictionVersion() {
+  const existing = await prisma.predictionVersion.findUnique({
+    where: { version: PREDICTION_VERSION },
+  })
+  if (existing) return existing
+
+  return prisma.predictionVersion.create({
+    data: {
+      version: PREDICTION_VERSION,
+      finishPromptHash: PREDICTION_VERSION,
+      funScorePromptHash: PREDICTION_VERSION,
+      description: PREDICTION_VERSION_DESCRIPTION,
+      active: true,
+    },
+  })
+}
+
+async function findFightsMissingPredictions(versionId: string): Promise<FightWithRelations[]> {
+  return prisma.fight.findMany({
     where: {
       isCancelled: false,
-      predictions: {
-        none: {
-          versionId: version.id,
-        },
-      },
+      predictions: { none: { versionId } },
     },
     include: {
       fighter1: {
         include: {
           entertainmentProfile: true,
-          contextChunks: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          },
+          contextChunks: { orderBy: { createdAt: 'desc' }, take: 1 },
         },
       },
       fighter2: {
         include: {
           entertainmentProfile: true,
-          contextChunks: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          },
+          contextChunks: { orderBy: { createdAt: 'desc' }, take: 1 },
         },
       },
       event: true,
     },
-    orderBy: [
-      { event: { date: 'asc' } },
-      { fightNumber: 'asc' },
-    ],
+    orderBy: [{ event: { date: 'asc' } }, { fightNumber: 'asc' }],
   })
+}
 
-  if (fightsNeedingPredictions.length === 0) {
-    console.log('✅ All fights already have hybrid predictions!')
-    process.exit(0)
-  }
-
-  console.log(`📝 Found ${fightsNeedingPredictions.length} fights needing predictions\n`)
-
-  // Group by event for display
-  const fightsByEvent = fightsNeedingPredictions.reduce((acc, fight) => {
-    const eventName = fight.event.name
-    if (!acc[eventName]) acc[eventName] = []
-    acc[eventName].push(fight)
+function groupByEvent(fights: FightWithRelations[]): Record<string, number> {
+  return fights.reduce<Record<string, number>>((acc, fight) => {
+    acc[fight.event.name] = (acc[fight.event.name] ?? 0) + 1
     return acc
-  }, {} as Record<string, typeof fightsNeedingPredictions>)
+  }, {})
+}
 
-  for (const [eventName, fights] of Object.entries(fightsByEvent)) {
-    console.log(`  📅 ${eventName}: ${fights.length} fights`)
-  }
-  console.log('')
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms))
+}
 
-  // Initialize service
-  const service = new HybridJudgmentService('openai')
-  console.log('🧠 Using OpenAI GPT-4o with hybrid judgment\n')
+interface SummaryArgs {
+  total: number
+  successCount: number
+  failedCount: number
+  totalTokens: number
+  totalCost: number
+  funScores: number[]
+  finishProbs: number[]
+  version: string
+}
 
-  let totalTokens = 0
-  let totalCost = 0
-  const results: Array<{
-    fight: string
-    event: string
-    finishProb: number
-    funScore: number
-    success: boolean
-  }> = []
-
-  for (let i = 0; i < fightsNeedingPredictions.length; i++) {
-    const fight = fightsNeedingPredictions[i]
-    console.log(`\n[${i + 1}/${fightsNeedingPredictions.length}] ${fight.event.name}`)
-    console.log(`    ${fight.fighter1.name} vs ${fight.fighter2.name}`)
-
-    try {
-      // Extract entertainment profiles if available
-      const f1Profile = fight.fighter1.entertainmentProfile
-        ? toEntertainmentContext(fight.fighter1.entertainmentProfile)
-        : undefined
-      const f2Profile = fight.fighter2.entertainmentProfile
-        ? toEntertainmentContext(fight.fighter2.entertainmentProfile)
-        : undefined
-
-      // Extract most recent context chunk if available
-      const f1Context = fight.fighter1.contextChunks?.[0]?.content
-      const f2Context = fight.fighter2.contextChunks?.[0]?.content
-
-      const hasF1Profile = !!f1Profile
-      const hasF2Profile = !!f2Profile
-      const hasF1Context = !!f1Context
-      const hasF2Context = !!f2Context
-      console.log(`    Profiles: ${hasF1Profile ? '✓' : '✗'} ${fight.fighter1.name} | ${hasF2Profile ? '✓' : '✗'} ${fight.fighter2.name}`)
-      console.log(`    Context:  ${hasF1Context ? '✓' : '✗'} ${fight.fighter1.name} | ${hasF2Context ? '✓' : '✗'} ${fight.fighter2.name}`)
-
-      // Build input with profiles and context
-      const input = buildJudgmentInput(
-        fight.fighter1,
-        fight.fighter2,
-        {
-          eventName: fight.event.name,
-          weightClass: fight.weightClass,
-          titleFight: fight.titleFight,
-          mainEvent: fight.mainEvent,
-        },
-        f1Context,
-        f2Context,
-        f1Profile,
-        f2Profile
-      )
-
-      // Get prediction
-      const result = await service.predictFight(input)
-
-      // Save to database
-      await prisma.prediction.upsert({
-        where: {
-          fightId_versionId: {
-            fightId: fight.id,
-            versionId: version.id,
-          },
-        },
-        create: {
-          fightId: fight.id,
-          versionId: version.id,
-          finishProbability: result.finishProbability,
-          finishConfidence: result.finishConfidence,
-          finishReasoning: {
-            vulnerabilityAnalysis: result.output.reasoning.vulnerabilityAnalysis,
-            offenseAnalysis: result.output.reasoning.offenseAnalysis,
-            styleMatchup: result.output.reasoning.styleMatchup,
-            finalAssessment: result.output.reasoning.entertainmentJudgment,
-            finishAnalysis: result.output.finishAnalysis,
-            keyFactors: result.output.keyFactors,
-          },
-          funScore: result.funScore,
-          funConfidence: result.funConfidence,
-          funBreakdown: {
-            aiJudgment: result.output.reasoning.entertainmentJudgment,
-            funAnalysis: result.output.funAnalysis,
-            narrative: result.output.narrative,
-            attributes: result.output.attributes,
-            keyFactors: result.output.keyFactors,
-          } as any,
-          modelUsed: result.modelUsed,
-          tokensUsed: result.tokensUsed,
-          costUsd: result.costUsd,
-        },
-        update: {
-          finishProbability: result.finishProbability,
-          finishConfidence: result.finishConfidence,
-          finishReasoning: {
-            vulnerabilityAnalysis: result.output.reasoning.vulnerabilityAnalysis,
-            offenseAnalysis: result.output.reasoning.offenseAnalysis,
-            styleMatchup: result.output.reasoning.styleMatchup,
-            finalAssessment: result.output.reasoning.entertainmentJudgment,
-            finishAnalysis: result.output.finishAnalysis,
-            keyFactors: result.output.keyFactors,
-          },
-          funScore: result.funScore,
-          funConfidence: result.funConfidence,
-          funBreakdown: {
-            aiJudgment: result.output.reasoning.entertainmentJudgment,
-            funAnalysis: result.output.funAnalysis,
-            narrative: result.output.narrative,
-            attributes: result.output.attributes,
-            keyFactors: result.output.keyFactors,
-          } as any,
-          modelUsed: result.modelUsed,
-          tokensUsed: result.tokensUsed,
-          costUsd: result.costUsd,
-        },
-      })
-
-      // Calculate and save risk level
-      const avgConfidence = (result.finishConfidence + result.funConfidence) / 2
-      let riskLevel: 'low' | 'balanced' | 'high'
-      if (avgConfidence >= 0.78) riskLevel = 'low'
-      else if (avgConfidence >= 0.675) riskLevel = 'balanced'
-      else riskLevel = 'high'
-
-      await prisma.fight.update({
-        where: { id: fight.id },
-        data: { riskLevel },
-      })
-
-      console.log(`  ✅ Saved: Finish ${(result.finishProbability * 100).toFixed(0)}% | Fun ${result.funScore}/100 | Risk: ${riskLevel}`)
-
-      totalTokens += result.tokensUsed
-      totalCost += result.costUsd
-      results.push({
-        fight: `${fight.fighter1.name} vs ${fight.fighter2.name}`,
-        event: fight.event.name,
-        finishProb: result.finishProbability,
-        funScore: result.funScore,
-        success: true,
-      })
-
-      // Rate limiting - 2 second delay between calls
-      if (i < fightsNeedingPredictions.length - 1) {
-        await new Promise(r => setTimeout(r, 2000))
-      }
-
-    } catch (error) {
-      console.error(`  ❌ Error: ${error instanceof Error ? error.message : String(error)}`)
-      results.push({
-        fight: `${fight.fighter1.name} vs ${fight.fighter2.name}`,
-        event: fight.event.name,
-        finishProb: 0,
-        funScore: 0,
-        success: false,
-      })
-    }
-  }
-
-  // Summary
-  console.log('\n\n' + '=' .repeat(60))
+function printSummary({
+  total,
+  successCount,
+  failedCount,
+  totalTokens,
+  totalCost,
+  funScores,
+  finishProbs,
+  version,
+}: SummaryArgs) {
+  console.log('\n\n' + '='.repeat(60))
   console.log('📊 FINAL SUMMARY')
-  console.log('=' .repeat(60))
-  
-  const successCount = results.filter(r => r.success).length
-  const failedCount = results.length - successCount
-  const successfulResults = results.filter(r => r.success)
-  
-  const avgFunScore = successfulResults.reduce((sum, r) => sum + r.funScore, 0) / successCount
-  const avgFinishProb = successfulResults.reduce((sum, r) => sum + r.finishProb, 0) / successCount
-  
-  console.log(`Total fights processed: ${fightsNeedingPredictions.length}`)
+  console.log('='.repeat(60))
+
+  const avgFun = successCount > 0 ? funScores.reduce((a, b) => a + b, 0) / successCount : 0
+  const avgFinish =
+    successCount > 0 ? finishProbs.reduce((a, b) => a + b, 0) / successCount : 0
+
+  console.log(`Total fights processed: ${total}`)
   console.log(`✅ Success: ${successCount}`)
   console.log(`❌ Failed: ${failedCount}`)
   console.log(`Total tokens: ${totalTokens.toLocaleString()}`)
   console.log(`Total cost: $${totalCost.toFixed(4)}`)
-  console.log(`Average cost per fight: $${(totalCost / successCount).toFixed(4)}`)
-  console.log(`Average fun score: ${avgFunScore.toFixed(1)}/100`)
-  console.log(`Average finish probability: ${(avgFinishProb * 100).toFixed(1)}%`)
-  
-  // Fun score distribution
-  const highFun = successfulResults.filter(r => r.funScore >= 70).length
-  const medFun = successfulResults.filter(r => r.funScore >= 50 && r.funScore < 70).length
-  const lowFun = successfulResults.filter(r => r.funScore < 50).length
-  
-  console.log(`\nFun Score Distribution:`)
-  console.log(`  🔥 High (70-100): ${highFun} fights (${Math.round(highFun/successCount*100)}%)`)
-  console.log(`  ⚖️  Medium (50-69): ${medFun} fights (${Math.round(medFun/successCount*100)}%)`)
-  console.log(`  😴 Low (0-49): ${lowFun} fights (${Math.round(lowFun/successCount*100)}%)`)
-  
-  console.log(`\nVersion: ${version.version}`)
-  console.log('\n🎉 All hybrid predictions saved to database!')
+  if (successCount > 0) {
+    console.log(`Average cost per fight: $${(totalCost / successCount).toFixed(4)}`)
+    console.log(`Average fun score: ${avgFun.toFixed(1)}/100`)
+    console.log(`Average finish probability: ${(avgFinish * 100).toFixed(1)}%`)
+
+    const high = funScores.filter((s) => s >= 70).length
+    const med = funScores.filter((s) => s >= 50 && s < 70).length
+    const low = funScores.filter((s) => s < 50).length
+    console.log('\nFun Score Distribution:')
+    console.log(`  🔥 High (70-100): ${high} fights (${pct(high, successCount)})`)
+    console.log(`  ⚖️  Medium (50-69): ${med} fights (${pct(med, successCount)})`)
+    console.log(`  😴 Low (0-49): ${low} fights (${pct(low, successCount)})`)
+  }
+
+  console.log(`\nVersion: ${version}`)
 }
 
-generateAllHybridPredictions()
-  .catch(console.error)
+function pct(n: number, total: number) {
+  return total > 0 ? `${Math.round((n / total) * 100)}%` : '0%'
+}
+
+main()
+  .catch((error) => {
+    console.error(error)
+    process.exitCode = 1
+  })
   .finally(() => prisma.$disconnect())

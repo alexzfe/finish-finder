@@ -8,7 +8,7 @@ The system does NOT predict winners or methods.
 
 ## Active architecture
 
-The active prediction service is **`hybridJudgmentService.ts`** (one file up, in `src/lib/ai/`). It makes a single LLM call per fight (OpenAI Structured Outputs or Anthropic Tool Use), reads back qualitative attributes, then computes the finish probability deterministically and uses the AI's `funScore` directly.
+The active producer is **`Predictor`** (`src/lib/ai/predictor.ts`). The Predictor is parameterised by an **LLMAdapter** (`src/lib/ai/adapters/`) and consumes a **FightSnapshot** (`src/lib/ai/snapshot.ts`). It makes a single LLM call per fight, reads back qualitative attributes, computes the finish probability deterministically (`src/lib/ai/math/finishProbability.ts`), and uses the AI's `funScore` directly.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -49,9 +49,10 @@ The active prediction service is **`hybridJudgmentService.ts`** (one file up, in
 
 | File | Purpose |
 |------|---------|
-| `hybridJudgmentPrompt.ts` | Active prompt template + types (`JudgmentPredictionInput`, `JudgmentPredictionOutput`, `FightAttributes`, `FighterStyle`, `classifyFighterStyle`) |
-| `weightClassRates.ts` | Statistical finish-rate baselines used by both the prompt (for `finishDanger` calibration) and the deterministic finish-probability calculation |
-| `index.ts` | Barrel re-exporting `weightClassRates`. The hybrid service imports from `./hybridJudgmentPrompt` directly. |
+| `hybridJudgmentPrompt.ts` | Prompt template (`buildJudgmentPredictionPrompt(snapshot)`) + LLM-output type (`JudgmentPredictionOutput`), `FightAttributes`, `FighterStyle`, `classifyFighterStyle` |
+| `judgmentResponseSchema.ts` | The `StructuredOutputSchema` paired with the prompt — passed through to whichever `LLMAdapter` runs the call |
+| `weightClassRates.ts` | Statistical finish-rate baselines used both inside the prompt (for `finishDanger` calibration) and by `math/finishProbability.ts` |
+| `index.ts` | Barrel re-export |
 
 ## Multi-Persona Analysis
 
@@ -89,10 +90,11 @@ finishDanger=5 → ~95% (baseline × 1.6, capped at 95)
 
 ## Structured Output Mode
 
-The service uses native structured-output features for guaranteed JSON compliance:
+`JUDGMENT_RESPONSE_SCHEMA` is one JSON-Schema object reused by every adapter:
 
-- **OpenAI**: Structured Outputs (`response_format: { type: 'json_schema' }`)
-- **Anthropic**: Tool Use mode with JSON schema definition
+- **OpenAIAdapter**: passes it inside `response_format: { type: 'json_schema' }`
+- **AnthropicAdapter**: passes it inside a Tool Use definition
+- **FakeAdapter**: ignores it; tests script the response directly
 
 ## Deterministic Finish-Probability Calculation
 
@@ -123,7 +125,8 @@ finishProbability =
 
 ## Integration Points
 
-- **`../hybridJudgmentService.ts`** — active service
+- **`../predictor.ts`** — the Predictor that consumes this prompt
+- **`../adapters/`** — the LLMAdapter implementations the Predictor injects
 - **`scripts/generate-hybrid-predictions-all.ts`** — batch runner
 - **GitHub Actions** — `.github/workflows/ai-predictions.yml` runs the runner daily at 4:30 AM UTC, after the scraper
 

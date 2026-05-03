@@ -1,9 +1,9 @@
 /**
- * AI Prediction Prompts barrel export.
+ * AI Prompts barrel export.
  *
- * The active prediction service is `hybridJudgmentService.ts`. It imports
- * directly from `./hybridJudgmentPrompt`; this barrel only re-exports the
- * shared weight-class rate helpers that other modules consume.
+ * The active producer is `Predictor` in `src/lib/ai/predictor.ts`. It builds
+ * prompts via `buildJudgmentPredictionPrompt` and matches the LLM response
+ * against `JUDGMENT_RESPONSE_SCHEMA`.
  */
 
 export {
@@ -12,3 +12,13 @@ export {
   normalizeWeightClass,
   type WeightClassRates,
 } from './weightClassRates'
+
+export {
+  buildJudgmentPredictionPrompt,
+  classifyFighterStyle,
+  type FighterStyle,
+  type FightAttributes,
+  type JudgmentPredictionOutput,
+} from './hybridJudgmentPrompt'
+
+export { JUDGMENT_RESPONSE_SCHEMA } from './judgmentResponseSchema'
