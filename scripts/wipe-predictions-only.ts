@@ -193,8 +193,8 @@ async function wipePredictions() {
   console.log('\n' + '=' .repeat(50))
   console.log('✅ Prediction data wiped successfully!')
   console.log('\nNext steps:')
-  console.log('  1. Regenerate predictions: npx ts-node scripts/unified-ai-predictions-runner.ts --force')
-  console.log('  2. Or with web search: npx ts-node scripts/unified-ai-predictions-runner.ts --force --web-search')
+  console.log('  1. Regenerate predictions: npm run predict:all')
+  console.log('     (or directly: npx ts-node scripts/generate-hybrid-predictions-all.ts)')
 }
 
 // Run

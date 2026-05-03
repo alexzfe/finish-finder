@@ -35,7 +35,7 @@ This directory contains deprecated code and documentation preserved for referenc
 
 ## Current Implementation
 - **Scraping**: `scraper/ufc_scraper/` (Python/Scrapy with UFCStats.com)
-- **AI Predictions**: `src/lib/ai/unifiedPredictionService.ts` + `scripts/unified-ai-predictions-runner.ts`
+- **AI Predictions**: `src/lib/ai/hybridJudgmentService.ts` + `scripts/generate-hybrid-predictions-all.ts`
 - **API**: `src/app/api/internal/ingest/route.ts`
 
 ## Git History
