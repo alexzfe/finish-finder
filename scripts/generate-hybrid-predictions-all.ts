@@ -3,6 +3,12 @@
  * Generate predictions for every upcoming fight that doesn't already have one
  * for the active PredictionVersion. Bump PREDICTION_VERSION whenever the
  * prompt, deterministic math, or output contract changes.
+ *
+ * Flags:
+ *   --limit N         Cap this run to N fights (smoke-testing a new version)
+ *   --include-past    Also predict fights whose event date has passed
+ *                     (evaluation mode — generates predictions for historical
+ *                     events so accuracy can be measured against actualFinish)
  */
 
 import { config } from 'dotenv'
@@ -41,14 +47,18 @@ async function main() {
   console.log('='.repeat(60))
 
   const limit = parseLimit()
+  const includePast = process.argv.includes('--include-past')
   if (limit) {
     console.log(`⚠️  --limit ${limit} — capping this run`)
+  }
+  if (includePast) {
+    console.log('⚠️  --include-past — predicting events whose date has passed (evaluation mode)')
   }
 
   const version = await ensurePredictionVersion()
   console.log(`✅ Version: ${version.version}`)
 
-  const allFights = await findFightsMissingPredictions(version.id)
+  const allFights = await findFightsMissingPredictions(version.id, includePast)
   const fights = limit ? allFights.slice(0, limit) : allFights
   if (allFights.length === 0) {
     console.log('✅ All fights already have predictions for this version.')
@@ -137,11 +147,15 @@ async function ensurePredictionVersion() {
   })
 }
 
-async function findFightsMissingPredictions(versionId: string): Promise<FightWithRelations[]> {
+async function findFightsMissingPredictions(
+  versionId: string,
+  includePast: boolean
+): Promise<FightWithRelations[]> {
   return prisma.fight.findMany({
     where: {
       isCancelled: false,
       predictions: { none: { versionId } },
+      ...(includePast ? {} : { event: { date: { gte: new Date() } } }),
     },
     include: {
       fighter1: {
