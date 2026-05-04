@@ -21,7 +21,6 @@
 ## Data Handling
 - Stored data: upcoming event schedules, fighter records, AI predictions. No PII.
 - Logs may contain scraped fighter names and Sherdog URLs; treat as public-level data but avoid distributing externally.
-- When exporting `public/data/events.json`, ensure no internal tokens or admin annotations leak.
 - If enabling fighter imagery scraping, respect robots.txt, set descriptive user agents, and cache aggressively to reduce load.
 
 ## Dependency Hygiene

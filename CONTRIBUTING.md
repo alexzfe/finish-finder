@@ -18,7 +18,7 @@
 1. Install dependencies with `npm install`.
 2. Copy `.env.example` → `.env.local` and fill in secrets (OpenAI, Postgres, Sentry). Never commit `.env.local`.
 3. Start the dev server with `npm run dev`.
-4. Optional: seed data by exporting static JSON via `npm run pages:build` or running the scraper in `check` mode against a populated database.
+4. Optional: seed data by running the scraper in `check` mode against a populated database.
 
 ### Helpful Commands
 | Task | Command |
@@ -27,7 +27,6 @@
 | Type check | `npx tsc --noEmit` (temporary until dedicated script is added) |
 | Run scraper | `npm run scraper:check` |
 | Regenerate predictions | `npm run predict:event` / `npm run predict:all` |
-| Export static bundle | `npm run pages:build` |
 
 ## Quality Expectations
 - Typescript: prefer explicit types on exported functions and complex objects. Avoid `any`.

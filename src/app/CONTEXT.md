@@ -8,20 +8,20 @@ The `src/app/` directory implements the **Next.js 15 App Router** frontend layer
 - Render UFC event schedules with fight cards organized by position (main/preliminary/early preliminary)
 - Fetch and display AI predictions (fun factor, finish probability, entertainment analysis)
 - Manage client-side application state (event selection, fight modals, loading/error states)
-- Handle graceful degradation (API → static JSON fallback)
+- Surface errors to the user when `/api/db-events` fails
 
 ## Current Status: Production-Ready (Nov 2025)
 
 **Evolution Context:**
 - Sep 2024: Initial Next.js 15 migration with Turbopack
 - Sep 2024: Sentry error tracking integration (client/server/edge)
-- Sep 2024: Database API connection established with fallback logic
-- **Current**: Stable production deployment on Vercel with static GitHub Pages mirror
+- Sep 2024: Database API connection established
+- **Current**: Stable production deployment on Vercel
 
 **Status Indicators:**
 - ✅ TypeScript strict mode enforced
 - ✅ Sentry error boundary active in root layout
-- ✅ API fallback to static JSON functional
+- ✅ /api/db-events serves Prisma-backed event feed
 - ✅ Mobile-responsive with UFC-themed design (Tailwind CSS 4)
 - ⚠️ No authentication on public API endpoints
 
@@ -96,21 +96,15 @@ const Component = memo(({ data, onSelect }: ComponentProps) => {
 
 ### Error Handling Strategy
 
-**Graceful Degradation Pattern:**
+**API Fetch Pattern:**
 ```typescript
 try {
-  // 1. Try database API
   const apiResponse = await fetch('/api/db-events')
-  if (apiResponse.ok) {
-    const apiData = await apiResponse.json()
-    if (apiData?.data?.events?.length > 0) {
-      return apiData.data.events
-    }
-  }
+  if (!apiResponse.ok) throw new Error(...)
+  const apiData = await apiResponse.json()
+  // ...validate and apply
 } catch (error) {
-  // 2. Fallback to static JSON
-  const staticResponse = await fetch('/data/events.json')
-  return staticResponse.json()
+  setError('Failed to load events. Please try again.')
 }
 ```
 
@@ -166,17 +160,10 @@ useEffect(() => {
   const fetchEvents = async () => {
     setLoading(true)
     try {
-      // Primary: Database API
       const events = await fetchFromAPI()
       setEvents(events)
     } catch (err) {
-      try {
-        // Fallback: Static JSON
-        const events = await fetchStaticData()
-        setEvents(events)
-      } catch (fallbackErr) {
-        setError('Failed to load events')
-      }
+      setError('Failed to load events')
     } finally {
       setLoading(false)
     }
@@ -184,11 +171,6 @@ useEffect(() => {
   fetchEvents()
 }, [])
 ```
-
-**Benefits:**
-- Resilient to API outages
-- Works offline (if static JSON cached)
-- Fast fallback (<100ms for local JSON)
 
 ### 2. Server Component API Routes
 
@@ -365,21 +347,6 @@ Sentry.captureException(error, {
 })
 ```
 
-### Static Export (GitHub Pages)
-
-**Generation:**
-```
-scripts/export-static-data.js
-  → Queries Prisma for all events
-    → Writes public/data/events.json
-      → GitHub Pages static mirror
-```
-
-**Fallback Chain:**
-1. Vercel API (`/api/db-events`)
-2. Static JSON (`/data/events.json`)
-3. Error message
-
 ## Development Patterns
 
 ### Adding a New Page
@@ -497,8 +464,6 @@ console.log('[db-events] Query started')
 
 **Regular Updates:**
 - Review Sentry errors weekly
-- Update static JSON export after scraper runs
-- Test fallback chain monthly
 
 **Known Limitations:**
 - No authentication on public APIs

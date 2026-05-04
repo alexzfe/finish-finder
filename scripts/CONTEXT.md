@@ -145,8 +145,6 @@ await prisma.$transaction(async (tx) => {
 scripts/
 ├── automated-scraper.js         # Main scraper orchestrator (1611 lines)
 ├── ai-predictions-runner.js     # AI prediction batch generator
-├── export-static-data.js        # GitHub Pages JSON export
-├── prepare-github-pages.js      # Static site build preparation
 ├── generate-*.js                # Various utility scripts
 └── check-*.js                   # Database inspection utilities
 ```
@@ -157,8 +155,6 @@ scripts/
 |--------|---------|-----------|--------------|
 | **automated-scraper.js** | Multi-source scraping + persistence | Daily 2 AM UTC | HybridUFCService, Prisma |
 | **ai-predictions-runner.js** | AI prediction generation | Daily 1:30 AM UTC | OpenAI, Prisma |
-| **export-static-data.js** | Static JSON export | Manual/post-deploy | Prisma |
-| **prepare-github-pages.js** | GitHub Pages build | Manual/CI | None |
 
 ## Architectural Patterns
 
@@ -444,60 +440,6 @@ SCRAPER_CANCEL_THRESHOLD=3
 SCRAPER_FIGHT_CANCEL_THRESHOLD=2
 ```
 
-### 5. Static Export for GitHub Pages
-
-**File:** `scripts/export-static-data.js`
-
-**Workflow:**
-```javascript
-async exportStaticData() {
-  // 1. Query all events with fights
-  const events = await prisma.event.findMany({
-    where: { completed: false },
-    include: {
-      fights: {
-        include: {
-          fighter1: true,
-          fighter2: true
-        }
-      }
-    },
-    orderBy: { date: 'asc' }
-  })
-
-  // 2. Transform to client format
-  const transformed = events.map(event => ({
-    id: event.id,
-    name: event.name,
-    date: event.date.toISOString(),
-    venue: event.venue,
-    location: event.location,
-    fightCard: event.fights.map(fight => ({
-      id: fight.id,
-      fighter1: {
-        name: fight.fighter1.name,
-        record: fight.fighter1.record,
-        // ...
-      },
-      fighter2: { /* ... */ },
-      funFactor: fight.funFactor,
-      finishProbability: fight.finishProbability,
-      // ...
-    }))
-  }))
-
-  // 3. Write to public/data/events.json
-  fs.writeFileSync(
-    'public/data/events.json',
-    JSON.stringify(transformed, null, 2)
-  )
-
-  console.log(`Exported ${events.length} events to static JSON`)
-}
-```
-
-**Trigger:** Manual or post-deploy CI step
-
 ## Integration Points
 
 ### GitHub Actions Workflows
@@ -737,8 +679,6 @@ gh run view <run-id> --log
 |------|-------|---------|
 | `automated-scraper.js` | 1611 | Main scraper orchestrator with deduplication |
 | `ai-predictions-runner.js` | ~500 | AI prediction batch generator |
-| `export-static-data.js` | ~200 | Static JSON export for fallback |
-| `prepare-github-pages.js` | ~100 | GitHub Pages build preparation |
 | `check-database-progress.js` | ~150 | Database inspection utility |
 
 ## Related Documentation
@@ -765,7 +705,6 @@ gh run view <run-id> --log
 **Performance:**
 - Full scraper run (10 events): 3-5 minutes
 - AI predictions (50 fights): 5-10 minutes
-- Static export: <30 seconds
 - Database cleanup: <1 minute
 
 **Future Enhancements:**

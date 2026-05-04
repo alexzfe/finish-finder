@@ -22,7 +22,6 @@
 | **Test Runner** | `npm run test:run` | **Vitest single run mode for CI/scripts.** |
 | **Test Coverage** | `npm run test:coverage` | **Coverage report with 60% thresholds on tested modules.** |
 | Scraper Dry Run | `npm run scraper:check` | Exercises data pipeline end-to-end; requires external services. |
-| Static Export | `npm run pages:build` | Validates export scripts and Prisma access. |
 | Tapology Enrichment (1 event) | `TAPOLOGY_ENRICH_RECORDS=true node scripts/test-enrich-records.js 1` | Verifies fighter record enrichment without DB writes. |
 | Sherdog Local Probe | `npm run sherdog:test:local` | Checks local Sherdog accessibility with rotated headers. |
 | Single Fighter Record | `node scripts/test-tapology-fighter-record.js "Name"` | Fetches a fighter's W-L-D from Tapology. |
@@ -38,9 +37,9 @@
    - Use Prisma test database (SQLite in-memory) to simulate scraper writes and API reads.
    - Mock OpenAI responses to verify prediction handling without live calls.
 3. **End-to-End Smoke**
-   - Use Playwright against local `npm run dev` with seeded data to assert key UI flows (event navigation, fight selection, fallback messaging).
+   - Use Playwright against local `npm run dev` with seeded data to assert key UI flows (event navigation, fight selection).
 4. **Regression Protection**
-   - Add snapshot tests for `public/data/events.json` shape to detect schema drift.
+   - Add snapshot tests for the `/api/db-events` response shape to detect schema drift.
 
 ## Fixtures & Test Data
 - ✅ **Test patterns established** with comprehensive edge case coverage (null/undefined, invalid JSON, circular references, type mismatches)

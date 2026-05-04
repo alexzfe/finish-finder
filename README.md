@@ -21,7 +21,7 @@ Finish Finder helps UFC fans pick the most electric fights. The system:
 - Persists the data in PostgreSQL (SQLite for local play).
 - Calls OpenAI to score finish probability, fun factor, and risk.
 - Delivers a mobile-first, responsive UFC-styled interface with optimized touch targets and sticky fight insights.
-- Exports static JSON bundles for GitHub Pages while supporting a dynamic API on Vercel/Supabase.
+- Serves a dynamic API on Vercel/Supabase.
 
 > ✅ **Automated Scraping Status**: **Phase 1 Complete**. Python/Scrapy scraper infrastructure deployed with content hash change detection, database schema updated, and ingestion API operational. Scraper implementation (parsers, tests) in progress.
 
@@ -30,17 +30,16 @@ Core repo pillars:
 - **APIs** – Prisma-backed routes in `src/app/api`, including `/api/db-events` (event feed), `/api/internal/ingest` (scraper ingestion), `/api/health` (system health checks), and `/api/performance` (database performance metrics).
 - **Scraper** – Python/Scrapy scraper in `/scraper` directory that crawls UFCStats.com and POSTs to the ingestion API with content hash change detection.
 - **Data & AI** – `src/lib/ai/hybridUFCService.ts` orchestrates prediction requests. Supporting utilities and validation schemas live in `src/lib`.
-- **Automation** – Node scripts in `scripts/` schedule scrapes, regenerate predictions, export static JSON, and prep GitHub Pages artifacts.
+- **Automation** – Node scripts in `scripts/` schedule scrapes and regenerate predictions.
 
 ## Architecture Snapshot
 | Slice | Entrypoints | Notes |
 | --- | --- | --- |
-| UI | `src/app/page.tsx`, `src/components/**` | Mobile-first responsive design. Fetches `/api/db-events` first, falls back to `public/data/events.json`. Adaptive sidebar: prominent on mobile, sticky on desktop. |
+| UI | `src/app/page.tsx`, `src/components/**` | Mobile-first responsive design. Fetches `/api/db-events`. Adaptive sidebar: prominent on mobile, sticky on desktop. |
 | API | `src/app/api/db-events/route.ts`, `src/app/api/fighter-image/route.ts`, `src/app/api/health/route.ts`, `src/app/api/performance/route.ts` | Prisma event feed with JSON safety guards; fighter-image route currently disabled to reduce third-party scraping noise. Health and performance monitoring endpoints for observability. |
 | Data Layer | `prisma/schema.prisma`, `prisma/migrations/**` | Runs on SQLite locally and Supabase/Postgres remotely. Includes ScrapeLog audit table and scraper fields (sourceUrl, contentHash, lastScrapedAt). |
 | Scraper | `scraper/ufc_scraper/`, `src/app/api/internal/ingest/route.ts`, `src/lib/scraper/validation.ts` | Python/Scrapy spider extracts data from UFCStats.com → POSTs JSON to Next.js API → Transaction-safe upserts with SHA256 change detection. Creates ScrapeLog entries for monitoring. |
 | AI | `src/lib/ai/hybridUFCService.ts`, `scripts/generate-*.js` | Generates fight predictions using OpenAI GPT-4o based on scraped data. |
-| Static Export | `scripts/export-static-data.js`, `scripts/prepare-github-pages.js`, `docs/` | Produces GitHub Pages snapshot with `_next` assets and pre-rendered data. |
 | Monitoring | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts`, `src/app/admin/`, `src/lib/database/monitoring.ts` | Sentry is wired for client, server, and edge; logger utilities keep console output structured. Database performance monitoring with admin dashboard at `/admin`. |
 
 ## Quickstart
@@ -63,14 +62,7 @@ cp .env.example .env.local
 ```bash
 npm run dev               # Start Next.js with Turbopack on http://localhost:3000
 ```
-The app attempts `/api/db-events` first. Without a database it will read from `public/data/events.json`.
-
-**Admin Dashboard**: Access database performance monitoring at `http://localhost:3000/admin` (password: "admin123" in development mode).
-
-To view the static export:
-```bash
-npm run pages:build       # Regenerates docs/ and public/data snapshots
-```
+The app fetches `/api/db-events`; you'll need a populated `DATABASE_URL` for it to render anything.
 
 ### Database Tasks
 ```bash
@@ -135,7 +127,6 @@ For detailed scraper documentation, see [`scraper/README.md`](scraper/README.md)
 ```bash
 npm run predict:event     # Generate AI predictions for the newest event(s)
 npm run predict:all       # Regenerate predictions for every tracked fight
-npm run pages:build       # Refresh GitHub Pages bundle under docs/
 ```
 
 Prediction commands require `DATABASE_URL` and `OPENAI_API_KEY`.
@@ -169,7 +160,6 @@ Recommended production topology:
 1. **Vercel + Supabase** – Deploy the Next.js app to Vercel (`npm run build`) and point Prisma at Supabase Postgres.
 2. **Secrets** – Configure `DATABASE_URL`, `DIRECT_DATABASE_URL`, `INGEST_API_SECRET`, `OPENAI_API_KEY`, and `SENTRY_*` in Vercel env settings and GitHub Actions secrets.
 3. **Automated Scraper** – Python/Scrapy scraper runs in GitHub Actions, POSTs to `/api/internal/ingest` endpoint.
-4. **Static Mirror (Optional)** – After successful scrapes, run `npm run pages:build` and publish `docs/` to GitHub Pages for a static fallback.
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`OPERATIONS.md`](OPERATIONS.md) for deeper diagrams, runbooks, and deployment checklists.
 

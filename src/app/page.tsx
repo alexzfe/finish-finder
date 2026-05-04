@@ -36,13 +36,7 @@ export default function Home() {
   const [selectedFight, setSelectedFight] = useState<Fight | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  // Fetch collected events from the database when available, otherwise fallback to static JSON
   useEffect(() => {
-    const basePath = process.env.NEXT_PUBLIC_BASE_PATH
-      ? `/${process.env.NEXT_PUBLIC_BASE_PATH.replace(/^\/+/, '')}`
-      : ''
-    const staticEventsUrl = `${basePath}/data/events.json`
-
     const parseEvents = (raw: unknown): UFCEvent[] | null => {
       if (!Array.isArray(raw) || raw.length === 0) return null
       const result = UFCEventSchema.array().safeParse(raw)
@@ -76,36 +70,20 @@ export default function Home() {
 
     const fetchEvents = async () => {
       setLoading(true)
-
       try {
         const apiResponse = await fetch('/api/db-events')
-        if (apiResponse.ok) {
-          const apiData = await apiResponse.json()
-          const sortedEvents = parseEvents(apiData?.data?.events)
-          if (sortedEvents) {
-            applyEvents(sortedEvents)
-            setLoading(false)
-            return
-          }
+        if (!apiResponse.ok) {
+          throw new Error(`Events fetch failed with status ${apiResponse.status}`)
         }
-      } catch (error) {
-        console.warn('API event fetch failed, falling back to static data.', error)
-      }
-
-      try {
-        const staticResponse = await fetch(staticEventsUrl)
-        if (!staticResponse.ok) {
-          throw new Error(`Static events fetch failed with status ${staticResponse.status}`)
-        }
-        const staticData = await staticResponse.json()
-        const sortedEvents = parseEvents(staticData?.events)
-        if (sortedEvents) {
-          applyEvents(sortedEvents)
+        const apiData = await apiResponse.json()
+        const sortedEvents = parseEvents(apiData?.data?.events)
+        if (!sortedEvents) {
+          setError('No events available.')
           return
         }
-        setError('No events available in static data. Please update data/events.json.')
-      } catch (fallbackError) {
-        console.error('Error fetching static events:', fallbackError)
+        applyEvents(sortedEvents)
+      } catch (error) {
+        console.error('Error fetching events:', error)
         setError('Failed to load events. Please try again.')
       } finally {
         setLoading(false)

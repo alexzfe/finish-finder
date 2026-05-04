@@ -22,7 +22,6 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "predict:all": "npx ts-node scripts/generate-hybrid-predictions-all.ts",
-    "pages:build": "node scripts/prepare-github-pages.js",
     "sherdog:test:local": "node scripts/test-sherdog-local.js",
     "db:migrate": "npx prisma migrate dev",
     "db:push": "npx prisma db push",

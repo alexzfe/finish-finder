@@ -38,20 +38,19 @@ Users → Next.js App (Vercel/GitHub Pages)
 ## Runtime Components
 | Layer | Responsibilities | Key Files |
 | --- | --- | --- |
-| **UI** | Renders events, fight cards, and sticky analysis. Handles optimistic selection state and base-path aware static fetch. | `src/app/page.tsx`, `src/components/**/*`
+| **UI** | Renders events, fight cards, and sticky analysis. Handles optimistic selection state. | `src/app/page.tsx`, `src/components/**/*`
 | **API** | Serves structured fight data from the database and (optionally) resolves fighter imagery. Includes ingestion API for scraper data submission, JSON safety nets, performance monitoring, and health check endpoints. | `src/app/api/db-events/route.ts`, `src/app/api/internal/ingest/route.ts`, `src/app/api/fighter-image/route.ts`, `src/app/api/performance/route.ts`, `src/app/api/health/route.ts`
 | **Data & Domain** | Defines TypeScript and Prisma models (Event, Fight, Fighter, ScrapeLog), conversion helpers, logging utilities, JSON parsing utilities, weight-class validation, scraper data validation schemas, and database performance monitoring. | `prisma/schema.prisma`, `src/types/**/*`, `src/lib/**/*`, `src/lib/utils/json.ts`, `src/lib/utils/weight-class.ts`, `src/lib/database/validation.ts`, `src/lib/database/monitoring.ts`, `src/lib/scraper/validation.ts`
 | **Scraper** | Python/Scrapy spider scrapes UFCStats.com for events, fights, and fighter profiles. Includes HTML parsers, content hash change detection, and API ingestion pipeline. Runs daily via GitHub Actions. | `scraper/ufc_scraper/spiders/ufcstats.py`, `scraper/ufc_scraper/parsers.py`, `scraper/ufc_scraper/pipelines.py`, `scraper/ufc_scraper/items.py`, `.github/workflows/scraper.yml`
-| **AI Predictions** | Generates fight predictions using OpenAI GPT-4o. Runs as separate daily workflow, exports static bundles, and prepares GitHub Pages artifacts. | `scripts/ai-predictions-runner.js`, `scripts/generate-*.js`, `scripts/export-static-data.js`, `scripts/prepare-github-pages.js`, `.github/workflows/ai-predictions.yml`
+| **AI Predictions** | Generates fight predictions using OpenAI GPT-4o. Runs as separate daily workflow. | `scripts/ai-predictions-runner.js`, `scripts/generate-*.js`, `.github/workflows/ai-predictions.yml`
 | **Monitoring** | Wires Sentry for client/server/edge and exposes loggers with structured output. ScrapeLog table provides audit trail of scraper executions. Provides database performance monitoring, health checks, and admin dashboard. | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts`, `src/app/admin/`, `src/components/admin/`, `prisma/schema.prisma` (ScrapeLog model)
 
 ## Data & Control Flow
 1. **Scrape** – Python/Scrapy spider runs daily at 2:00 AM UTC via GitHub Actions (`.github/workflows/scraper.yml`). It crawls UFCStats.com event listings, extracts fight details and fighter profiles, then POSTs JSON payloads to `/api/internal/ingest` with Bearer token authentication. The ingestion API validates data with Zod schemas, performs SHA256 content hash comparison to detect changes, and executes transaction-safe upserts to Postgres. Creates `ScrapeLog` audit entries for monitoring. Spider can be triggered manually with optional event limit.
 2. **Predict** – Separate AI predictions workflow (`.github/workflows/ai-predictions.yml`) runs daily at 1:30 AM UTC. Script `scripts/ai-predictions-runner.js` identifies fights lacking AI predictions and batches them through OpenAI using `buildPredictionPrompt`. Results update `fights` table with entertainment scores and finish probabilities, plus `predictionUsage` metrics.
-3. **Serve** – The UI requests `/api/db-events`. When Postgres is reachable it returns Prisma-backed events with fight enrichment data (title fights, card position, main event flags); otherwise the frontend falls back to `public/data/events.json` (exported via `scripts/export-static-data.js`).
-4. **Static Mirror** – `scripts/prepare-github-pages.js` copies the production `out/` bundle into `docs/` so GitHub Pages can host a static mirror with client-side data fetching disabled.
-5. **Monitoring** – Each failure path logs to Sentry (client/server) or to the structured logger. Scraper executions tracked in `ScrapeLog` table with status, event counts, and error messages. Database operations are automatically tracked via Prisma middleware for performance analysis.
-6. **Performance Tracking** – All database queries are monitored in real-time, with slow/critical query detection and health scoring. Admins can access performance data via `/api/health`, `/api/performance`, or the dashboard at `/admin`.
+3. **Serve** – The UI requests `/api/db-events`, which returns Prisma-backed events with fight enrichment data (title fights, card position, main event flags).
+4. **Monitoring** – Each failure path logs to Sentry (client/server) or to the structured logger. Scraper executions tracked in `ScrapeLog` table with status, event counts, and error messages. Database operations are automatically tracked via Prisma middleware for performance analysis.
+5. **Performance Tracking** – All database queries are monitored in real-time, with slow/critical query detection and health scoring. Admins can access performance data via `/api/health`, `/api/performance`, or the dashboard at `/admin`.
 
 ## External Integrations
 - **UFCStats.com** – Single authoritative data source for all UFC events, fights, and fighter profiles. Official UFC stats partner with consistent HTML structure. Python/Scrapy spider respects robots.txt and implements 3-second request delays.
@@ -59,7 +58,7 @@ Users → Next.js App (Vercel/GitHub Pages)
 - **Fighter imagery** – Implemented in `fighter-image` route but currently disabled (returns placeholder) to avoid aggressive scraping until rate-limiting is solved.
 - **OpenAI (gpt-4o)** – Generates fight entertainment analysis; chunk size configurable via `OPENAI_PREDICTION_CHUNK_SIZE`.
 - **Sentry** – Error and performance monitoring for UI, API, and edge functions.
-- **GitHub Actions** – Schedules daily scraper runs (2:00 AM UTC) and AI predictions (1:30 AM UTC). Publishes static exports to GitHub Pages.
+- **GitHub Actions** – Schedules daily scraper runs (2:00 AM UTC) and AI predictions (1:30 AM UTC).
 - **Supabase PostgreSQL** – Managed database with connection pooling. Uses `DATABASE_URL` for runtime, `DIRECT_DATABASE_URL` for migrations.
 
 ## Configuration & Environments

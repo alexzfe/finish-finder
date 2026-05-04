@@ -210,14 +210,6 @@ GROUP BY status;
 
 **Detailed troubleshooting guide**: See `/scraper/OPERATIONS.md`
 
-### Static Export Refresh
-```bash
-npm run pages:build
-```
-This writes:
-- `public/data/events.json` – canonical JSON feed.
-- `docs/` – static Next.js export for GitHub Pages. Ensure GitHub Pages is configured to serve from `docs/` on `main`.
-
 ### Database Migration
 1. Update `prisma/schema.prisma`.
 2. Generate migration:
@@ -252,7 +244,7 @@ This writes:
 ## Incident Response
 | Symptom | Checks | Remediation |
 | --- | --- | --- |
-| **No events in UI** | `/api/db-events` returns 500 or empty. Check Postgres availability and `ScrapeLog` table. | Run manual scrape via `gh workflow run scraper.yml -f limit=1`. Check Sentry for API errors. Static fallback available at `public/data/events.json`. |
+| **No events in UI** | `/api/db-events` returns 500 or empty. Check Postgres availability and `ScrapeLog` table. | Run manual scrape via `gh workflow run scraper.yml -f limit=1`. Check Sentry for API errors. |
 | **Scraper returns 0 events** | Check `ScrapeLog.errorMessage` and GitHub Actions logs. | UFCStats.com HTML may have changed. Update parsers in `/scraper/ufc_scraper/parsers.py`. Run tests: `pytest tests/test_parsers.py -v`. |
 | **API authentication failures** | Scraper logs show 401/403 errors. | Verify `INGEST_API_SECRET` matches in GitHub secrets and Vercel environment variables. Rotate secret if compromised. |
 | **Database connection errors** | Scraper logs show "Can't reach database server". | Check Supabase database status. Verify `DATABASE_URL` in Vercel. Test connection: `node -e "require('@prisma/client').PrismaClient().$connect()"` |
@@ -262,5 +254,4 @@ This writes:
 
 ## Backups & Data Retention
 - **Database** – Rely on managed Postgres backups (Supabase PITR or provider snapshots). Schedule nightly exports at minimum.
-- **Static Data** – `public/data/events.json` can be archived per release tag for forensic comparisons.
 - **Scrape Logs** – GitHub Actions artifacts retained for 7 days. ScrapeLog database table provides long-term audit trail. Consider archiving old ScrapeLog entries (>90 days) for historical analysis.

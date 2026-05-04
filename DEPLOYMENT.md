@@ -92,17 +92,6 @@ Future step: once lint/type cleanup is finished, revert `eslint.ignoreDuringBuil
   - 2025-11-01: Connected UI to new database, fixed Prisma export issue
   - 2025-11-01: Updated environment variables with new database connection strings
 
-## GitHub Pages Deployment (Static)
-
-Switch to the `github-pages-static` branch for static hosting:
-```bash
-git checkout github-pages-static
-npm run pages:build
-git add docs/
-git commit -m "Update static export"
-git push
-```
-
 ## Local Development
 
 For local development, you can use either SQLite or PostgreSQL:
