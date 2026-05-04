@@ -22,7 +22,7 @@ if (existsSync(envPath)) {
 }
 
 import { OpenAIAdapter } from '../src/lib/ai/adapters'
-import { PredictionRepository } from '../src/lib/ai/persistence/predictionRepository'
+import { PredictionStore } from '../src/lib/ai/persistence/predictionStore'
 import { Predictor } from '../src/lib/ai/predictor'
 import { buildSnapshot, type FightWithRelations } from '../src/lib/ai/snapshot'
 import { prisma } from '../src/lib/database/prisma'
@@ -71,10 +71,16 @@ async function main() {
     console.log(`⚠️  --event-id ${eventId} — restricting to a single event`)
   }
 
+  const store = new PredictionStore(prisma)
+
   const version = await ensurePredictionVersion()
   console.log(`✅ Version: ${version.version}`)
 
-  const allFights = await findFightsMissingPredictions(version.id, includePast, eventId)
+  const allFights = await store.findFightsMissingPrediction({
+    versionId: version.id,
+    eventId,
+    includePast,
+  })
   const fights = limit ? allFights.slice(0, limit) : allFights
   if (allFights.length === 0) {
     console.log('✅ All fights already have predictions for this version.')
@@ -91,7 +97,6 @@ async function main() {
 
   const adapter = new OpenAIAdapter({ model: OPENAI_MODEL })
   const predictor = new Predictor(adapter)
-  const repository = new PredictionRepository(prisma)
   console.log(`\n🧠 Using OpenAIAdapter(model=${OPENAI_MODEL}) with hybrid judgment\n`)
 
   let totalTokens = 0
@@ -109,7 +114,7 @@ async function main() {
     try {
       const snapshot = buildSnapshot(fight)
       const prediction = await predictor.predict(snapshot)
-      await repository.save({
+      await store.save({
         fightId: fight.id,
         versionId: version.id,
         prediction,
@@ -177,37 +182,6 @@ async function ensurePredictionVersion() {
         active: true,
       },
     })
-  })
-}
-
-async function findFightsMissingPredictions(
-  versionId: string,
-  includePast: boolean,
-  eventId: string | null
-): Promise<FightWithRelations[]> {
-  return prisma.fight.findMany({
-    where: {
-      isCancelled: false,
-      predictions: { none: { versionId } },
-      ...(eventId ? { eventId } : {}),
-      ...(includePast || eventId ? {} : { event: { date: { gte: new Date() } } }),
-    },
-    include: {
-      fighter1: {
-        include: {
-          entertainmentProfile: true,
-          contextChunks: { orderBy: { createdAt: 'desc' }, take: 1 },
-        },
-      },
-      fighter2: {
-        include: {
-          entertainmentProfile: true,
-          contextChunks: { orderBy: { createdAt: 'desc' }, take: 1 },
-        },
-      },
-      event: true,
-    },
-    orderBy: [{ event: { date: 'asc' } }, { fightNumber: 'asc' }],
   })
 }
 

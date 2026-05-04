@@ -180,14 +180,12 @@ async function wipePredictions() {
     fighters: await prisma.fighter.count(),
     events: await prisma.event.count(),
     fights: await prisma.fight.count(),
-    contextChunks: await prisma.fighterContextChunk.count(),
     entertainmentProfiles: await prisma.fighterEntertainmentProfile.count(),
   }
 
   console.log(`  Fighters: ${coreCounts.fighters} ✅`)
   console.log(`  Events: ${coreCounts.events} ✅`)
   console.log(`  Fights: ${coreCounts.fights} ✅`)
-  console.log(`  Context Chunks: ${coreCounts.contextChunks} ✅`)
   console.log(`  Entertainment Profiles: ${coreCounts.entertainmentProfiles} ✅`)
 
   console.log('\n' + '=' .repeat(50))

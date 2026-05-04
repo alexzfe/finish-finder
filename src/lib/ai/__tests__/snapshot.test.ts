@@ -5,7 +5,6 @@ import { buildSnapshot, type FightWithRelations, type FighterWithRelations } fro
 import type {
   Event,
   Fight,
-  FighterContextChunk,
   FighterEntertainmentProfile as PrismaFighterEntertainmentProfile,
 } from '@prisma/client'
 
@@ -65,10 +64,7 @@ function makeFighter(overrides: Partial<FighterWithRelations> = {}): FighterWith
     contentHash: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    profileText: null,
-    embeddingUpdatedAt: null,
     entertainmentProfile: null,
-    contextChunks: [],
     ...overrides,
   } as FighterWithRelations
 }
@@ -192,42 +188,6 @@ describe('buildSnapshot', () => {
       makeFight({ fighter1: makeFighter({ entertainmentProfile: null }) })
     )
     expect(snapshot.fighter1.entertainmentProfile).toBeUndefined()
-  })
-
-  it('omits recentContext when contextChunks is empty', () => {
-    const snapshot = buildSnapshot(
-      makeFight({ fighter1: makeFighter({ contextChunks: [] }) })
-    )
-    expect(snapshot.fighter1.recentContext).toBeUndefined()
-  })
-
-  it('uses the first contextChunk content as recentContext (caller orders by recency)', () => {
-    const chunks: FighterContextChunk[] = [
-      {
-        id: 'c1',
-        fighterId: 'f1',
-        content: 'most recent',
-        contentType: 'news',
-        sourceUrl: null,
-        publishedAt: null,
-        expiresAt: null,
-        createdAt: new Date(),
-      } as FighterContextChunk,
-      {
-        id: 'c2',
-        fighterId: 'f1',
-        content: 'older',
-        contentType: 'news',
-        sourceUrl: null,
-        publishedAt: null,
-        expiresAt: null,
-        createdAt: new Date(),
-      } as FighterContextChunk,
-    ]
-    const snapshot = buildSnapshot(
-      makeFight({ fighter1: makeFighter({ contextChunks: chunks }) })
-    )
-    expect(snapshot.fighter1.recentContext).toBe('most recent')
   })
 
   it('translates a snake_case Prisma entertainment profile into the camelCase context shape', () => {

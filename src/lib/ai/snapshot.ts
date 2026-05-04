@@ -3,7 +3,6 @@ import { z } from 'zod'
 import type {
   Fight,
   Fighter,
-  FighterContextChunk,
   FighterEntertainmentProfile as PrismaFighterEntertainmentProfile,
   Event,
 } from '@prisma/client'
@@ -43,7 +42,6 @@ export const FighterSnapshotSchema = z.object({
 
   primaryStyle: FighterStyleSchema,
 
-  recentContext: z.string().optional(),
   entertainmentProfile: FighterEntertainmentContext.optional(),
 })
 
@@ -66,7 +64,6 @@ export type FightSnapshot = z.infer<typeof FightSnapshotSchema>
 
 export type FighterWithRelations = Fighter & {
   entertainmentProfile: PrismaFighterEntertainmentProfile | null
-  contextChunks: FighterContextChunk[]
 }
 
 export type FightWithRelations = Fight & {
@@ -97,7 +94,6 @@ export function buildSnapshot(fight: FightWithRelations): FightSnapshot {
 
 function toFighterSnapshot(fighter: FighterWithRelations) {
   const profile = fighter.entertainmentProfile
-  const recent = fighter.contextChunks[0]?.content
 
   return {
     name: fighter.name,
@@ -128,7 +124,6 @@ function toFighterSnapshot(fighter: FighterWithRelations) {
       submissionAverage: fighter.submissionAverage,
     }),
 
-    recentContext: recent,
     entertainmentProfile: profile ? toEntertainmentContext(profile) : undefined,
   }
 }

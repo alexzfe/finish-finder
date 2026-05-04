@@ -23,7 +23,7 @@ import { RateLimiter, createRateLimitHeaders, getClientIP } from '@/lib/api/midd
 import { CARD_POSITION_ORDER, RATE_LIMITS } from '@/config'
 import { prisma } from '@/lib/database/prisma'
 import { apiLogger } from '@/lib/monitoring/logger'
-import { parseJsonArray } from '@/lib/utils/json'
+import { PredictionStore, toCurrentPrediction } from '@/lib/ai/persistence/predictionStore'
 
 // Configure route to be dynamic
 export const dynamic = 'force-dynamic'
@@ -31,6 +31,10 @@ export const revalidate = 0
 
 // Initialize rate limiter
 const rateLimiter = new RateLimiter(RATE_LIMITS.DEFAULT)
+
+// PredictionStore is the single seam for "current prediction for a fight" —
+// owns active-version lookup and the legacy-column compat shim.
+const predictionStore = new PredictionStore(prisma)
 
 /**
  * Transformed fight data for API response
@@ -89,82 +93,6 @@ interface TransformedEvent {
 }
 
 /**
- * Extract the 1-10 fun score from a fight's active prediction.
- * Falls back to the legacy `funFactor` column (already on a 1-10 scale).
- */
-function extractPredictedFunScore(fight: {
-  predictions: Array<{ funScore: number | null }>
-  funFactor: number | null
-}): number {
-  const prediction = fight.predictions[0]
-  if (prediction && typeof prediction.funScore === 'number') {
-    return clampFunScore(prediction.funScore)
-  }
-  if (typeof fight.funFactor === 'number') {
-    return clampFunScore(fight.funFactor)
-  }
-  return 0
-}
-
-function clampFunScore(score: number): number {
-  return Math.min(10, Math.max(0, Math.round(score)))
-}
-
-/**
- * Extract finish probability (0-1) from a fight's active prediction.
- */
-function extractFinishProbability(fight: {
-  predictions: Array<{ finishProbability: number | null }>
-  finishProbability: number | null
-}): number {
-  const prediction = fight.predictions[0]
-  if (prediction && typeof prediction.finishProbability === 'number') {
-    return prediction.finishProbability
-  }
-  return fight.finishProbability || 0
-}
-
-/**
- * Extract finish confidence (0-1) from a fight's active prediction.
- */
-function extractFinishConfidence(fight: {
-  predictions: Array<{ finishConfidence: number | null }>
-}): number {
-  const prediction = fight.predictions[0]
-  if (prediction && typeof prediction.finishConfidence === 'number') {
-    return prediction.finishConfidence
-  }
-  return 0
-}
-
-/**
- * Extract keyFactors from a fight's active prediction (funBreakdown.keyFactors).
- * Falls back to legacy keyFactors / funFactors columns.
- */
-function extractFunFactors(fight: {
-  predictions: Array<{ funBreakdown: unknown }>
-  keyFactors: string | null
-  funFactors: string | null
-}): string[] {
-  const prediction = fight.predictions[0]
-  if (prediction?.funBreakdown) {
-    try {
-      const breakdown = typeof prediction.funBreakdown === 'string'
-        ? JSON.parse(prediction.funBreakdown)
-        : prediction.funBreakdown
-      if (Array.isArray(breakdown?.keyFactors)) {
-        return breakdown.keyFactors.filter((f: unknown): f is string => typeof f === 'string')
-      }
-    } catch {
-      // fall through to legacy fields
-    }
-  }
-  return parseJsonArray(fight.keyFactors ?? fight.funFactors).filter(
-    (f): f is string => typeof f === 'string'
-  )
-}
-
-/**
  * Transform database fight to API response format
  */
 function transformFight(fight: {
@@ -213,6 +141,7 @@ function transformFight(fight: {
   round: number | null
   time: string | null
 }): TransformedFight {
+  const current = toCurrentPrediction(fight)
   return {
     id: fight.id,
     fighter1: {
@@ -245,10 +174,10 @@ function transformFight(fight: {
     cardPosition: fight.cardPosition,
     scheduledRounds: fight.scheduledRounds,
     fightNumber: fight.fightNumber,
-    predictedFunScore: extractPredictedFunScore(fight),
-    finishProbability: extractFinishProbability(fight),
-    finishConfidence: extractFinishConfidence(fight),
-    funFactors: extractFunFactors(fight),
+    predictedFunScore: current?.funScore ?? 0,
+    finishProbability: current?.finishProbability ?? 0,
+    finishConfidence: current?.finishConfidence ?? 0,
+    funFactors: current?.funFactors ?? [],
     fightPrediction: fight.fightPrediction,
     completed: fight.completed,
     bookingDate: fight.bookingDate,
@@ -334,10 +263,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get active prediction version
-    const activePredictionVersion = await prisma.predictionVersion.findFirst({
-      where: { active: true },
-      orderBy: { createdAt: 'desc' },
-    })
+    const activePredictionVersion = await predictionStore.getActiveVersion()
 
     // Fetch events with fights and predictions
     const events = await prisma.event.findMany({

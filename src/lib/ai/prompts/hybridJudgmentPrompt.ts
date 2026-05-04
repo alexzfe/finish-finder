@@ -95,7 +95,6 @@ export function buildJudgmentPredictionPrompt(input: FightSnapshot): string {
 
   // Build context sections
   const contextSection = buildContextSection(context)
-  const recentContextSection = buildRecentContextSection(fighter1, fighter2)
   const entertainmentProfileSection = buildEntertainmentProfileSection(fighter1, fighter2)
 
   return `You are an elite MMA analyst predicting fight entertainment value. You have access to comprehensive fighter data, statistics, and qualitative profiles.
@@ -140,7 +139,7 @@ MATCHUP SUMMARY:
 • Combined strikes/min: ${combinedStrikeRate.toFixed(1)} ${combinedStrikeRate >= 10 ? '(ELITE pace)' : combinedStrikeRate >= 7 ? '(High pace)' : ''}
 • Combined UFC finish rate: ${(((fighter1.finishRate + fighter2.finishRate) / 2) * 100).toFixed(1)}%
 • Style matchup: ${fighter1.primaryStyle.toUpperCase()} vs ${fighter2.primaryStyle.toUpperCase()}
-${recentContextSection}${entertainmentProfileSection}
+${entertainmentProfileSection}
 
 IMPORTANT: You are an MMA expert with deep knowledge of UFC fighters. USE your knowledge of these fighters — their reputations, famous fights, tendencies, rivalries, training camps, and public personas — to inform your numeric ratings. Don't be timid: a known wrestler-vs-wrestler matchup deserves a low funScore even if the stats look balanced.
 
@@ -250,27 +249,6 @@ function buildContextSection(context: FightContext): string {
   return parts.length > 0 ? parts.join(' | ') : ''
 }
 
-function buildRecentContextSection(
-  fighter1: FighterSnapshot,
-  fighter2: FighterSnapshot
-): string {
-  if (!fighter1.recentContext && !fighter2.recentContext) {
-    return ''
-  }
-
-  let section = '\n\nRECENT CONTEXT (From Web Search):\n'
-
-  if (fighter1.recentContext) {
-    section += `${fighter1.name}: ${fighter1.recentContext}\n`
-  }
-  if (fighter2.recentContext) {
-    section += `${fighter2.name}: ${fighter2.recentContext}\n`
-  }
-
-  section += 'Consider recent momentum, injuries, or stylistic changes in your analysis.'
-
-  return section
-}
 
 function formatEntertainmentProfile(
   profile: FighterEntertainmentContext,

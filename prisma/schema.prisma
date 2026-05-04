@@ -83,15 +83,9 @@ model Fighter {
   createdAt                  DateTime  @default(now())
   updatedAt                  DateTime  @updatedAt
 
-  // Embedding/RAG fields (vector column managed via raw SQL)
-  profileText                String?   @map("profile_text") @db.Text  // Text summary for embedding
-  embeddingUpdatedAt         DateTime? @map("embedding_updated_at")
-  // Note: profile_embedding (vector) and search_vector (tsvector) are managed via raw SQL
-
   // Relations
   fighter1Fights             Fight[]   @relation("Fighter1")
   fighter2Fights             Fight[]   @relation("Fighter2")
-  contextChunks              FighterContextChunk[]
   entertainmentProfile       FighterEntertainmentProfile?
 
   @@map("fighters")
@@ -394,30 +388,6 @@ model WeakSupervisionLabel {
   fight                 Fight    @relation(fields: [fightId], references: [id], onDelete: Cascade)
 
   @@map("weak_supervision_labels")
-}
-
-// ============================================
-// PHASE 3: RAG INFRASTRUCTURE
-// ============================================
-
-model FighterContextChunk {
-  id          String    @id @default(cuid())
-  fighterId   String    @map("fighter_id")
-  content     String    @db.Text
-  contentType String    @map("content_type")  // 'news', 'analysis', 'fight_history', 'training_camp'
-  sourceUrl   String?   @map("source_url")
-  publishedAt DateTime? @map("published_at")
-  expiresAt   DateTime? @map("expires_at")    // For time-sensitive content
-  createdAt   DateTime  @default(now()) @map("created_at")
-  // Note: embedding (vector) and search_vector (tsvector) are managed via raw SQL
-
-  // Relations
-  fighter     Fighter   @relation(fields: [fighterId], references: [id], onDelete: Cascade)
-
-  @@index([fighterId])
-  @@index([contentType])
-  @@index([expiresAt])
-  @@map("fighter_context_chunks")
 }
 
 // ============================================
