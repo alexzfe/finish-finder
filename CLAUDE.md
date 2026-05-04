@@ -17,8 +17,10 @@ scraper and OpenAI-driven prediction pipeline. Reads served via
   `scripts/generate-hybrid-predictions-all.ts` whenever the prompt,
   deterministic math, or output contract changes. An earlier auto-hash
   approach churned versions on cosmetic edits and was dropped.
-- **Scraper writes are transactional.** Fighter/Event/Fight upserts in
-  `src/app/api/internal/ingest/route.ts` run inside one `prisma.$transaction`.
+- **Scraper writes are transactional.** `IngestOrchestrator`
+  (`src/lib/scraper/ingestOrchestrator.ts`) coordinates Fighter/Event/Fight
+  upserts inside one `prisma.$transaction`; the route handler is just auth +
+  parse + delegate.
 - **OpenAI calls must set `timeout`** (default 60_000) — the SDK hangs without it.
 
 ## System map
@@ -29,7 +31,7 @@ scraper and OpenAI-driven prediction pipeline. Reads served via
 | API routes | `src/app/api/db-events/`, `src/app/api/internal/ingest/`, `src/app/api/health/` |
 | Stores | `src/lib/database/{fighterStore,eventStore,fightStore}.ts`, `src/lib/ai/persistence/predictionStore.ts` |
 | Predictions | `src/lib/ai/{predictor,snapshot}.ts`, `src/lib/ai/adapters/`, `src/lib/ai/math/finishProbability.ts` |
-| Scraper (TS) | `src/lib/scraper/{validation,fightReconciler,contentHash}.ts` |
+| Scraper (TS) | `src/lib/scraper/{validation,fightReconciler,contentHash,ingestOrchestrator}.ts` |
 | Scraper (Python) | `scraper/ufc_scraper/` |
 | Schema | `prisma/schema.prisma` |
 

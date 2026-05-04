@@ -19,12 +19,18 @@ import { FighterStore } from '@/lib/database/fighterStore'
 import { FightStore } from '@/lib/database/fightStore'
 import prisma from '@/lib/database/prisma'
 import { apiLogger } from '@/lib/monitoring/logger'
-import { planFightReconciliation } from '@/lib/scraper/fightReconciler'
+import { IngestOrchestrator, type IngestResult } from '@/lib/scraper/ingestOrchestrator'
 import { ScrapedDataSchema, type ScrapedData } from '@/lib/scraper/validation'
 
 const fighterStore = new FighterStore(prisma)
 const eventStore = new EventStore(prisma)
 const fightStore = new FightStore(prisma)
+const orchestrator = new IngestOrchestrator(
+  prisma.$transaction.bind(prisma),
+  fighterStore,
+  eventStore,
+  fightStore,
+)
 
 /**
  * POST /api/internal/ingest
@@ -35,7 +41,6 @@ export async function POST(req: NextRequest) {
   const requestId = getRequestId(req)
 
   try {
-    // 1. Authenticate request with timing-safe comparison
     const authHeader = req.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
     const expectedToken = process.env.INGEST_API_SECRET || ''
@@ -49,19 +54,54 @@ export async function POST(req: NextRequest) {
       throw Errors.unauthorized('Invalid or missing authentication token')
     }
 
-    // 2. Parse and validate request body
     const body = await req.json()
-    const result = ScrapedDataSchema.safeParse(body)
+    const parsed = ScrapedDataSchema.safeParse(body)
 
-    if (!result.success) {
-      const errors = result.error.errors.map((err) => `${err.path.join('.')}: ${err.message}`)
+    if (!parsed.success) {
+      const errors = parsed.error.errors.map((err) => `${err.path.join('.')}: ${err.message}`)
       throw Errors.validation('Request validation failed', { errors })
     }
 
-    const data = result.data
+    const data = parsed.data
+    const startTime = new Date()
 
-    // 3. Upsert data in transaction
-    const scrapeLog = await ingestScrapedData(data, requestId)
+    let result: IngestResult
+    try {
+      result = await orchestrator.apply(data)
+    } catch (error) {
+      // Transaction rolled back; record a FAILURE audit row with zeros
+      // (partial counts after rollback are misleading and were a known bug
+      // in the previous inline implementation).
+      await prisma.scrapeLog.create({
+        data: {
+          startTime,
+          endTime: new Date(),
+          status: 'FAILURE',
+          eventsFound: data.events.length,
+          fightsAdded: 0,
+          fightsUpdated: 0,
+          fightsCancelled: 0,
+          fightersAdded: 0,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        },
+      })
+      throw error
+    }
+
+    emitDomainLogs(result, data, requestId)
+
+    const scrapeLog = await prisma.scrapeLog.create({
+      data: {
+        startTime,
+        endTime: new Date(),
+        status: 'SUCCESS',
+        eventsFound: data.events.length,
+        fightsAdded: result.fights.created,
+        fightsUpdated: result.fights.updated,
+        fightsCancelled: result.fights.cancelled,
+        fightersAdded: result.fighters.added,
+      },
+    })
 
     apiLogger.info('Scraper data ingested successfully', {
       requestId,
@@ -70,7 +110,6 @@ export async function POST(req: NextRequest) {
       fightsCount: data.fights.length,
     })
 
-    // 4. Return success response
     return successResponse({
       scrapeLogId: scrapeLog.id,
       eventsCreated: data.events.length,
@@ -90,99 +129,28 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function ingestScrapedData(data: ScrapedData, requestId: string) {
-  const startTime = new Date()
-  let fightersAdded = 0
-  let fightsAdded = 0
-  let fightsUpdated = 0
-  let fightsCancelled = 0
-
-  try {
-    await prisma.$transaction(async (tx) => {
-      const fighterResult = await fighterStore.upsertMany(data.fighters, { tx })
-      fightersAdded = fighterResult.added
-
-      await eventStore.upsertMany(data.events, { tx })
-
-      const fighterBySourceUrl = await fighterStore.findBySourceUrls(
-        data.fighters.map((f) => f.sourceUrl),
-        { tx },
-      )
-      const eventBySourceUrl = await eventStore.findBySourceUrls(
-        data.events.map((e) => e.sourceUrl),
-        { tx },
-      )
-      const eventIds = Array.from(eventBySourceUrl.values()).map((e) => e.id)
-      const existingFightsByEventId = await fightStore.findExistingForReconciliation(eventIds, {
-        tx,
-      })
-
-      const plan = planFightReconciliation({
-        scrapedFights: data.fights,
-        scrapedFighters: data.fighters,
-        scrapedEvents: data.events,
-        fighterBySourceUrl,
-        eventBySourceUrl,
-        existingFightsByEventId,
-        scrapedEventUrls: data.scrapedEventUrls ?? [],
-      })
-
-      const fightResult = await fightStore.applyReconciliationPlan(plan, { tx })
-      fightsAdded = fightResult.created
-      fightsUpdated = fightResult.updated
-      fightsCancelled = fightResult.cancelled
-
-      for (const skipped of plan.skipped) {
-        apiLogger.warn('Skipping fight - missing related records', {
-          requestId,
-          fightId: skipped.scrapedFightId,
-          reason: skipped.reason,
-        })
-      }
-
-      if (plan.reversedOrderHits > 0) {
-        // Legacy compatibility signal — once this stays at 0 across enough
-        // ingest runs, the reversed-order fallback can be deleted.
-        apiLogger.info('Matched fights in reversed fighter order (legacy compat)', {
-          requestId,
-          hits: plan.reversedOrderHits,
-        })
-      }
-
-      if ((data.scrapedEventUrls ?? []).length > 0) {
-        apiLogger.info('Reconciliation complete', { requestId, fightsCancelled })
-      }
+function emitDomainLogs(result: IngestResult, data: ScrapedData, requestId: string) {
+  for (const skipped of result.skipped) {
+    apiLogger.warn('Skipping fight - missing related records', {
+      requestId,
+      fightId: skipped.scrapedFightId,
+      reason: skipped.reason,
     })
+  }
 
-    const endTime = new Date()
-    return await prisma.scrapeLog.create({
-      data: {
-        startTime,
-        endTime,
-        status: 'SUCCESS',
-        eventsFound: data.events.length,
-        fightsAdded,
-        fightsUpdated,
-        fightsCancelled,
-        fightersAdded,
-      },
+  if (result.reversedOrderHits > 0) {
+    // Legacy compatibility signal — once this stays at 0 across enough
+    // ingest runs, the reversed-order fallback can be deleted.
+    apiLogger.info('Matched fights in reversed fighter order (legacy compat)', {
+      requestId,
+      hits: result.reversedOrderHits,
     })
-  } catch (error) {
-    const endTime = new Date()
-    await prisma.scrapeLog.create({
-      data: {
-        startTime,
-        endTime,
-        status: 'FAILURE',
-        eventsFound: data.events.length,
-        fightsAdded,
-        fightsUpdated,
-        fightsCancelled,
-        fightersAdded,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      },
-    })
+  }
 
-    throw error
+  if ((data.scrapedEventUrls ?? []).length > 0) {
+    apiLogger.info('Reconciliation complete', {
+      requestId,
+      fightsCancelled: result.fights.cancelled,
+    })
   }
 }
