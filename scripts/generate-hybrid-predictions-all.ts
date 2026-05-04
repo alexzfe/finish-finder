@@ -146,19 +146,36 @@ async function main() {
 }
 
 async function ensurePredictionVersion() {
-  const existing = await prisma.predictionVersion.findUnique({
-    where: { version: PREDICTION_VERSION },
-  })
-  if (existing) return existing
+  // Atomically make PREDICTION_VERSION the *only* active row. /api/db-events
+  // picks the most recent active version, so leaving prior versions active
+  // would hide today's cohort behind whichever one the API found first.
+  return prisma.$transaction(async (tx) => {
+    await tx.predictionVersion.updateMany({
+      where: { version: { not: PREDICTION_VERSION }, active: true },
+      data: { active: false },
+    })
 
-  return prisma.predictionVersion.create({
-    data: {
-      version: PREDICTION_VERSION,
-      finishPromptHash: PREDICTION_VERSION,
-      funScorePromptHash: PREDICTION_VERSION,
-      description: PREDICTION_VERSION_DESCRIPTION,
-      active: true,
-    },
+    const existing = await tx.predictionVersion.findUnique({
+      where: { version: PREDICTION_VERSION },
+    })
+    if (existing) {
+      return existing.active
+        ? existing
+        : tx.predictionVersion.update({
+            where: { version: PREDICTION_VERSION },
+            data: { active: true },
+          })
+    }
+
+    return tx.predictionVersion.create({
+      data: {
+        version: PREDICTION_VERSION,
+        finishPromptHash: PREDICTION_VERSION,
+        funScorePromptHash: PREDICTION_VERSION,
+        description: PREDICTION_VERSION_DESCRIPTION,
+        active: true,
+      },
+    })
   })
 }
 
