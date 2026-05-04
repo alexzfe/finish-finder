@@ -20,7 +20,6 @@
 import { type NextResponse } from 'next/server'
 
 import { prisma } from '@/lib/database/prisma'
-import { queryMonitor } from '@/lib/database/monitoring'
 import { apiLogger } from '@/lib/monitoring/logger'
 
 // Configure route to be dynamic
@@ -75,72 +74,6 @@ async function checkDatabaseHealth(): Promise<HealthCheckResult> {
     return {
       healthy: false,
       message: `Database connection failed: ${message}`,
-      details: { error: message },
-    }
-  }
-}
-
-/**
- * Check query performance health based on monitoring data
- */
-async function checkQueryPerformanceHealth(): Promise<HealthCheckResult> {
-  try {
-    if (!queryMonitor.isEnabled()) {
-      return {
-        healthy: true,
-        message: 'Query monitoring disabled',
-        details: { monitoringEnabled: false },
-      }
-    }
-
-    const metrics = await queryMonitor.getMetrics()
-
-    if (metrics.totalQueries === 0) {
-      return {
-        healthy: true,
-        message: 'No query data available yet',
-        details: { totalQueries: 0 },
-      }
-    }
-
-    // Calculate health thresholds
-    const criticalQueryRate = (metrics.criticalQueries / metrics.totalQueries) * 100
-    const slowQueryRate = (metrics.slowQueries / metrics.totalQueries) * 100
-    const avgDuration = metrics.averageDuration
-
-    let healthy = true
-    let message = 'Query performance healthy'
-
-    // Check for critical issues
-    if (criticalQueryRate > 5) {
-      healthy = false
-      message = `High critical query rate: ${criticalQueryRate.toFixed(1)}%`
-    } else if (slowQueryRate > 20) {
-      healthy = false
-      message = `High slow query rate: ${slowQueryRate.toFixed(1)}%`
-    } else if (avgDuration > 500) {
-      healthy = false
-      message = `High average query duration: ${avgDuration.toFixed(1)}ms`
-    } else if (slowQueryRate > 10) {
-      message = `Moderate slow query rate: ${slowQueryRate.toFixed(1)}%`
-    }
-
-    return {
-      healthy,
-      message,
-      details: {
-        totalQueries: metrics.totalQueries,
-        averageDuration: `${avgDuration.toFixed(1)}ms`,
-        slowQueryRate: `${slowQueryRate.toFixed(1)}%`,
-        criticalQueryRate: `${criticalQueryRate.toFixed(1)}%`,
-        monitoringEnabled: true,
-      },
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return {
-      healthy: false,
-      message: `Query performance check failed: ${message}`,
       details: { error: message },
     }
   }
@@ -267,12 +200,6 @@ export async function GET(): Promise<NextResponse> {
     checks.database = await checkDatabaseHealth()
     if (!checks.database.healthy) {
       overallStatus = 'down'
-    }
-
-    // Query performance check
-    checks.queryPerformance = await checkQueryPerformanceHealth()
-    if (!checks.queryPerformance.healthy && overallStatus === 'healthy') {
-      overallStatus = 'degraded'
     }
 
     // System resources check

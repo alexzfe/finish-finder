@@ -11,9 +11,3 @@ export {
   type ValidationError,
   type ValidationResult,
 } from './validation'
-export {
-  QueryMonitor,
-  getDatabaseHealth,
-  type QueryMetric,
-  type QueryPerformanceReport,
-} from './monitoring'
