@@ -83,14 +83,13 @@ describe('Card Position Ordering', () => {
 })
 
 describe('toCurrentPrediction — prediction row path', () => {
-  it('reads funScore, finishProbability, and finishConfidence from the active prediction', () => {
+  it('reads funScore and finishProbability from the active prediction', () => {
     const current = toCurrentPrediction(
       makeFight({
         predictions: [
           {
             funScore: 7,
             finishProbability: 0.6,
-            finishConfidence: 0.82,
             funBreakdown: { keyFactors: ['knockout power'] },
           },
         ],
@@ -99,7 +98,6 @@ describe('toCurrentPrediction — prediction row path', () => {
     expect(current).toMatchObject({
       funScore: 7,
       finishProbability: 0.6,
-      finishConfidence: 0.82,
       funFactors: ['knockout power'],
       source: 'prediction',
     })
@@ -109,7 +107,7 @@ describe('toCurrentPrediction — prediction row path', () => {
     const current = toCurrentPrediction(
       makeFight({
         predictions: [
-          { funScore: 7.6, finishProbability: 0.5, finishConfidence: 0.8, funBreakdown: null },
+          { funScore: 7.6, finishProbability: 0.5, funBreakdown: null },
         ],
       })
     )
@@ -120,14 +118,14 @@ describe('toCurrentPrediction — prediction row path', () => {
     const high = toCurrentPrediction(
       makeFight({
         predictions: [
-          { funScore: 99, finishProbability: 0, finishConfidence: 0, funBreakdown: null },
+          { funScore: 99, finishProbability: 0, funBreakdown: null },
         ],
       })
     )
     const low = toCurrentPrediction(
       makeFight({
         predictions: [
-          { funScore: -3, finishProbability: 0, finishConfidence: 0, funBreakdown: null },
+          { funScore: -3, finishProbability: 0, funBreakdown: null },
         ],
       })
     )
@@ -142,7 +140,6 @@ describe('toCurrentPrediction — prediction row path', () => {
           {
             funScore: 7,
             finishProbability: 0.5,
-            finishConfidence: 0.8,
             funBreakdown: { keyFactors: ['knockout power', 'scramble heavy'] },
           },
         ],
@@ -158,7 +155,6 @@ describe('toCurrentPrediction — prediction row path', () => {
           {
             funScore: 7,
             finishProbability: 0.5,
-            finishConfidence: 0.8,
             funBreakdown: JSON.stringify({ keyFactors: ['cardio gap'] }),
           },
         ],
@@ -174,7 +170,6 @@ describe('toCurrentPrediction — prediction row path', () => {
           {
             funScore: 7,
             finishProbability: 0.5,
-            finishConfidence: 0.8,
             funBreakdown: 'not json',
           },
         ],

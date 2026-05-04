@@ -30,7 +30,6 @@ const sampleFighter = {
 const samplePrediction = {
   funScore: 7,
   finishProbability: 0.42,
-  confidence: 0.6,
   keyFactors: ['knockout power'],
   modelUsed: 'gpt-5.5',
   createdAt: '2026-05-04T12:00:00.000Z',

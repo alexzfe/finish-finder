@@ -113,12 +113,6 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                         </div>
                       )
                     })()}
-                    <div className="rounded-xl bg-white/5 px-4 py-3">
-                      <span className="block text-[0.7rem] md:text-[0.75rem] text-white/70">Confidence</span>
-                      <span className="ufc-condensed text-lg text-white">
-                        {Math.round((fight.prediction?.confidence ?? 0) * 100)}%
-                      </span>
-                    </div>
                   </div>
                 </div>
 

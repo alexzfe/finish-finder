@@ -89,7 +89,6 @@ function toPrediction(current: CurrentPrediction | null): Prediction | null {
   return {
     funScore: current.funScore,
     finishProbability: current.finishProbability,
-    confidence: current.finishConfidence,
     keyFactors: current.funFactors,
     modelUsed: current.modelUsed,
     createdAt: current.createdAt ? current.createdAt.toISOString() : null,

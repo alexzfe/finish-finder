@@ -62,7 +62,6 @@ export type Fighter = z.infer<typeof FighterSchema>
 export const PredictionSchema = z.object({
   funScore: z.number(), // 1-10 integer
   finishProbability: z.number(), // 0-1
-  confidence: z.number(), // 0-1
   keyFactors: z.array(z.string()),
   modelUsed: z.string().nullable(),
   createdAt: z.string().nullable(), // ISO

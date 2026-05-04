@@ -35,9 +35,8 @@ export const JUDGMENT_RESPONSE_SCHEMA: StructuredOutputSchema = {
         type: 'array',
         items: { type: 'string' },
       },
-      confidence: { type: 'number', minimum: 0, maximum: 1 },
     },
-    required: ['attributes', 'funScore', 'keyFactors', 'confidence'],
+    required: ['attributes', 'funScore', 'keyFactors'],
     additionalProperties: false,
   },
 }

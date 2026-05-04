@@ -31,13 +31,13 @@ import { Predictor } from '../src/lib/ai/predictor'
 import { buildSnapshot, type FightWithRelations } from '../src/lib/ai/snapshot'
 import { prisma } from '../src/lib/database/prisma'
 
-const PREDICTION_VERSION = 'v4.1-funscore-1to10-gpt55'
+const PREDICTION_VERSION = 'v4.2-no-confidence-gpt55'
 const PREDICTION_VERSION_DESCRIPTION = `Hybrid Judgment Architecture
 - Finish Probability: Deterministic (from attributes)
 - Fun Score: AI Judgment (1-10 integer)
 - Producer: Predictor + LLMAdapter
 - Model: gpt-5.5
-- Output: attributes + funScore + keyFactors + confidence (no reasoning)`
+- Output: attributes + funScore + keyFactors (confidence removed in v4.2)`
 
 const OPENAI_MODEL = 'gpt-5.5' as const
 
@@ -131,7 +131,7 @@ async function main() {
       successfulFinishProbs.push(prediction.finishProbability)
 
       console.log(
-        `  ✅ Saved: Finish ${(prediction.finishProbability * 100).toFixed(0)}% | Fun ${prediction.funScore}/10 | Conf ${prediction.finishConfidence.toFixed(2)}`
+        `  ✅ Saved: Finish ${(prediction.finishProbability * 100).toFixed(0)}% | Fun ${prediction.funScore}/10`
       )
     } catch (error) {
       failedCount += 1

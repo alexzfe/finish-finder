@@ -37,15 +37,13 @@ export interface JudgmentPredictionOutput {
   funScore: number
   /** 3-5 short phrases summarising what drives the fight. */
   keyFactors: string[]
-  /** 0-1 confidence in the overall analysis. */
-  confidence: number
 }
 
 /**
  * Build the hybrid judgment prediction prompt.
  *
  * Output: qualitative attributes (drive deterministic finishProbability),
- * a 1-10 funScore (direct AI judgment), keyFactors, and confidence.
+ * a 1-10 funScore (direct AI judgment), and keyFactors.
  */
 export function buildJudgmentPredictionPrompt(input: FightSnapshot): string {
   const { fighter1, fighter2, context } = input
@@ -197,8 +195,7 @@ OUTPUT FORMAT (JSON only, no markdown)
     "groundBattleLikely": <true|false>
   },
   "funScore": <1-10>,
-  "keyFactors": ["<factor 1>", "<factor 2>", "<factor 3>"],
-  "confidence": <0.0-1.0>
+  "keyFactors": ["<factor 1>", "<factor 2>", "<factor 3>"]
 }
 
 CRITICAL INSTRUCTIONS:
@@ -207,8 +204,7 @@ CRITICAL INSTRUCTIONS:
 3. A boring fight deserves a boring score. Don't inflate scores to be nice.
 4. If both fighters have high decision rates and low finish rates, score ≤ 5.
 5. If styles cancel out (wrestler vs wrestler, counter-striker vs counter-striker), score 3-4.
-6. Confidence (0.0-1.0) reflects uncertainty in your overall analysis, independent of the funScore value.
-7. keyFactors: 3-5 short phrases such as "knockout power", "scramble heavy", "wrestling stalemate".
+6. keyFactors: 3-5 short phrases such as "knockout power", "scramble heavy", "wrestling stalemate".
 
 Provide only valid JSON output.`
 }

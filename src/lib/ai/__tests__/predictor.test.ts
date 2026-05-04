@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { FakeAdapter } from '../adapters/fakeAdapter'
 import { Predictor } from '../predictor'
 
-import type { FightSnapshot } from '../snapshot'
 import type { JudgmentPredictionOutput } from '../prompts/hybridJudgmentPrompt'
+import type { FightSnapshot } from '../snapshot'
 
 const baseOutput: JudgmentPredictionOutput = {
   attributes: {
@@ -17,7 +17,6 @@ const baseOutput: JudgmentPredictionOutput = {
   },
   funScore: 6,
   keyFactors: ['power', 'pace'],
-  confidence: 0.8,
 }
 
 const baseSnapshot: FightSnapshot = {
@@ -122,42 +121,5 @@ describe('Predictor', () => {
 
     expect((await new Predictor(high).predict(baseSnapshot)).funScore).toBe(10)
     expect((await new Predictor(low).predict(baseSnapshot)).funScore).toBe(1)
-  })
-
-  it('applies the inconsistency penalty when high pace+finishDanger pair with a lowFun score', async () => {
-    const inconsistent = new FakeAdapter({
-      responder: () => ({
-        ...baseOutput,
-        attributes: { ...baseOutput.attributes, pace: 5, finishDanger: 5 },
-        funScore: 3,
-        confidence: 0.9,
-      }),
-    })
-    const consistent = new FakeAdapter({
-      responder: () => ({
-        ...baseOutput,
-        attributes: { ...baseOutput.attributes, pace: 5, finishDanger: 5 },
-        funScore: 8,
-        confidence: 0.9,
-      }),
-    })
-
-    const inconsistentPrediction = await new Predictor(inconsistent).predict(baseSnapshot)
-    const consistentPrediction = await new Predictor(consistent).predict(baseSnapshot)
-
-    expect(inconsistentPrediction.finishConfidence).toBeCloseTo(0.81, 5)
-    expect(consistentPrediction.finishConfidence).toBeCloseTo(0.9, 5)
-  })
-
-  it('clamps confidence into [0.3, 1.0]', async () => {
-    const tinyConfidence = new FakeAdapter({
-      responder: () => ({ ...baseOutput, confidence: 0.05 }),
-    })
-    const overConfidence = new FakeAdapter({
-      responder: () => ({ ...baseOutput, confidence: 2.0 }),
-    })
-
-    expect((await new Predictor(tinyConfidence).predict(baseSnapshot)).finishConfidence).toBe(0.3)
-    expect((await new Predictor(overConfidence).predict(baseSnapshot)).finishConfidence).toBe(1.0)
   })
 })

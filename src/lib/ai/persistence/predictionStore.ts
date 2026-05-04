@@ -1,6 +1,7 @@
-import { Prisma, type PrismaClient, type PredictionVersion } from '@prisma/client'
+import { type Prisma, type PrismaClient, type PredictionVersion } from '@prisma/client'
 
 import { parseJsonArray } from '../../utils/json'
+
 import type { Prediction } from '../prediction'
 import type { FightWithRelations } from '../snapshot'
 
@@ -15,7 +16,6 @@ import type { FightWithRelations } from '../snapshot'
 export interface CurrentPrediction {
   funScore: number          // integer, clamped to [1, 10] (or 0 when legacy is empty)
   finishProbability: number // 0-1
-  finishConfidence: number  // 0-1
   funFactors: string[]
   source: 'prediction' | 'legacy'
   modelUsed: string | null
@@ -25,7 +25,6 @@ export interface CurrentPrediction {
 interface PredictionRowFields {
   funScore: number | null
   finishProbability: number | null
-  finishConfidence: number | null
   funBreakdown: unknown
   modelUsed?: string | null
   createdAt?: Date | null
@@ -54,7 +53,6 @@ export function toCurrentPrediction(
     return {
       funScore: clampFunScore(row.funScore),
       finishProbability: row.finishProbability ?? 0,
-      finishConfidence: row.finishConfidence ?? 0,
       funFactors: extractFunFactorsFromBreakdown(row.funBreakdown),
       source: 'prediction',
       modelUsed: row.modelUsed ?? null,
@@ -80,7 +78,6 @@ export function toCurrentPrediction(
   return {
     funScore: legacyFunScore !== null ? clampFunScore(legacyFunScore) : 0,
     finishProbability: legacyFinishProb ?? 0,
-    finishConfidence: 0,
     funFactors: legacyFactors,
     source: 'legacy',
     modelUsed: null,
@@ -177,12 +174,15 @@ function buildPersistedShape(prediction: Prediction) {
     keyFactors: output.keyFactors,
   }
 
+  // finishConfidence/funConfidence columns are still NOT NULL in the DB;
+  // we no longer surface a confidence value. Writes 0 as a placeholder until
+  // the columns are dropped in a follow-up PR (deploy-first ordering).
   return {
     finishProbability: prediction.finishProbability,
-    finishConfidence: prediction.finishConfidence,
+    finishConfidence: 0,
     finishReasoning,
     funScore: prediction.funScore,
-    funConfidence: prediction.funConfidence,
+    funConfidence: 0,
     funBreakdown,
     modelUsed: prediction.modelUsed,
     tokensUsed: prediction.tokensUsed,

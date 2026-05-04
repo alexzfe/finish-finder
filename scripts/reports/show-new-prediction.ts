@@ -61,12 +61,10 @@ async function showPrediction() {
     console.log('Cost: $' + prediction.costUsd.toFixed(4))
     console.log()
     console.log('FINISH PROBABILITY:', (prediction.finishProbability * 100).toFixed(1) + '%')
-    console.log('Confidence:', prediction.finishConfidence)
     console.log('\nReasoning:')
     console.log(prediction.finishReasoning)
     console.log()
     console.log('FUN SCORE:', prediction.funScore + '/100')
-    console.log('Confidence:', prediction.funConfidence)
     console.log('\nBreakdown:')
     console.log(prediction.funBreakdown)
 

@@ -9,11 +9,6 @@ import type { FightSnapshot } from './snapshot'
 
 const FUN_SCORE_FLOOR = 1
 const FUN_SCORE_CEILING = 10
-const CONFIDENCE_FLOOR = 0.3
-const CONFIDENCE_CEILING = 1.0
-const INCONSISTENCY_PENALTY = 0.9
-const LOW_FUN_THRESHOLD = 4
-const HIGH_FUN_THRESHOLD = 7
 
 export class Predictor {
   constructor(private readonly adapter: LLMAdapter) {}
@@ -29,13 +24,10 @@ export class Predictor {
       snapshot.context.weightClass
     )
     const funScore = clampFunScore(output.funScore)
-    const confidence = adjustConfidence(output)
 
     return {
       finishProbability,
-      finishConfidence: confidence,
       funScore,
-      funConfidence: confidence,
       output,
       modelUsed: result.modelUsed,
       tokensUsed: result.tokensUsed,
@@ -46,23 +38,4 @@ export class Predictor {
 
 function clampFunScore(score: number): number {
   return Math.min(FUN_SCORE_CEILING, Math.max(FUN_SCORE_FLOOR, Math.round(score)))
-}
-
-/**
- * Penalise the LLM's stated confidence when its qualitative attributes contradict
- * the funScore it returned (e.g. high-pace + high-finishDanger + lowFun is
- * incoherent).
- */
-function adjustConfidence(output: JudgmentPredictionOutput): number {
-  const { attributes, funScore } = output
-  const highPace = attributes.pace >= 4
-  const highFinish = attributes.finishDanger >= 4
-  const lowFun = funScore <= LOW_FUN_THRESHOLD
-  const highFun = funScore >= HIGH_FUN_THRESHOLD
-
-  const inconsistent =
-    (highPace && highFinish && lowFun) || (!highPace && !highFinish && highFun)
-
-  const adjusted = inconsistent ? output.confidence * INCONSISTENCY_PENALTY : output.confidence
-  return Math.min(CONFIDENCE_CEILING, Math.max(CONFIDENCE_FLOOR, adjusted))
 }

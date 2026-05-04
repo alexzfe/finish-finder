@@ -274,10 +274,6 @@ export default function Home() {
                           </div>
                         )
                       })()}
-                      <div className="rounded-xl bg-white/5 px-4 py-3.5">
-                        <span className="block text-[0.7rem] text-white/70">Confidence</span>
-                        <span className="ufc-condensed text-base text-white md:text-lg">{Math.round((selectedFight.prediction?.confidence ?? 0) * 100)}%</span>
-                      </div>
                     </div>
 
                     {selectedFight.prediction?.keyFactors && selectedFight.prediction.keyFactors.length > 0 && (
