@@ -1,13 +1,7 @@
 import { z } from 'zod'
 
-import type {
-  Fight,
-  Fighter,
-  FighterEntertainmentProfile as PrismaFighterEntertainmentProfile,
-  Event,
-} from '@prisma/client'
 
-import { classifyFighterStyle } from './prompts/hybridJudgmentPrompt'
+import { classifyFighterStyle, FighterStyleSchema } from './fighterStyle'
 import {
   EntertainmentMentality,
   EntertainmentPrediction,
@@ -15,7 +9,12 @@ import {
   FighterEntertainmentContext,
 } from './schemas/fighterEntertainmentProfile'
 
-const FighterStyleSchema = z.enum(['striker', 'wrestler', 'grappler', 'balanced'])
+import type {
+  Fight,
+  Fighter,
+  FighterEntertainmentProfile as PrismaFighterEntertainmentProfile,
+  Event,
+} from '@prisma/client'
 
 export const FighterSnapshotSchema = z.object({
   name: z.string().min(1),
