@@ -161,12 +161,12 @@ Recommended production topology:
 2. **Secrets** – Configure `DATABASE_URL`, `DIRECT_DATABASE_URL`, `INGEST_API_SECRET`, and `OPENAI_API_KEY` in Vercel env settings and GitHub Actions secrets.
 3. **Automated Scraper** – Python/Scrapy scraper runs in GitHub Actions, POSTs to `/api/internal/ingest` endpoint.
 
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`OPERATIONS.md`](OPERATIONS.md) for deeper diagrams, runbooks, and deployment checklists.
+See [`OPERATIONS.md`](OPERATIONS.md) for runbooks and deployment checklists, and [`CLAUDE.md`](CLAUDE.md) for the architecture rules and system map.
 
 ## Documentation
 
 ### Core Guides
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) – System architecture, data flows, and component overview.
+- [`CLAUDE.md`](CLAUDE.md) – Architecture rules, system map, and quick commands.
 - [`docs/DEVELOPER_GUIDE.md`](docs/DEVELOPER_GUIDE.md) – Complete setup, development workflow, and troubleshooting.
 - [`OPERATIONS.md`](OPERATIONS.md) – Runbooks for daily operations, incident response, and maintenance.
 - [`DEPLOYMENT.md`](DEPLOYMENT.md) – Deployment procedures for Vercel, database setup, and monitoring.

@@ -9,7 +9,7 @@ Welcome to the Finish Finder documentation. This hub organizes all project docum
 | I want to... | Go to... |
 |--------------|----------|
 | **Set up the project** | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) |
-| **Understand the system** | [ARCHITECTURE.md](../ARCHITECTURE.md) |
+| **Understand the system** | [CLAUDE.md](../CLAUDE.md) |
 | **Deploy to production** | [DEPLOYMENT.md](../DEPLOYMENT.md) |
 | **Run daily operations** | [OPERATIONS.md](../OPERATIONS.md) |
 | **Learn about AI predictions** | [AI_DOCUMENTATION_INDEX.md](AI_DOCUMENTATION_INDEX.md) |
@@ -24,7 +24,7 @@ Welcome to the Finish Finder documentation. This hub organizes all project docum
 ### For New Developers
 
 1. Start with [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for complete setup
-2. Review [ARCHITECTURE.md](../ARCHITECTURE.md) for system overview
+2. Review [CLAUDE.md](../CLAUDE.md) for architecture rules and system map
 3. Check [CONTRIBUTING.md](../CONTRIBUTING.md) for workflow guidelines
 
 ### For DevOps/Operations
@@ -52,7 +52,6 @@ Welcome to the Finish Finder documentation. This hub organizes all project docum
 ```
 docs/
 ├── README.md                          # This file - navigation hub
-├── ARCHITECTURE.md                    # System architecture (from root)
 ├── DEVELOPER_GUIDE.md                 # Developer onboarding
 ├── AI_DOCUMENTATION_INDEX.md          # AI system navigation
 ├── AI_SYSTEM_QUICK_REFERENCE.md       # Quick AI commands
@@ -70,8 +69,7 @@ docs/
 Root level documentation:
 ```
 ├── README.md              # Main project readme
-├── CLAUDE.md              # Current project state (for Claude)
-├── ARCHITECTURE.md        # System architecture
+├── CLAUDE.md              # Architecture rules + system map (auto-loaded by Claude Code)
 ├── DEPLOYMENT.md          # Deployment guide
 ├── OPERATIONS.md          # Operations runbook
 ├── ROADMAP.md             # Project roadmap
