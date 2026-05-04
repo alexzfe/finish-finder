@@ -1,18 +1,29 @@
 import type { CardPosition } from '@/types'
 
+// The Python scraper writes five distinct cardPosition values
+// (scraper/ufc_scraper/parsers.py:336-344) and the DB carries them through
+// unchanged. Keeping them distinct in the canonical enum is load-bearing
+// because `fightNumber` is null for newly-scraped fights — without these
+// values, the within-card ordering (Main Event → Co-Main → rest) collapses.
 const CANONICAL_BY_RAW: Record<string, CardPosition> = {
-  // Title-case forms emitted by the Wikipedia/Tapology scrapers.
-  'Main Event': 'main',
+  // Title-case forms emitted by the Python scraper.
+  'Main Event': 'main-event',
   'Co-Main Event': 'co-main',
-  'Main Card': 'main',
+  'Main Card': 'main-card',
   'Prelims': 'preliminary',
   'Early Prelims': 'early-preliminary',
 
   // Already-canonical kebab forms (defensive — some paths already emit these).
-  'main': 'main',
+  'main-event': 'main-event',
   'co-main': 'co-main',
+  'main-card': 'main-card',
   'preliminary': 'preliminary',
   'early-preliminary': 'early-preliminary',
+
+  // Lower-case spelled-out variants from older scraper revisions.
+  'main': 'main-card',
+  'prelims': 'preliminary',
+  'early prelims': 'early-preliminary',
 }
 
 /**
@@ -24,5 +35,10 @@ const CANONICAL_BY_RAW: Record<string, CardPosition> = {
  */
 export function toCanonicalCardPosition(raw: string | null | undefined): CardPosition {
   if (!raw) return 'preliminary'
-  return CANONICAL_BY_RAW[raw] ?? CANONICAL_BY_RAW[raw.trim()] ?? 'preliminary'
+  const trimmed = raw.trim()
+  return (
+    CANONICAL_BY_RAW[trimmed] ??
+    CANONICAL_BY_RAW[trimmed.toLowerCase()] ??
+    'preliminary'
+  )
 }

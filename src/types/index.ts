@@ -29,8 +29,9 @@ export const WeightClassSchema = z.enum([
 export type WeightClass = z.infer<typeof WeightClassSchema>
 
 export const CardPositionSchema = z.enum([
-  'main',
+  'main-event',
   'co-main',
+  'main-card',
   'preliminary',
   'early-preliminary',
 ])

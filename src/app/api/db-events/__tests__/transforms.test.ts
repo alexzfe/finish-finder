@@ -35,19 +35,21 @@ function sortFightsByCardPosition<T extends { cardPosition: string }>(fights: T[
 }
 
 describe('Card Position Ordering', () => {
-  it('sorts canonical card positions: main → co-main → preliminary → early-preliminary', () => {
+  it('sorts canonical card positions: main-event → co-main → main-card → preliminary → early-preliminary', () => {
     const fights = [
       { id: '1', cardPosition: 'early-preliminary' },
       { id: '2', cardPosition: 'preliminary' },
-      { id: '3', cardPosition: 'co-main' },
-      { id: '4', cardPosition: 'main' },
+      { id: '3', cardPosition: 'main-card' },
+      { id: '4', cardPosition: 'co-main' },
+      { id: '5', cardPosition: 'main-event' },
     ]
 
     const sorted = sortFightsByCardPosition(fights)
 
     expect(sorted.map((f) => f.cardPosition)).toEqual([
-      'main',
+      'main-event',
       'co-main',
+      'main-card',
       'preliminary',
       'early-preliminary',
     ])
@@ -57,12 +59,12 @@ describe('Card Position Ordering', () => {
     const fights = [
       { id: '1', cardPosition: 'unknown-bucket' },
       { id: '2', cardPosition: 'preliminary' },
-      { id: '3', cardPosition: 'main' },
+      { id: '3', cardPosition: 'main-event' },
     ]
 
     const sorted = sortFightsByCardPosition(fights)
 
-    expect(sorted[0].cardPosition).toBe('main')
+    expect(sorted[0].cardPosition).toBe('main-event')
     expect(sorted[1].cardPosition).toBe('preliminary')
     expect(sorted[2].cardPosition).toBe('unknown-bucket')
   })
@@ -70,7 +72,7 @@ describe('Card Position Ordering', () => {
   it('does not mutate the original array', () => {
     const fights = [
       { id: '1', cardPosition: 'preliminary' },
-      { id: '2', cardPosition: 'main' },
+      { id: '2', cardPosition: 'main-event' },
     ]
     const originalOrder = fights.map((f) => f.cardPosition)
 

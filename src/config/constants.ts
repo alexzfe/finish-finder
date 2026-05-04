@@ -20,12 +20,18 @@ export const RATE_LIMITS = {
 
 /**
  * Card position ordering for display, keyed on the canonical CardPosition enum.
+ *
+ * Ordering matters even within sections: the scraper sets cardPosition based
+ * on the fight's index in the UFCStats listing (Main Event first), but does
+ * not populate fightNumber, so this is the *only* signal that places the main
+ * event at the top.
  */
 export const CARD_POSITION_ORDER: Record<string, number> = {
-  'main': 1,
+  'main-event': 1,
   'co-main': 2,
-  'preliminary': 3,
-  'early-preliminary': 4,
+  'main-card': 3,
+  'preliminary': 4,
+  'early-preliminary': 5,
 } as const
 
 /**

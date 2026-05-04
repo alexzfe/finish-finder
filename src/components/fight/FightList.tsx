@@ -3,6 +3,7 @@
 import { useEffect, useMemo, memo, useCallback, useState } from 'react'
 
 import { FighterAvatar } from '@/components/fighter/FighterAvatar'
+import { CARD_POSITION_ORDER } from '@/config'
 import { funScoreColor } from '@/lib/ui/funScoreColor'
 import { type CardPosition, type Fight, type UFCEvent } from '@/types'
 
@@ -17,7 +18,7 @@ interface FightSection {
 }
 
 const SECTION_FILTERS: Array<{ title: string; positions: CardPosition[] }> = [
-  { title: 'Main Card', positions: ['main', 'co-main'] },
+  { title: 'Main Card', positions: ['main-event', 'co-main', 'main-card'] },
   { title: 'Preliminary Card', positions: ['preliminary'] },
   { title: 'Early Preliminary Card', positions: ['early-preliminary'] },
 ]
@@ -37,10 +38,19 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
     return SECTION_FILTERS
       .map(({ title, positions }) => ({
         title,
+        // Sort by cardPosition order first (main-event → co-main → main-card),
+        // then by fightNumber. Most rows have fightNumber=null in the live DB,
+        // so the cardPosition tiebreaker is what places the main event at the
+        // top of the section.
         fights: fightCard
           .filter((f) => positions.includes(f.cardPosition))
           .slice()
-          .sort((a, b) => (a.fightNumber ?? 0) - (b.fightNumber ?? 0)),
+          .sort((a, b) => {
+            const orderA = CARD_POSITION_ORDER[a.cardPosition] ?? 999
+            const orderB = CARD_POSITION_ORDER[b.cardPosition] ?? 999
+            if (orderA !== orderB) return orderA - orderB
+            return (a.fightNumber ?? 0) - (b.fightNumber ?? 0)
+          }),
       }))
       .filter((section) => section.fights.length > 0)
   }, [event])
@@ -75,25 +85,22 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
     return `${record.wins}-${record.losses}-${record.draws}`
   }
 
-  // Label by position in the main-card section: the DB doesn't distinguish
-  // Main Event / Co-Main / Main Card (all stored as 'Main Card'), and the
-  // canonical wire enum collapses them to 'main'. The scraper convention is
-  // fightNumber=1 → main event, fightNumber=2 → co-main, so after the
-  // fightNumber-asc sort, index 0 is the main event and index 1 is the co-main.
-  const positionLabel = (fight: Fight, indexInMainCard: number): string => {
-    if (fight.cardPosition === 'co-main') return 'Co-Main Event'
-    if (fight.mainEvent || indexInMainCard === 0) return 'Main Event'
-    if (indexInMainCard === 1) return 'Co-Main Event'
-    return 'Main Card'
+  const positionLabel = (fight: Fight): string => {
+    switch (fight.cardPosition) {
+      case 'main-event': return 'Main Event'
+      case 'co-main': return 'Co-Main Event'
+      case 'main-card': return 'Main Card'
+      default: return 'Main Card'
+    }
   }
 
   const renderFightRow = useCallback(
-    (fight: Fight, sectionTitle: string, indexInSection: number) => {
+    (fight: Fight, sectionTitle: string) => {
       const isActive = selectedFight?.id === fight.id
       const funScore = fight.prediction?.funScore ?? 0
       const finishProbability = fight.prediction?.finishProbability ?? 0
       const headerLabel =
-        sectionTitle === 'Main Card' ? positionLabel(fight, indexInSection) : sectionTitle
+        sectionTitle === 'Main Card' ? positionLabel(fight) : sectionTitle
 
       return (
         <div
@@ -238,7 +245,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
 
           <div className="p-3 sm:p-5">
             <div className="grid gap-3.5">
-              {section.fights.map((fight, idx) => renderFightRow(fight, section.title, idx))}
+              {section.fights.map((fight) => renderFightRow(fight, section.title))}
             </div>
           </div>
         </div>

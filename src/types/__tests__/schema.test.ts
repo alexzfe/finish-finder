@@ -43,7 +43,7 @@ const sampleFight = {
   weightClass: 'lightweight' as const,
   titleFight: false,
   mainEvent: true,
-  cardPosition: 'main' as const,
+  cardPosition: 'main-event' as const,
   scheduledRounds: 5,
   fightNumber: 1,
   bookingDate: '2026-05-04T00:00:00.000Z',
@@ -113,11 +113,13 @@ describe('Sub-schemas', () => {
   })
 
   it('CardPositionSchema accepts only the canonical kebab values', () => {
-    expect(() => CardPositionSchema.parse('main')).not.toThrow()
+    expect(() => CardPositionSchema.parse('main-event')).not.toThrow()
     expect(() => CardPositionSchema.parse('co-main')).not.toThrow()
+    expect(() => CardPositionSchema.parse('main-card')).not.toThrow()
     expect(() => CardPositionSchema.parse('preliminary')).not.toThrow()
     expect(() => CardPositionSchema.parse('early-preliminary')).not.toThrow()
     expect(() => CardPositionSchema.parse('Main Event')).toThrow()
+    expect(() => CardPositionSchema.parse('main')).toThrow()
   })
 
   it('FighterSchema requires nullable nickname/imageUrl, not omitted', () => {
