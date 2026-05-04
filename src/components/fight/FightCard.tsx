@@ -5,6 +5,7 @@ import React, { useState } from 'react'
 import { Reorder } from 'framer-motion'
 
 import { FighterAvatar } from '@/components/fighter/FighterAvatar'
+import { funScoreColor } from '@/lib/ui/funScoreColor'
 import { type Fight } from '@/types'
 
 interface FightCardProps {
@@ -22,15 +23,6 @@ export const FightCard = React.memo(
   // Manual state control for hover/tap to avoid React 19 compatibility issues
   const [isHovered, setIsHovered] = useState(false)
   const [isTapped, setIsTapped] = useState(false)
-  // Fun Score color on the 1-10 heat scale (5 tiers, 2 values each)
-  const getFunScoreColor = (score: number) => {
-    if (score >= 9) return 'bg-[var(--score-fire)]'
-    if (score >= 7) return 'bg-[var(--score-hot)]'
-    if (score >= 5) return 'bg-[var(--score-warm)]'
-    if (score >= 3) return 'bg-[var(--score-cool)]'
-    return 'bg-[var(--score-cold)]'
-  }
-
   const formatWeightClass = (wc?: string | null): string => {
     if (!wc) return 'TBD'
     return wc
@@ -68,7 +60,10 @@ export const FightCard = React.memo(
       {/* Tier 1: Always Visible */}
       <div className="relative">
         {/* Fun Score Badge - MOST PROMINENT */}
-        <div className={`absolute top-2 right-2 ${getFunScoreColor(funScore)} text-white px-3 py-1 rounded-full font-bold text-2xl z-10 shadow-lg`}>
+        <div
+          className="absolute top-2 right-2 text-white px-3 py-1 rounded-full font-bold text-2xl z-10 shadow-lg"
+          style={{ backgroundColor: funScoreColor(funScore).color }}
+        >
           {funScore}
         </div>
 

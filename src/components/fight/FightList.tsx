@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, memo, useCallback } from 'react'
 
 import { FighterAvatar } from '@/components/fighter/FighterAvatar'
+import { funScoreColor } from '@/lib/ui/funScoreColor'
 import { type UFCEvent, type Fight, type WeightClass } from '@/types'
 
 interface FightListProps {
@@ -94,14 +95,7 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
     setLoading(false)
   }, [event])
 
-  const getFunScoreStyle = (score: number) => {
-    // 1-10 heat scale: cold → cool → warm → hot → fire (2 values per tier)
-    if (score >= 9) return { color: 'var(--score-fire)', textShadow: 'var(--score-fire-glow)' }
-    if (score >= 7) return { color: 'var(--score-hot)' }
-    if (score >= 5) return { color: 'var(--score-warm)' }
-    if (score >= 3) return { color: 'var(--score-cool)' }
-    return { color: 'var(--score-cold)' }
-  }
+  const getFunScoreStyle = funScoreColor
 
   const getFinishProbabilityStyle = (probability: number) => {
     // Cool analytical scale for finish likelihood

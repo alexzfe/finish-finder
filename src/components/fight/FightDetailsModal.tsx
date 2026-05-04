@@ -5,6 +5,7 @@ import { Fragment } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
+import { funScoreColor } from '@/lib/ui/funScoreColor'
 import { type Fight } from '@/types'
 
 interface FightDetailsModalProps {
@@ -21,15 +22,6 @@ const formatWeightClass = (weightClass?: string | null): string => {
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
-}
-
-const getFunScoreStyle = (score: number): { color: string; textShadow?: string } => {
-  // 1-10 heat scale: cold → cool → warm → hot → fire (2 values per tier)
-  if (score >= 9) return { color: 'var(--score-fire)', textShadow: 'var(--score-fire-glow)' }
-  if (score >= 7) return { color: 'var(--score-hot)' }
-  if (score >= 5) return { color: 'var(--score-warm)' }
-  if (score >= 3) return { color: 'var(--score-cool)' }
-  return { color: 'var(--score-cold)' }
 }
 
 const getFinishProbabilityStyles = (probability: number) => {
@@ -105,7 +97,7 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                 <div className="grid gap-3 mb-5">
                   <div className="rounded-xl bg-white/5 px-4 py-3.5">
                     <span className="block text-[0.7rem] md:text-[0.75rem] text-white/70">Fun Score</span>
-                    <span className="ufc-condensed text-3xl" style={getFunScoreStyle(fight.predictedFunScore || 0)}>
+                    <span className="ufc-condensed text-3xl" style={funScoreColor(fight.predictedFunScore || 0)}>
                       {fight.predictedFunScore || 0}
                     </span>
                   </div>

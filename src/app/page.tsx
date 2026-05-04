@@ -6,6 +6,7 @@ import { FightDetailsModal } from '@/components/fight/FightDetailsModal'
 import { FightList } from '@/components/fight/FightList'
 import { EventNavigation } from '@/components/ui/EventNavigation'
 import { Header } from '@/components/ui/Header'
+import { funScoreColor } from '@/lib/ui/funScoreColor'
 import { type UFCEvent, type Fight } from '@/types'
 
 // Utility function to format weight class names
@@ -17,15 +18,6 @@ const formatWeightClass = (weightClass?: string | null): string => {
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
-}
-
-// Fun Score style on the 1-10 heat scale: cold → cool → warm → hot → fire (2 values per tier)
-const getFunScoreStyle = (score: number): { color: string; textShadow?: string } => {
-  if (score >= 9) return { color: 'var(--score-fire)', textShadow: 'var(--score-fire-glow)' }
-  if (score >= 7) return { color: 'var(--score-hot)' }
-  if (score >= 5) return { color: 'var(--score-warm)' }
-  if (score >= 3) return { color: 'var(--score-cool)' }
-  return { color: 'var(--score-cold)' }
 }
 
 // Finish Probability styling based on likelihood
@@ -309,7 +301,7 @@ export default function Home() {
                     <div className="grid gap-2.5 text-sm uppercase tracking-[0.24em] text-white/80">
                       <div className="rounded-xl bg-white/5 px-4 py-3.5">
                         <span className="block text-[0.7rem] text-white/70">Fun Score</span>
-                        <span className="ufc-condensed text-2xl md:text-3xl" style={getFunScoreStyle(selectedFight.predictedFunScore || 0)}>{selectedFight.predictedFunScore || 0}</span>
+                        <span className="ufc-condensed text-2xl md:text-3xl" style={funScoreColor(selectedFight.predictedFunScore || 0)}>{selectedFight.predictedFunScore || 0}</span>
                       </div>
                       {(() => {
                         const finishStyles = getFinishProbabilityStyles(selectedFight.finishProbability || 0)

@@ -14,13 +14,7 @@
   --ufc-font-sans: "Karla Variable", "Karla", "Arial", "Helvetica Neue", sans-serif;
   --ufc-letter-spacing-wide: 0.08em;
 
-  /* Fun Score - Warm "heat" scale on 1-10 axis (entertainment value) */
-  --score-cold: #94a3b8;      /* slate-400: 1-2  — unwatchable / snoozefest */
-  --score-cool: #38bdf8;      /* sky-400:   3-4  — likely underwhelming */
-  --score-warm: #fbbf24;      /* amber-400: 5-6  — solid / middling */
-  --score-hot: #f97316;       /* orange-500: 7-8 — strong, action-leaning */
-  --score-fire: #ef4444;      /* red-500:   9-10 — card highlight / classic */
-  --score-fire-glow: 0 0 16px rgba(239, 68, 68, 0.6), 0 0 8px rgba(239, 68, 68, 0.4);
+  /* Fun Score colours live in src/lib/ui/funScoreColor.ts (continuous 1-10 gradient). */
 
   /* Finish Probability - Cool analytical scale */
   --finish-high: #22d3ee;     /* cyan-400: 70%+ */
