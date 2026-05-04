@@ -28,7 +28,6 @@
 ## Logging & Monitoring
 - Use the typed loggers from `src/lib/monitoring/logger.ts` instead of raw `console.log` in new code.
 - Include context objects for warnings/errors (`{ eventId, fightId }`) to simplify triage.
-- Capture errors with Sentry where appropriate (`Sentry.captureException`).
 
 ## Scripts & Automation
 - Keep scripts idempotent and re-runnable. Ensure they exit with non-zero status on failure.

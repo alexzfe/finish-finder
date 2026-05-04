@@ -1,10 +1,10 @@
+import { Geist, Geist_Mono } from "next/font/google";
+
 import type { Metadata } from "next";
 
-import { Geist, Geist_Mono } from "next/font/google";
 
 import "@fontsource-variable/roboto-condensed";
 import "@fontsource-variable/karla";
-import * as Sentry from "@sentry/nextjs";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,9 +37,7 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <Sentry.ErrorBoundary fallback={<div>Something went wrong. Please refresh.</div>}>
-          {children}
-        </Sentry.ErrorBoundary>
+        {children}
       </body>
     </html>
   );

@@ -8,7 +8,6 @@
 
 import { type NextRequest } from 'next/server'
 
-import * as Sentry from '@sentry/nextjs'
 
 import { CARD_POSITION_ORDER, RATE_LIMITS } from '@/config'
 import {
@@ -188,10 +187,6 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    Sentry.captureException(error, {
-      data: { route: '/api/db-events' },
-    })
-
     apiLogger.error('Failed to fetch events', {
       error: error instanceof Error ? error.message : String(error),
       ip: clientIP,

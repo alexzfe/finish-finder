@@ -10,7 +10,7 @@
 | ✅ **Repository cleanup** | **Reduce repo size and git noise** | **Build artifacts removed from git, gitignore updated** | **L** | **Low risk, housekeeping** | **Maintenance** | **None** |
 | ✅ **Lint/type build blocker infrastructure** | **Infrastructure to prevent silent regressions** | **Build configuration tested and confirmed working** | **M** | **Low risk, infrastructure ready** | **DevOps Engineer** | **TypeScript fixes** |
 | ✅ **TypeScript strict mode infrastructure** | **Enable comprehensive type safety enforcement** | **TypeScript compilation passes; ESLint strict mode active** | **M** | **Low risk, quality gate working** | **Frontend Engineer** | **Build infrastructure** |
-| Secret hygiene remediation | Keys leaked in history | Rotated Sentry/OpenAI/Google tokens; secret scanning job added | M | Rotation requires coordination → stage rollouts by environment | Security Champ | Access to secret managers |
+| Secret hygiene remediation | Keys leaked in history | Rotated OpenAI/Google tokens; secret scanning job added | M | Rotation requires coordination → stage rollouts by environment | Security Champ | Access to secret managers |
 | ✅ **JSON parsing & error handling tests** | **Lock in recent fixes** | **Vitest suite with 60 tests achieving 99.06% coverage on JSON utilities, weight-class validation, and database validation functions** | **M** | **✅ Complete - Vitest config bootstrapped, comprehensive test patterns established** | **Backend Engineer** | **✅ Lint/type blockers working** |
 | ✅ **Enhanced Fighter Statistics (Phase 1)** | **Foundation for advanced AI predictions** | **17 new fighter stats scraped from UFCStats.com, database schema enhanced, PredictionVersion & Prediction models created, scraper updated and tested** | **M** | **✅ Complete - 26 fighters scraped with full statistics, validation schemas updated, ingestion API enhanced** | **Data Engineer + AI Engineer** | **✅ Python scraper, database schema** |
 | Lint/type cleanup (scrapers + Next config) | Restore strict build gates on Vercel | Remove remaining `any` and `require()` usage; no ESLint errors in scrapers; revert `ignoreBuildErrors`/`ignoreDuringBuilds` to false | M | Touches multiple files → do in small PRs; use CI to enforce | Frontend/Data Engineer | Existing scraper implementation |
@@ -26,7 +26,7 @@
 | **Prediction Evaluation System (Phase 4)** | **Track accuracy and enable continuous improvement** | **Finish accuracy metrics, Brier score for calibration, fun score correlation with FOTN awards, monthly evaluation reports** | **M** | **Requires manual outcome recording → build admin UI for easy data entry** | **AI Engineer** | **✅ New prediction service** |
 | **AI Prediction Deployment (Phase 5)** | **Production rollout with monitoring** | **GitHub Actions workflow updated, parallel testing with old system, gradual rollout, deprecate old AI system** | **M** | **Production risk → run both systems in parallel for 2 weeks before cutover** | **DevOps + AI Engineer** | **Evaluation system** |
 | Add automated test suites | Increase confidence | CI running Vitest (≥60% stmt coverage on `src/lib/**`) + Playwright smoke for UI | H | Flaky UI tests → start with headless-only smoke path | QA Lead | ✅ Vitest bootstrap complete |
-| Observability enhancements | Improve triage | Standard log fields + scrape duration metrics + Sentry breadcrumb tagging | M | Requires schema for metrics storage → start with structured logs shipped to log store | Platform Engineer | Scraper hardening |
+| Observability enhancements | Improve triage | Standard log fields + scrape duration metrics shipped to a managed log sink | M | Requires schema for metrics storage → start with structured logs shipped to log store | Platform Engineer | Scraper hardening |
 | Contributor onboarding refinements | Shorten ramp | Update handbook references, add `pnpm`/`docker` instructions, record walkthrough video | M | Docs drift quickly → assign owner for monthly review | DX Lead | Docs overhaul complete |
 
 ## Horizon: Later (6–12+ weeks)
@@ -46,7 +46,6 @@
 ## Observability Plan
 - Standardise log payloads (`service`, `eventId`, `durationMs`, `result`) and ship to a managed log sink (e.g., Logtail) weekly.
 - Instrument scraper duration and OpenAI token counts via custom metrics; expose Prometheus-style endpoint for Docker scheduler.
-- Configure Sentry performance monitoring with meaningful transactions (scraper run, API request) and sample rate 0.2.
 - Add health endpoint `/api/health` checking DB connectivity and last scrape timestamp.
 
 ## Security Hygiene

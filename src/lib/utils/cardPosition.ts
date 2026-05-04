@@ -31,7 +31,7 @@ const CANONICAL_BY_RAW: Record<string, CardPosition> = {
  *
  * Falls through to `'preliminary'` for unknown inputs rather than throwing —
  * an unrecognised value should not blank the page; it just lands in the
- * fallback bucket and (caller's responsibility) can be reported to Sentry.
+ * fallback bucket. Callers may log unknown inputs separately.
  */
 export function toCanonicalCardPosition(raw: string | null | undefined): CardPosition {
   if (!raw) return 'preliminary'

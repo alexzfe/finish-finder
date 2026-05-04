@@ -64,8 +64,7 @@ class Logger {
   }
 
   private sendToExternalService(entry: LogEntry): void {
-    // Placeholder for external logging service integration
-    // Examples: Sentry, LogRocket, DataDog, etc.
+    // Placeholder for an external logging service integration.
     if (entry.level === 'error') {
       // Send errors to error tracking service
     }
@@ -143,10 +142,7 @@ export class ErrorTracker {
 
     console.error('Captured error:', errorInfo)
 
-    // In production, send to error tracking service
-    if (process.env.NODE_ENV === 'production') {
-      // Send to Sentry, Bugsnag, etc.
-    }
+    // In production, an external error tracker can be wired in here.
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

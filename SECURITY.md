@@ -8,7 +8,7 @@
 5. [Vulnerability Reporting](#vulnerability-reporting)
 
 ## Guiding Principles
-- Treat all API keys (OpenAI, Google, Sentry) as high-value secrets.
+- Treat all API keys (OpenAI, Google) as high-value secrets.
 - Store production databases in managed services with role-based access.
 - Limit third-party scraping frequency to avoid bans and require TLS for all outbound calls.
 - Keep audit trails for scraper activity (logs + strike ledgers).

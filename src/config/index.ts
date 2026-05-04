@@ -7,8 +7,8 @@
  * ```typescript
  * import { env, FEATURES, RATE_LIMITS } from '@/config'
  *
- * if (FEATURES.SENTRY_ENABLED) {
- *   // Initialize Sentry
+ * if (FEATURES.OPENAI_AI) {
+ *   // Use OpenAI adapter
  * }
  * ```
  */

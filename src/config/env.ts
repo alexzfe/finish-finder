@@ -23,11 +23,6 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   BRAVE_SEARCH_API_KEY: z.string().min(1).optional(),
 
-  // Sentry (optional)
-  SENTRY_DSN: z.string().url().optional(),
-  NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
-  SENTRY_TOKEN: z.string().optional(),
-
   // Application settings
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
@@ -79,9 +74,6 @@ export const FEATURES = {
   WEB_SEARCH: !!env.BRAVE_SEARCH_API_KEY,
   ANTHROPIC_AI: !!env.ANTHROPIC_API_KEY,
   OPENAI_AI: !!env.OPENAI_API_KEY,
-
-  // Monitoring
-  SENTRY_ENABLED: !!env.SENTRY_DSN,
 
   // Environment
   IS_DEVELOPMENT: env.NODE_ENV === 'development',

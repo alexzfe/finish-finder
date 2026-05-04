@@ -23,13 +23,6 @@
 | `OPENAI_API_KEY` | AI Predictions | Auth for GPT-4o predictions (legacy + new system fallback). |
 | `AI_PROVIDER` | AI Predictions (New) | AI provider to use: `anthropic` (default) or `openai`. |
 | `OPENAI_PREDICTION_CHUNK_SIZE` | Scripts (Legacy) | Overrides default batch size (6 fights per OpenAI call) in old system. |
-| `SENTRY_DSN` | Server | Backend Sentry project. |
-| `NEXT_PUBLIC_SENTRY_DSN` | Client | Frontend Sentry project. |
-| `SENTRY_TRACES_SAMPLE_RATE` | Server | Trace sample rate (0.0–1.0). |
-| `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` | Client | Client trace sample rate. |
-| `NEXT_PUBLIC_SENTRY_REPLAY_SESSION_SAMPLE_RATE` | Client | Session replay sample rate. |
-| `NEXT_PUBLIC_SENTRY_REPLAY_ON_ERROR_SAMPLE_RATE` | Client | Replay sampling on errors. |
-| `SENTRY_TOKEN` | CI / Operations | Token for Sentry CLI when publishing source maps. |
 | `NEXT_PUBLIC_BASE_PATH` | Client | Base path for static deployments (GitHub Pages). |
 
 Store sensitive values in platform secret managers (Vercel, GitHub Actions, 1Password). Never commit real keys.
@@ -227,9 +220,6 @@ GROUP BY status;
 5. Update relevant runbooks and docs if new columns impact scraper or UI.
 
 ## Observability
-- **Sentry**
-  - Client: `sentry.client.config.ts` configured via `NEXT_PUBLIC_SENTRY_*`
-  - Server & Edge: `sentry.server.config.ts`, `sentry.edge.config.ts` use `SENTRY_DSN`
 - **Database Monitoring**
   - `ScrapeLog` table: Audit trail of all scraper executions with metrics
   - Admin dashboard: `/admin` (password: "admin123" in dev) for database performance
@@ -244,7 +234,7 @@ GROUP BY status;
 ## Incident Response
 | Symptom | Checks | Remediation |
 | --- | --- | --- |
-| **No events in UI** | `/api/db-events` returns 500 or empty. Check Postgres availability and `ScrapeLog` table. | Run manual scrape via `gh workflow run scraper.yml -f limit=1`. Check Sentry for API errors. |
+| **No events in UI** | `/api/db-events` returns 500 or empty. Check Postgres availability and `ScrapeLog` table. | Run manual scrape via `gh workflow run scraper.yml -f limit=1`. Check Vercel logs for API errors. |
 | **Scraper returns 0 events** | Check `ScrapeLog.errorMessage` and GitHub Actions logs. | UFCStats.com HTML may have changed. Update parsers in `/scraper/ufc_scraper/parsers.py`. Run tests: `pytest tests/test_parsers.py -v`. |
 | **API authentication failures** | Scraper logs show 401/403 errors. | Verify `INGEST_API_SECRET` matches in GitHub secrets and Vercel environment variables. Rotate secret if compromised. |
 | **Database connection errors** | Scraper logs show "Can't reach database server". | Check Supabase database status. Verify `DATABASE_URL` in Vercel. Test connection: `node -e "require('@prisma/client').PrismaClient().$connect()"` |

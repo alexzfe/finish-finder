@@ -16,7 +16,7 @@
 
 ## Development Environment
 1. Install dependencies with `npm install`.
-2. Copy `.env.example` → `.env.local` and fill in secrets (OpenAI, Postgres, Sentry). Never commit `.env.local`.
+2. Copy `.env.example` → `.env.local` and fill in secrets (OpenAI, Postgres). Never commit `.env.local`.
 3. Start the dev server with `npm run dev`.
 4. Optional: seed data by running the scraper in `check` mode against a populated database.
 
@@ -32,7 +32,7 @@
 - Typescript: prefer explicit types on exported functions and complex objects. Avoid `any`.
 - React: favour pure components and memoisation for large lists; avoid prop drilling by promoting shared hooks.
 - Prisma: run `npm run db:push` and inspect diffs before committing migrations.
-- Errors: log via Sentry or `src/lib/monitoring/logger.ts`; do not swallow exceptions silently.
+- Errors: log via `src/lib/monitoring/logger.ts`; do not swallow exceptions silently.
 - Secrets: never commit live API keys, tokens, or connection strings. Rotate anything that leaks.
 
 ## Pull Request Checklist

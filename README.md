@@ -40,7 +40,7 @@ Core repo pillars:
 | Data Layer | `prisma/schema.prisma`, `prisma/migrations/**` | Runs on SQLite locally and Supabase/Postgres remotely. Includes ScrapeLog audit table and scraper fields (sourceUrl, contentHash, lastScrapedAt). |
 | Scraper | `scraper/ufc_scraper/`, `src/app/api/internal/ingest/route.ts`, `src/lib/scraper/validation.ts` | Python/Scrapy spider extracts data from UFCStats.com → POSTs JSON to Next.js API → Transaction-safe upserts with SHA256 change detection. Creates ScrapeLog entries for monitoring. |
 | AI | `src/lib/ai/hybridUFCService.ts`, `scripts/generate-*.js` | Generates fight predictions using OpenAI GPT-4o based on scraped data. |
-| Monitoring | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts`, `src/app/admin/`, `src/lib/database/monitoring.ts` | Sentry is wired for client, server, and edge; logger utilities keep console output structured. Database performance monitoring with admin dashboard at `/admin`. |
+| Monitoring | `src/lib/monitoring/logger.ts` | Structured loggers (`apiLogger`, `scraperLogger`, etc.) for console output. |
 
 ## Quickstart
 
@@ -55,7 +55,7 @@ Core repo pillars:
 ```bash
 npm install
 cp .env.example .env.local
-# populate .env.local with private keys (OpenAI, Sentry, DATABASE_URL, etc.)
+# populate .env.local with private keys (OpenAI, DATABASE_URL, etc.)
 ```
 
 ### Run Locally
@@ -158,7 +158,7 @@ For complete architecture details, see [`docs/NEW_SCRAPER_ARCHITECTURE.md`](docs
 ## Deployment
 Recommended production topology:
 1. **Vercel + Supabase** – Deploy the Next.js app to Vercel (`npm run build`) and point Prisma at Supabase Postgres.
-2. **Secrets** – Configure `DATABASE_URL`, `DIRECT_DATABASE_URL`, `INGEST_API_SECRET`, `OPENAI_API_KEY`, and `SENTRY_*` in Vercel env settings and GitHub Actions secrets.
+2. **Secrets** – Configure `DATABASE_URL`, `DIRECT_DATABASE_URL`, `INGEST_API_SECRET`, and `OPENAI_API_KEY` in Vercel env settings and GitHub Actions secrets.
 3. **Automated Scraper** – Python/Scrapy scraper runs in GitHub Actions, POSTs to `/api/internal/ingest` endpoint.
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`OPERATIONS.md`](OPERATIONS.md) for deeper diagrams, runbooks, and deployment checklists.

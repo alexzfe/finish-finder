@@ -22,16 +22,6 @@ Connection strings are configured in Vercel environment variables (see step 2 be
    - `DATABASE_URL`: Your Supabase PostgreSQL connection string
    - `SHADOW_DATABASE_URL`: Shadow database connection string
    - `OPENAI_API_KEY`: Your OpenAI API key
-   - `SENTRY_DSN`: Backend Sentry DSN
-   - `NEXT_PUBLIC_SENTRY_DSN`: Frontend Sentry DSN
-   - `SCRAPER_CANCEL_THRESHOLD`: (optional) Default: 3
-   - `SCRAPER_FIGHT_CANCEL_THRESHOLD`: (optional) Default: 2
-   - `SHERDOG_ENABLED`: (optional) Set to `false` for CI/deploy contexts
-   - `TAPOLOGY_ENRICH_RECORDS`: (optional) Set to `true` for daily runs
-   - `SLOW_QUERY_THRESHOLD_MS`: (optional) Default: 1000
-   - `CRITICAL_QUERY_THRESHOLD_MS`: (optional) Default: 5000
-   - `FREQUENT_QUERY_THRESHOLD`: (optional) Default: 100
-   - `DISABLE_QUERY_MONITORING`: (optional) Default: false
    - `QUERY_LOGGING_VERBOSE`: (optional) Default: false
 
 ### 3. Database Migration
