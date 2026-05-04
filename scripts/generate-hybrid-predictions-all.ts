@@ -27,14 +27,15 @@ import { Predictor } from '../src/lib/ai/predictor'
 import { buildSnapshot, type FightWithRelations } from '../src/lib/ai/snapshot'
 import { prisma } from '../src/lib/database/prisma'
 
-const PREDICTION_VERSION = 'v4.0-funscore-1to10'
+const PREDICTION_VERSION = 'v4.1-funscore-1to10-gpt55'
 const PREDICTION_VERSION_DESCRIPTION = `Hybrid Judgment Architecture
 - Finish Probability: Deterministic (from attributes)
 - Fun Score: AI Judgment (1-10 integer)
 - Producer: Predictor + LLMAdapter
+- Model: gpt-5.5
 - Output: attributes + funScore + keyFactors + confidence (no reasoning)`
 
-const OPENAI_MODEL = 'gpt-4o' as const
+const OPENAI_MODEL = 'gpt-5.5' as const
 
 const RATE_LIMIT_DELAY_MS = 2000
 
