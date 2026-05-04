@@ -17,12 +17,16 @@ const MODELS_REQUIRING_DEFAULT_TEMPERATURE: ReadonlySet<OpenAIModel> = new Set([
   'gpt-5.5-pro',
 ])
 
+export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high'
+
 export interface OpenAIAdapterOptions {
   apiKey?: string
   model?: OpenAIModel
   temperature?: number
   maxTokens?: number
   timeoutMs?: number
+  /** Only honoured by reasoning-class models (gpt-5.5/-pro). Omit for others. */
+  reasoningEffort?: ReasoningEffort
 }
 
 export class OpenAIAdapter implements LLMAdapter {
@@ -30,6 +34,7 @@ export class OpenAIAdapter implements LLMAdapter {
   private readonly model: OpenAIModel
   private readonly temperature: number
   private readonly maxTokens: number
+  private readonly reasoningEffort?: ReasoningEffort
 
   constructor(opts: OpenAIAdapterOptions = {}) {
     const apiKey = opts.apiKey ?? process.env.OPENAI_API_KEY
@@ -38,6 +43,7 @@ export class OpenAIAdapter implements LLMAdapter {
     this.model = opts.model ?? 'gpt-4o'
     this.temperature = opts.temperature ?? 0.4
     this.maxTokens = opts.maxTokens ?? 2000
+    this.reasoningEffort = opts.reasoningEffort
   }
 
   async call({ prompt, output }: LLMCallArgs): Promise<LLMCallResult> {
@@ -46,6 +52,7 @@ export class OpenAIAdapter implements LLMAdapter {
       model: this.model,
       max_completion_tokens: this.maxTokens,
       ...(supportsCustomTemperature ? { temperature: this.temperature } : {}),
+      ...(this.reasoningEffort ? { reasoning_effort: this.reasoningEffort } : {}),
       messages: [{ role: 'user', content: prompt }],
       response_format: {
         type: 'json_schema',

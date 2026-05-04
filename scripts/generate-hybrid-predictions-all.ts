@@ -31,13 +31,14 @@ import { Predictor } from '../src/lib/ai/predictor'
 import { buildSnapshot, type FightWithRelations } from '../src/lib/ai/snapshot'
 import { prisma } from '../src/lib/database/prisma'
 
-const PREDICTION_VERSION = 'v4.2-no-confidence-gpt55'
+const PREDICTION_VERSION = 'v4.3-low-effort-gpt55'
 const PREDICTION_VERSION_DESCRIPTION = `Hybrid Judgment Architecture
 - Finish Probability: Deterministic (from attributes)
 - Fun Score: AI Judgment (1-10 integer)
 - Producer: Predictor + LLMAdapter
 - Model: gpt-5.5
-- Output: attributes + funScore + keyFactors (confidence removed in v4.2)`
+- Reasoning effort: low (was default medium in v4.2)
+- Output: attributes + funScore + keyFactors`
 
 const OPENAI_MODEL = 'gpt-5.5' as const
 
@@ -99,7 +100,7 @@ async function main() {
     console.log(`  📅 ${eventName}: ${count} fights`)
   }
 
-  const adapter = new OpenAIAdapter({ model: OPENAI_MODEL })
+  const adapter = new OpenAIAdapter({ model: OPENAI_MODEL, reasoningEffort: 'low' })
   const predictor = new Predictor(adapter)
   console.log(`\n🧠 Using OpenAIAdapter(model=${OPENAI_MODEL}) with hybrid judgment\n`)
 
