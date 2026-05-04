@@ -95,10 +95,11 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
   }, [event])
 
   const getFunScoreStyle = (score: number) => {
-    // Warm "heat" scale on the 1-10 funScore axis: cold → warm → hot → fire
+    // 1-10 heat scale: cold → cool → warm → hot → fire (2 values per tier)
     if (score >= 9) return { color: 'var(--score-fire)', textShadow: 'var(--score-fire-glow)' }
     if (score >= 7) return { color: 'var(--score-hot)' }
-    if (score >= 6) return { color: 'var(--score-warm)' }
+    if (score >= 5) return { color: 'var(--score-warm)' }
+    if (score >= 3) return { color: 'var(--score-cool)' }
     return { color: 'var(--score-cold)' }
   }
 
