@@ -2,34 +2,18 @@
 
 ## Current Project State
 
-### Recent Work (February 2025)
+### AI Predictions
+The active prediction path is `Predictor` + an `LLMAdapter` (OpenAI/Anthropic) → `PredictionStore`. See `ARCHITECTURE.md` for the data-flow description.
 
-#### 1. Hybrid Judgment AI Predictions (v3.0-hybrid) ✅
-Implemented new AI prediction approach that separates finish probability (deterministic) from fun score (AI-judged):
+- **Finish Probability** (0-1): deterministic, computed in `src/lib/ai/math/finishProbability.ts` from the qualitative attributes the LLM returns and the per-weight-class baseline.
+- **Fun Score** (1-10 integer): direct AI judgment, no recomputation.
+- **Confidence** (0-1): the model's stated certainty, used to display uncertainty in the UI. Replaces the old `riskLevel`.
+- **Model**: OpenAI GPT-4o (default) via `OpenAIAdapter`. `AnthropicAdapter` exists for swap-out.
+- **Runner**: `scripts/generate-hybrid-predictions-all.ts` (`npm run predict:all`); GitHub Actions daily at 4:30 AM UTC (after scraper).
+- **Versioning**: `PREDICTION_VERSION` constant in the runner, bumped manually whenever the prompt, deterministic math, or output contract changes.
 
-- **Finish Probability**: Deterministic calculation from fighter attributes (vulnerability + offense + style matchup)
-- **Fun Score**: AI-judged 0-100 based on holistic expert assessment of stats, entertainment profiles, and intangibles
-- **Coverage**: 54 upcoming fights across 6 events (UFC 325, UFC Fight Nights, UFC 326)
-- **Cost**: ~$0.009 per fight (~$0.50 total)
-- **Model**: OpenAI GPT-4o with structured outputs
-
-Key files:
-- `src/lib/ai/hybridJudgmentService.ts` - Core service
-- `src/lib/ai/prompts/hybridJudgmentPrompt.ts` - Prompt template
-- `scripts/generate-hybrid-predictions-all.ts` - Batch runner
-
-#### 2. Fighter Image Backfill ✅
-Backfilled 84 fighter images from ESPN API:
-- **Success rate**: 97.7% (84/86 fighters)
-- **Still missing**: 2 fighters (Josh Hokit, Zach Reese - newer fighters without photos)
-- **Source**: ESPN headshots primarily, Wikipedia fallback
-- **Script**: `scraper/scripts/backfill_fighter_images.py`
-
-#### 3. Legacy Service Cleanup ✅
-All older prediction services are deprecated. The active service is:
-- `hybridJudgmentService.ts` - Deterministic finish probability + AI-judged fun score
-- Runner: `scripts/generate-hybrid-predictions-all.ts`
-- Automated: GitHub Actions daily at 4:30 AM UTC (after scraper)
+### Fighter Image Backfill
+Images come from ESPN headshots (Wikipedia as fallback). Backfill script: `scraper/scripts/backfill_fighter_images.py`.
 
 ---
 

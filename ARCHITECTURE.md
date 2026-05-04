@@ -17,11 +17,11 @@ Finish Finder sits between public fight data sources and UFC fans:
 - **Supabase/Postgres** (or SQLite locally) persists events, fights, fighter profiles, and scrape audit logs.
 
 ```
-Users → Next.js App (Vercel/GitHub Pages)
+Users → Next.js App (Vercel)
             ↓ fetches
-        API Routes (db-events, fighter-image, health, performance)
+        API Routes (db-events, fighter-image, health)
             ↓ Prisma ORM
-      PostgreSQL / SQLite (Supabase)
+      PostgreSQL (Supabase)
             ↑ Transaction-safe upserts
         Ingestion API (/api/internal/ingest)
             ↑ HTTP POST with Bearer auth
@@ -38,8 +38,8 @@ Users → Next.js App (Vercel/GitHub Pages)
 | Layer | Responsibilities | Key Files |
 | --- | --- | --- |
 | **UI** | Renders events, fight cards, and sticky analysis. Handles optimistic selection state. | `src/app/page.tsx`, `src/components/**/*`
-| **API** | Serves structured fight data from the database and (optionally) resolves fighter imagery. Includes ingestion API for scraper data submission, JSON safety nets, performance monitoring, and health check endpoints. | `src/app/api/db-events/route.ts`, `src/app/api/internal/ingest/route.ts`, `src/app/api/fighter-image/route.ts`, `src/app/api/performance/route.ts`, `src/app/api/health/route.ts`
-| **Data & Domain** | Defines TypeScript and Prisma models (Event, Fight, Fighter, ScrapeLog), conversion helpers, logging utilities, JSON parsing utilities, weight-class validation, scraper data validation schemas, and database performance monitoring. | `prisma/schema.prisma`, `src/types/**/*`, `src/lib/**/*`, `src/lib/utils/json.ts`, `src/lib/utils/weight-class.ts`, `src/lib/database/validation.ts`, `src/lib/database/monitoring.ts`, `src/lib/scraper/validation.ts`
+| **API** | Serves structured fight data from the database, resolves fighter imagery, and exposes a health check. The ingestion API receives scraper submissions, validated by Zod schemas. | `src/app/api/db-events/route.ts`, `src/app/api/internal/ingest/route.ts`, `src/app/api/fighter-image/route.ts`, `src/app/api/health/route.ts`
+| **Data & Domain** | Defines TypeScript and Prisma models (Event, Fight, Fighter, Prediction, PredictionVersion, ScrapeLog), conversion helpers, JSON parsing utilities, weight-class validation, and scraper data validation schemas. | `prisma/schema.prisma`, `src/types/**/*`, `src/lib/utils/json.ts`, `src/lib/utils/weight-class.ts`, `src/lib/database/validation.ts`, `src/lib/scraper/validation.ts`, `src/lib/scraper/fightReconciler.ts`
 | **Scraper** | Python/Scrapy spider scrapes UFCStats.com for events, fights, and fighter profiles. Includes HTML parsers, content hash change detection, and API ingestion pipeline. Runs daily via GitHub Actions. | `scraper/ufc_scraper/spiders/ufcstats.py`, `scraper/ufc_scraper/parsers.py`, `scraper/ufc_scraper/pipelines.py`, `scraper/ufc_scraper/items.py`, `.github/workflows/scraper.yml`
 | **AI Predictions** | Per fight, a `Predictor` builds a `FightSnapshot`, calls one `LLMAdapter` (OpenAI/Anthropic), reads back qualitative attributes + AI-judged `funScore` + `confidence`, and computes `finishProbability` deterministically from those attributes. Persists through `PredictionStore` against an active `PredictionVersion`. **The system predicts entertainment value — never winners or methods.** | `src/lib/ai/predictor.ts`, `src/lib/ai/adapters/`, `src/lib/ai/snapshot.ts`, `src/lib/ai/persistence/predictionStore.ts`, `scripts/generate-hybrid-predictions-all.ts`, `.github/workflows/ai-predictions.yml`
 | **Monitoring** | Structured loggers for console output. ScrapeLog table provides audit trail of scraper executions. | `src/lib/monitoring/logger.ts`, `prisma/schema.prisma` (ScrapeLog model)
@@ -48,8 +48,7 @@ Users → Next.js App (Vercel/GitHub Pages)
 1. **Scrape** – Python/Scrapy spider runs daily at 2:00 AM UTC via GitHub Actions (`.github/workflows/scraper.yml`). It crawls UFCStats.com event listings, extracts fight details and fighter profiles, then POSTs JSON payloads to `/api/internal/ingest` with Bearer token authentication. The ingestion API validates data with Zod schemas, performs SHA256 content hash comparison to detect changes, and executes transaction-safe upserts to Postgres. Creates `ScrapeLog` audit entries for monitoring. Spider can be triggered manually with optional event limit.
 2. **Predict** – `.github/workflows/ai-predictions.yml` runs `scripts/generate-hybrid-predictions-all.ts` daily after the scraper. The runner asks `PredictionStore` for fights missing predictions for the current `PREDICTION_VERSION`, then per fight: a `Predictor` builds a `FightSnapshot`, makes one LLM call (via an injected adapter) for qualitative attributes + `funScore` (1-10 integer) + `confidence`, computes `finishProbability` deterministically from the attributes, and saves through `PredictionStore`. `PREDICTION_VERSION` is **bumped manually** whenever the prompt, deterministic math, or output contract changes — an earlier file-hashing approach produced too much version churn on cosmetic edits and was dropped.
 3. **Serve** – The UI requests `/api/db-events`, which returns Prisma-backed events with fight enrichment data (title fights, card position, main event flags).
-4. **Monitoring** – Failure paths log via the structured logger (`src/lib/monitoring/logger.ts`). Scraper executions tracked in `ScrapeLog` table with status, event counts, and error messages.
-5. **Performance Tracking** – All database queries are monitored in real-time, with slow/critical query detection and health scoring. Admins can access performance data via `/api/health`, `/api/performance`, or the dashboard at `/admin`.
+4. **Monitoring** – Failure paths log via the structured logger (`src/lib/monitoring/logger.ts`). Scraper executions tracked in `ScrapeLog` table with status, event counts, and error messages. `/api/health` exposes a basic readiness probe.
 
 ## External Integrations
 - **UFCStats.com** – Single authoritative data source for all UFC events, fights, and fighter profiles. Official UFC stats partner with consistent HTML structure. Python/Scrapy spider respects robots.txt and implements 3-second request delays.
@@ -64,7 +63,7 @@ Users → Next.js App (Vercel/GitHub Pages)
 - **Profiles** –
   - *Local* – SQLite at `prisma/dev.db`; optional `.env.local` overrides; static data fallback works without external services. Python scraper requires `INGEST_API_URL` and `INGEST_API_SECRET` for local testing.
   - *Sandbox / CI* – GitHub Actions runs Python scraper with secrets injected (`INGEST_API_URL`, `INGEST_API_SECRET`). Separate AI predictions workflow uses `DATABASE_URL` and `OPENAI_API_KEY`.
-  - *Production* – Vercel hosting with Supabase PostgreSQL; Python scraper runs in GitHub Actions; static mirror optionally lives on GitHub Pages from `docs/`.
+  - *Production* – Vercel hosting with Supabase PostgreSQL; Python scraper runs in GitHub Actions.
 - **Feature Flags** – None presently. Image lookup effectively toggled off via early return in `fighter-image` route.
 
 ## Known Gaps & Future Work
@@ -79,20 +78,14 @@ Users → Next.js App (Vercel/GitHub Pages)
 - Fighter imagery fallback logic exists but is disabled; needs rate-limit friendly implementation before re-enabling.
 - **Secret hygiene** - Leaked tokens in history need rotation (OpenAI/Google). See ROADMAP for remediation plan.
 
-## Recent Database Improvements (2025-09-20 & 2025-09-21)
-- ✅ **Performance indexes added** for event queries and fight joins
-- ✅ **Connection pooling optimized** with singleton PrismaClient pattern
-- ✅ **Query pagination implemented** to prevent unbounded results
-- ✅ **Transaction safety added** to scraper operations for atomicity
-- ✅ **Bulk operations optimized** for fighter/fight creation
-- ✅ **JSON field validation** implemented to prevent runtime errors
-- ✅ **Query performance monitoring** with real-time dashboard and health checks
-- ✅ **Admin interface** for database performance visualization and management
-- ✅ **Comprehensive observability** with metrics collection and alerting
+## Database Patterns
+- Performance indexes on event queries and fight joins.
+- Singleton `PrismaClient` (`src/lib/database/prisma.ts`) shared across API routes and scripts.
+- Pagination on the events query path to bound result sets.
+- Scraper writes wrapped in Prisma transactions (see `src/app/api/internal/ingest/route.ts`); fight matching/cancellation handled by `planFightReconciliation` in `src/lib/scraper/fightReconciler.ts`.
+- JSON columns parsed via `src/lib/utils/json.ts` (`parseJsonArray`, etc.) with safe fallbacks.
 
-See [`DATABASE_PRODUCTION_STATUS.md`](DATABASE_PRODUCTION_STATUS.md) for complete implementation details.
-
-## Enhanced Fighter Statistics & AI Prediction System (2025-11-02)
+## Enhanced Fighter Statistics
 
 ### Database Schema Enhancements
 Added comprehensive fighter statistics from UFCStats.com to support advanced AI predictions:
@@ -107,30 +100,7 @@ Added comprehensive fighter statistics from UFCStats.com to support advanced AI 
 - **Calculated Win Stats**: `finishRate`, `koPercentage`, `submissionPercentage` (derived from win methods)
 - **Calculated Loss Stats**: `lossFinishRate`, `koLossPercentage`, `submissionLossPercentage` (defensive metrics)
 
-**New AI Prediction Tracking Models:**
-```prisma
-model PredictionVersion {
-  // Tracks different prompt iterations with accuracy metrics
-  version             String   @unique
-  finishPromptHash    String   // SHA256 of finish probability prompt
-  funScorePromptHash  String   // SHA256 of fun score prompt
-  finishAccuracy      Float?   // % of correct predictions
-  brierScore          Float?   // Calibration score for probabilities
-  funScoreCorrelation Float?   // Correlation with FOTN awards
-}
-
-model Prediction {
-  // Individual fight predictions with full reasoning
-  fightId             String
-  versionId           String
-  finishProbability   Float    // 0-1 (0-100%)
-  finishConfidence    Float    // 0-1
-  finishReasoning     Json     // Chain-of-thought steps
-  funScore            Float    // 0-100
-  funBreakdown        Json     // Score breakdown by factor
-  actualFinish        Boolean? // Actual outcome for evaluation
-}
-```
+**Prediction tracking models** — `PredictionVersion` (one row per active prompt/math/contract revision; manually bumped via `PREDICTION_VERSION` in the runner) and `Prediction` (one row per fight per version, with `funScore` 1-10 integer, `finishProbability` 0-1, `confidence` 0-1, `actualFinish` for post-hoc evaluation). See `prisma/schema.prisma` for the canonical shape; `PredictionStore` (`src/lib/ai/persistence/predictionStore.ts`) is the only writer.
 
 ### Enhanced Scraper (Python/Scrapy)
 Updated `parse_fighter_profile()` function to extract all 17 statistics from UFCStats.com:
@@ -161,88 +131,10 @@ Updated `parse_fighter_profile()` function to extract all 17 statistics from UFC
 - `lastScrapedAt` timestamp tracks freshness
 - Foreign keys maintain referential integrity between fights and fighters
 
-### AI Prediction Implementation Plan
-Complete implementation plan stored in `/docs/AI_PREDICTION_IMPLEMENTATION_PLAN.md`:
-
-**Architecture**: Two-prompt approach
-- **Prompt A**: Finish Probability (0-100%) with 4-step chain-of-thought reasoning
-- **Prompt B**: Fun Score (0-100) with weighted factor analysis
-
-**Phase 1 Complete** (Database & Scraper):
-- ✅ Database schema with 17 new fighter stats
-- ✅ PredictionVersion and Prediction tracking models
-- ✅ Enhanced scraper extracting full statistics
-- ✅ Validation schemas and API ingestion updated
-- ✅ Tested with real UFCStats.com data (26 fighters scraped successfully)
-
-**Phase 2 Complete** (AI Prompt Templates):
-- ✅ Weight class base rates lookup (`src/lib/ai/prompts/weightClassRates.ts`)
-- ✅ Finish probability prompt with 4-step chain-of-thought reasoning
-- ✅ Fun score prompt with weighted factor analysis (40% pace, 30% secondary, 20% style, 10% context)
-- ✅ Fighter style classification helper (`striker`, `wrestler`, `grappler`, `balanced`)
-- ✅ Complete TypeScript interfaces with full type safety
-- ✅ Example usage and database mapper functions
-
-**Phase 3 Complete** (Prediction Service & Runner):
-- ✅ NewPredictionService class with Anthropic Claude and OpenAI support (`src/lib/ai/newPredictionService.ts`)
-- ✅ 1-fight-per-call architecture for maximum quality (can batch later if needed)
-- ✅ Retry logic with exponential backoff (3 attempts, 1s → 2s → 4s delays)
-- ✅ JSON parsing with markdown code block handling and comprehensive validation
-- ✅ Token and cost tracking ($0.02-0.04 per fight, ~$2/month for 4 events)
-- ✅ Prediction runner script with version management (`scripts/new-ai-predictions-runner.ts`)
-- ✅ SHA256 hash-based prompt versioning for A/B testing
-- ✅ Command line interface: `--dry-run`, `--force`, `--event-id=<id>`
-- ✅ **Risk Level Calculation** - Automatically derives Fight.riskLevel from AI confidence scores:
-  - `calculateRiskLevel()` function averages finish + fun confidence scores
-  - Maps confidence to risk: High confidence (≥0.7) → "low" risk, Medium (0.4-0.7) → "balanced", Low (<0.4) → "high"
-  - Populated automatically when predictions are generated
-  - Displayed in UI "Risk Profile" section (`src/components/fight/FightDetailsModal.tsx:97-100`)
-- ✅ Progress tracking and error handling with detailed metrics logging
-- ✅ Tested with dry-run: 51 fights found across 4 upcoming events
-
-**Next Phases**:
-- Phase 4: Implement evaluation system with accuracy tracking (Brier score, finish accuracy, fun score correlation)
-- Phase 5: Deploy to production and establish continuous improvement loop with monthly prompt optimization
-
-See [`/docs/AI_PREDICTION_IMPLEMENTATION_PLAN.md`](docs/AI_PREDICTION_IMPLEMENTATION_PLAN.md) for complete technical specification.
-
-## TypeScript Strict Mode Migration (2025-09-21)
-- ✅ **Build quality gates enabled** - TypeScript and ESLint errors now block builds in production
-- ✅ **Strategic any types documented** - All framework integration `any` usage justified with ESLint disable comments
-- ✅ **Vercel deployment validated** - Production builds successfully pass strict type checking
-- ✅ **ESLint configuration optimized** - Build artifacts and legacy code excluded from quality checks
-
-See [`TYPESCRIPT_MIGRATION_PLAN.md`](TYPESCRIPT_MIGRATION_PLAN.md) for complete migration details.
-
-## JSON Parsing & Error Handling Infrastructure (2025-09-21)
-- ✅ **Vitest test suite implemented** - 60 comprehensive tests covering JSON utilities, weight-class validation, and database validation
-- ✅ **JSON utilities with error handling** - parseJsonArray, parseJsonSafe, stringifyJsonSafe with graceful fallbacks and console warning logging
-- ✅ **Weight class validation & normalization** - Handles common scraping variations (LHW → light_heavyweight, case normalization, women's divisions)
-- ✅ **Database input validation** - Type checking and error accumulation for fight/fighter data with realistic test scenarios
-- ✅ **99.06% test coverage achieved** - Far exceeding the 60% target on tested src/lib modules
-- ✅ **API route refactoring** - db-events route now uses centralized JSON parsing utilities
-
-### Key Utility Functions
-- **JSON Parsing**: `src/lib/utils/json.ts:parseJsonArray` - Safely parses database JSON with fallback to empty arrays
-- **Weight Class Validation**: `src/lib/utils/weight-class.ts:toWeightClass` - Normalizes weight class variations from scraped data
-- **Database Validation**: `src/lib/database/validation.ts:validateFightData` - Validates fight objects with comprehensive error reporting
-
-## Python/Scrapy UFC Scraper (2025-11-01)
-- ✅ **Production-ready scraper** - Complete Python/Scrapy implementation with UFCStats.com as single authoritative source
-- ✅ **Complete fighter profiles** - Extracts wins, losses, draws from fighter profile pages (100% coverage)
-- ✅ **Fight enrichment data** - Title fights detection, card position assignment, main event identification
-- ✅ **Content hash change detection** - SHA256-based comparison prevents unnecessary database writes
-- ✅ **Transaction-safe upserts** - All database operations wrapped in Prisma transactions for atomicity
-- ✅ **Comprehensive audit trail** - ScrapeLog table tracks every execution with metrics and error logging
-- ✅ **Automated daily runs** - GitHub Actions workflow at 2:00 AM UTC with manual trigger support
-- ✅ **90% test coverage** - Comprehensive unit tests with HTML fixtures for offline testing
-
 ### Scraper Architecture
-- **Event List Parsing**: `scraper/ufc_scraper/parsers.py:parse_event_list` - Extracts 750+ events from UFCStats.com
-- **Event Detail Parsing**: `scraper/ufc_scraper/parsers.py:parse_event_detail` - Extracts fights, fighters, and metadata
-- **Fighter Profile Parsing**: `scraper/ufc_scraper/parsers.py:parse_fighter_profile` - Extracts complete fighter records
-- **Fight Enrichment**: `scraper/ufc_scraper/parsers.py:enrich_fight_data` - Adds title fight, card position, main event flags
-- **API Ingestion**: `src/app/api/internal/ingest/route.ts` - Validates and persists scraped data
-- **Data Validation**: `src/lib/scraper/validation.ts` - Zod schemas for type-safe data contracts
-- **Test Suite**: `scraper/tests/test_parsers.py` - 14 tests with 90% coverage
-- **Operations Guide**: `/scraper/OPERATIONS.md` - Comprehensive troubleshooting and monitoring runbook
+- **Event List Parsing**: `scraper/ufc_scraper/parsers.py:parse_event_list` — extracts events from UFCStats.com
+- **Event Detail Parsing**: `scraper/ufc_scraper/parsers.py:parse_event_detail` — extracts fights, fighters, metadata
+- **Fighter Profile Parsing**: `scraper/ufc_scraper/parsers.py:parse_fighter_profile` — extracts complete fighter records, computes UFC-only finish/loss-finish rates
+- **Fight Enrichment**: `scraper/ufc_scraper/parsers.py:enrich_fight_data` — adds title-fight, card-position, main-event flags
+- **API Ingestion**: `src/app/api/internal/ingest/route.ts` — validates with Zod, applies the plan from `planFightReconciliation`
+- **Test Suite**: `scraper/tests/test_parsers.py` — pytest with HTML fixtures for offline testing
