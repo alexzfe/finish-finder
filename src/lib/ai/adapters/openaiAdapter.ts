@@ -5,9 +5,17 @@ import type { LLMAdapter, LLMCallArgs, LLMCallResult } from './llmAdapter'
 const PRICING_PER_MILLION_TOKENS = {
   'gpt-4o': { input: 2.5, output: 10.0 },
   'gpt-4o-mini': { input: 0.15, output: 0.6 },
+  'gpt-5.5': { input: 5.0, output: 30.0 },
+  'gpt-5.5-pro': { input: 30.0, output: 180.0 },
 } as const
 
 export type OpenAIModel = keyof typeof PRICING_PER_MILLION_TOKENS
+
+/** Models that reject custom `temperature` and require the API default (1). */
+const MODELS_REQUIRING_DEFAULT_TEMPERATURE: ReadonlySet<OpenAIModel> = new Set([
+  'gpt-5.5',
+  'gpt-5.5-pro',
+])
 
 export interface OpenAIAdapterOptions {
   apiKey?: string
@@ -33,10 +41,11 @@ export class OpenAIAdapter implements LLMAdapter {
   }
 
   async call({ prompt, output }: LLMCallArgs): Promise<LLMCallResult> {
+    const supportsCustomTemperature = !MODELS_REQUIRING_DEFAULT_TEMPERATURE.has(this.model)
     const completion = await this.client.chat.completions.create({
       model: this.model,
-      max_tokens: this.maxTokens,
-      temperature: this.temperature,
+      max_completion_tokens: this.maxTokens,
+      ...(supportsCustomTemperature ? { temperature: this.temperature } : {}),
       messages: [{ role: 'user', content: prompt }],
       response_format: {
         type: 'json_schema',

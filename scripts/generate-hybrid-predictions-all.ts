@@ -9,6 +9,8 @@
  *   --include-past    Also predict fights whose event date has passed
  *                     (evaluation mode — generates predictions for historical
  *                     events so accuracy can be measured against actualFinish)
+ *   --event-id ID     Restrict to a single event (implies --include-past for
+ *                     historical events; useful for A/B-ing one card)
  */
 
 import { config } from 'dotenv'
@@ -32,6 +34,8 @@ const PREDICTION_VERSION_DESCRIPTION = `Hybrid Judgment Architecture
 - Producer: Predictor + LLMAdapter
 - Output: attributes + funScore + keyFactors + confidence (no reasoning)`
 
+const OPENAI_MODEL = 'gpt-4o' as const
+
 const RATE_LIMIT_DELAY_MS = 2000
 
 function parseLimit(): number | null {
@@ -42,23 +46,34 @@ function parseLimit(): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null
 }
 
+function parseEventId(): string | null {
+  const arg = process.argv.find((a) => a.startsWith('--event-id'))
+  if (!arg) return null
+  const value = arg.includes('=') ? arg.split('=')[1] : process.argv[process.argv.indexOf(arg) + 1]
+  return value && value.length > 0 ? value : null
+}
+
 async function main() {
   console.log('🤖 Generating Hybrid Judgment Predictions for All Fights')
   console.log('='.repeat(60))
 
   const limit = parseLimit()
   const includePast = process.argv.includes('--include-past')
+  const eventId = parseEventId()
   if (limit) {
     console.log(`⚠️  --limit ${limit} — capping this run`)
   }
   if (includePast) {
     console.log('⚠️  --include-past — predicting events whose date has passed (evaluation mode)')
   }
+  if (eventId) {
+    console.log(`⚠️  --event-id ${eventId} — restricting to a single event`)
+  }
 
   const version = await ensurePredictionVersion()
   console.log(`✅ Version: ${version.version}`)
 
-  const allFights = await findFightsMissingPredictions(version.id, includePast)
+  const allFights = await findFightsMissingPredictions(version.id, includePast, eventId)
   const fights = limit ? allFights.slice(0, limit) : allFights
   if (allFights.length === 0) {
     console.log('✅ All fights already have predictions for this version.')
@@ -73,10 +88,10 @@ async function main() {
     console.log(`  📅 ${eventName}: ${count} fights`)
   }
 
-  const adapter = new OpenAIAdapter()
+  const adapter = new OpenAIAdapter({ model: OPENAI_MODEL })
   const predictor = new Predictor(adapter)
   const repository = new PredictionRepository(prisma)
-  console.log('\n🧠 Using OpenAIAdapter (default model) with hybrid judgment\n')
+  console.log(`\n🧠 Using OpenAIAdapter(model=${OPENAI_MODEL}) with hybrid judgment\n`)
 
   let totalTokens = 0
   let totalCost = 0
@@ -149,13 +164,15 @@ async function ensurePredictionVersion() {
 
 async function findFightsMissingPredictions(
   versionId: string,
-  includePast: boolean
+  includePast: boolean,
+  eventId: string | null
 ): Promise<FightWithRelations[]> {
   return prisma.fight.findMany({
     where: {
       isCancelled: false,
       predictions: { none: { versionId } },
-      ...(includePast ? {} : { event: { date: { gte: new Date() } } }),
+      ...(eventId ? { eventId } : {}),
+      ...(includePast || eventId ? {} : { event: { date: { gte: new Date() } } }),
     },
     include: {
       fighter1: {
