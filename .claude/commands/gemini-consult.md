@@ -151,7 +151,7 @@ When implementing Gemini's suggestions:
 2. Test incrementally
 3. Share results back with Gemini
 4. Iterate based on real-world feedback
-5. Document key insights in appropriate CONTEXT.md files
+5. Document key insights in code comments or `ARCHITECTURE.md`
 
 ## Remember
 

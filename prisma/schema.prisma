@@ -123,7 +123,9 @@ model Fight {
   scheduledRounds     Int      @default(3)
   fightNumber         Int?
 
-  // Legacy AI prediction fields (to be deprecated)
+  // Legacy AI prediction columns. No longer written by the active Predictor;
+  // PredictionStore reads them only as a compatibility shim until prod data
+  // is fully migrated to the Prediction table. Drop in a future migration.
   funFactor           Int      @default(0)
   finishProbability   Int      @default(0)
   entertainmentReason String?

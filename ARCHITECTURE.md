@@ -15,7 +15,6 @@ Finish Finder sits between public fight data sources and UFC fans:
 - **Next.js ingestion API** receives scraped data and performs transaction-safe database upserts.
 - **OpenAI** generates entertainment scores, finish probabilities, and narrative summaries.
 - **Supabase/Postgres** (or SQLite locally) persists events, fights, fighter profiles, and scrape audit logs.
-- **Sentry** captures client, server, and API exceptions.
 
 ```
 Users → Next.js App (Vercel/GitHub Pages)
@@ -42,14 +41,14 @@ Users → Next.js App (Vercel/GitHub Pages)
 | **API** | Serves structured fight data from the database and (optionally) resolves fighter imagery. Includes ingestion API for scraper data submission, JSON safety nets, performance monitoring, and health check endpoints. | `src/app/api/db-events/route.ts`, `src/app/api/internal/ingest/route.ts`, `src/app/api/fighter-image/route.ts`, `src/app/api/performance/route.ts`, `src/app/api/health/route.ts`
 | **Data & Domain** | Defines TypeScript and Prisma models (Event, Fight, Fighter, ScrapeLog), conversion helpers, logging utilities, JSON parsing utilities, weight-class validation, scraper data validation schemas, and database performance monitoring. | `prisma/schema.prisma`, `src/types/**/*`, `src/lib/**/*`, `src/lib/utils/json.ts`, `src/lib/utils/weight-class.ts`, `src/lib/database/validation.ts`, `src/lib/database/monitoring.ts`, `src/lib/scraper/validation.ts`
 | **Scraper** | Python/Scrapy spider scrapes UFCStats.com for events, fights, and fighter profiles. Includes HTML parsers, content hash change detection, and API ingestion pipeline. Runs daily via GitHub Actions. | `scraper/ufc_scraper/spiders/ufcstats.py`, `scraper/ufc_scraper/parsers.py`, `scraper/ufc_scraper/pipelines.py`, `scraper/ufc_scraper/items.py`, `.github/workflows/scraper.yml`
-| **AI Predictions** | Generates fight predictions using OpenAI GPT-4o. Runs as separate daily workflow. | `scripts/ai-predictions-runner.js`, `scripts/generate-*.js`, `.github/workflows/ai-predictions.yml`
-| **Monitoring** | Wires Sentry for client/server/edge and exposes loggers with structured output. ScrapeLog table provides audit trail of scraper executions. Provides database performance monitoring, health checks, and admin dashboard. | `sentry.*.config.ts`, `src/lib/monitoring/logger.ts`, `src/app/admin/`, `src/components/admin/`, `prisma/schema.prisma` (ScrapeLog model)
+| **AI Predictions** | Per fight, a `Predictor` builds a `FightSnapshot`, calls one `LLMAdapter` (OpenAI/Anthropic), reads back qualitative attributes + AI-judged `funScore` + `confidence`, and computes `finishProbability` deterministically from those attributes. Persists through `PredictionStore` against an active `PredictionVersion`. **The system predicts entertainment value — never winners or methods.** | `src/lib/ai/predictor.ts`, `src/lib/ai/adapters/`, `src/lib/ai/snapshot.ts`, `src/lib/ai/persistence/predictionStore.ts`, `scripts/generate-hybrid-predictions-all.ts`, `.github/workflows/ai-predictions.yml`
+| **Monitoring** | Structured loggers for console output. ScrapeLog table provides audit trail of scraper executions. | `src/lib/monitoring/logger.ts`, `prisma/schema.prisma` (ScrapeLog model)
 
 ## Data & Control Flow
 1. **Scrape** – Python/Scrapy spider runs daily at 2:00 AM UTC via GitHub Actions (`.github/workflows/scraper.yml`). It crawls UFCStats.com event listings, extracts fight details and fighter profiles, then POSTs JSON payloads to `/api/internal/ingest` with Bearer token authentication. The ingestion API validates data with Zod schemas, performs SHA256 content hash comparison to detect changes, and executes transaction-safe upserts to Postgres. Creates `ScrapeLog` audit entries for monitoring. Spider can be triggered manually with optional event limit.
-2. **Predict** – Separate AI predictions workflow (`.github/workflows/ai-predictions.yml`) runs daily at 1:30 AM UTC. Script `scripts/ai-predictions-runner.js` identifies fights lacking AI predictions and batches them through OpenAI using `buildPredictionPrompt`. Results update `fights` table with entertainment scores and finish probabilities, plus `predictionUsage` metrics.
+2. **Predict** – `.github/workflows/ai-predictions.yml` runs `scripts/generate-hybrid-predictions-all.ts` daily after the scraper. The runner asks `PredictionStore` for fights missing predictions for the current `PREDICTION_VERSION`, then per fight: a `Predictor` builds a `FightSnapshot`, makes one LLM call (via an injected adapter) for qualitative attributes + `funScore` (1-10 integer) + `confidence`, computes `finishProbability` deterministically from the attributes, and saves through `PredictionStore`. `PREDICTION_VERSION` is **bumped manually** whenever the prompt, deterministic math, or output contract changes — an earlier file-hashing approach produced too much version churn on cosmetic edits and was dropped.
 3. **Serve** – The UI requests `/api/db-events`, which returns Prisma-backed events with fight enrichment data (title fights, card position, main event flags).
-4. **Monitoring** – Each failure path logs to Sentry (client/server) or to the structured logger. Scraper executions tracked in `ScrapeLog` table with status, event counts, and error messages. Database operations are automatically tracked via Prisma middleware for performance analysis.
+4. **Monitoring** – Failure paths log via the structured logger (`src/lib/monitoring/logger.ts`). Scraper executions tracked in `ScrapeLog` table with status, event counts, and error messages.
 5. **Performance Tracking** – All database queries are monitored in real-time, with slow/critical query detection and health scoring. Admins can access performance data via `/api/health`, `/api/performance`, or the dashboard at `/admin`.
 
 ## External Integrations
@@ -57,12 +56,11 @@ Users → Next.js App (Vercel/GitHub Pages)
 - **Next.js Ingestion API** – Internal API endpoint (`/api/internal/ingest`) receives scraped data from Python spider. Secured with Bearer token authentication (`INGEST_API_SECRET`). Validates incoming data with Zod schemas before database writes.
 - **Fighter imagery** – Implemented in `fighter-image` route but currently disabled (returns placeholder) to avoid aggressive scraping until rate-limiting is solved.
 - **OpenAI (gpt-4o)** – Generates fight entertainment analysis; chunk size configurable via `OPENAI_PREDICTION_CHUNK_SIZE`.
-- **Sentry** – Error and performance monitoring for UI, API, and edge functions.
 - **GitHub Actions** – Schedules daily scraper runs (2:00 AM UTC) and AI predictions (1:30 AM UTC).
 - **Supabase PostgreSQL** – Managed database with connection pooling. Uses `DATABASE_URL` for runtime, `DIRECT_DATABASE_URL` for migrations.
 
 ## Configuration & Environments
-- **Environment Variables** – See `.env.example` and [`OPERATIONS.md`](OPERATIONS.md) for full list. Critical variables include `DATABASE_URL`, `DIRECT_DATABASE_URL`, `INGEST_API_URL`, `INGEST_API_SECRET`, `OPENAI_API_KEY`, `SENTRY_*`, and `NEXT_PUBLIC_BASE_PATH`.
+- **Environment Variables** – See `.env.example` and [`OPERATIONS.md`](OPERATIONS.md) for full list. Critical variables include `DATABASE_URL`, `DIRECT_DATABASE_URL`, `INGEST_API_URL`, `INGEST_API_SECRET`, `OPENAI_API_KEY`, and `NEXT_PUBLIC_BASE_PATH`.
 - **Profiles** –
   - *Local* – SQLite at `prisma/dev.db`; optional `.env.local` overrides; static data fallback works without external services. Python scraper requires `INGEST_API_URL` and `INGEST_API_SECRET` for local testing.
   - *Sandbox / CI* – GitHub Actions runs Python scraper with secrets injected (`INGEST_API_URL`, `INGEST_API_SECRET`). Separate AI predictions workflow uses `DATABASE_URL` and `OPENAI_API_KEY`.
@@ -79,7 +77,7 @@ Users → Next.js App (Vercel/GitHub Pages)
 - ✅ **Scraper audit trail** - ScrapeLog table tracks all scraper executions with metrics and error logging
 - No automated tests in CI; builds now enforce TypeScript/ESLint quality gates. See [`ROADMAP.md`](ROADMAP.md) for test suite implementation.
 - Fighter imagery fallback logic exists but is disabled; needs rate-limit friendly implementation before re-enabling.
-- **Secret hygiene** - Leaked tokens in history need rotation (Sentry/OpenAI/Google). See ROADMAP for remediation plan.
+- **Secret hygiene** - Leaked tokens in history need rotation (OpenAI/Google). See ROADMAP for remediation plan.
 
 ## Recent Database Improvements (2025-09-20 & 2025-09-21)
 - ✅ **Performance indexes added** for event queries and fight joins

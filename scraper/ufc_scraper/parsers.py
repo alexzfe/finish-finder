@@ -610,7 +610,9 @@ def parse_fighter_profile(soup: BeautifulSoup, fighter_url: str) -> Dict[str, An
         fighter['koPercentage'] = 0.0
         fighter['submissionPercentage'] = 0.0
 
-    # Calculate loss finish rates (defensive metrics)
+    # Calculate loss finish rates (defensive vulnerability metric).
+    # Loss finish rate is the primary signal for how often a fighter, when
+    # they lose, gets finished — feeds the Predictor's finish-probability math.
     losses_by_ko = fighter.get('lossesByKO', 0)
     losses_by_sub = fighter.get('lossesBySubmission', 0)
     losses_by_decision = fighter.get('lossesByDecision', 0)

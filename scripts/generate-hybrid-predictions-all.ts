@@ -4,6 +4,10 @@
  * for the active PredictionVersion. Bump PREDICTION_VERSION whenever the
  * prompt, deterministic math, or output contract changes.
  *
+ * Versioning is deliberately manual: an earlier approach hashed the source
+ * files producing the prediction, but cosmetic edits churned the version
+ * and bloated the PredictionVersion table, so it was dropped.
+ *
  * Flags:
  *   --limit N         Cap this run to N fights (smoke-testing a new version)
  *   --include-past    Also predict fights whose event date has passed
