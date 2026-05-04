@@ -22,7 +22,7 @@ import {
   type ExistingFight,
   planFightReconciliation,
 } from '@/lib/scraper/fightReconciler'
-import { ScrapedDataSchema, validateScrapedData, type ScrapedData } from '@/lib/scraper/validation'
+import { ScrapedDataSchema, type ScrapedData } from '@/lib/scraper/validation'
 
 /**
  * POST /api/internal/ingest
@@ -50,13 +50,14 @@ export async function POST(req: NextRequest) {
 
     // 2. Parse and validate request body
     const body = await req.json()
-    const errors = validateScrapedData(body)
+    const result = ScrapedDataSchema.safeParse(body)
 
-    if (errors.length > 0) {
+    if (!result.success) {
+      const errors = result.error.errors.map((err) => `${err.path.join('.')}: ${err.message}`)
       throw Errors.validation('Request validation failed', { errors })
     }
 
-    const data = ScrapedDataSchema.parse(body)
+    const data = result.data
 
     // 3. Upsert data in transaction
     const scrapeLog = await upsertScrapedData(data, requestId)

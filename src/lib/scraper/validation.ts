@@ -123,19 +123,3 @@ export type ScrapedFighter = z.infer<typeof ScrapedFighterSchema>
 export type ScrapedFight = z.infer<typeof ScrapedFightSchema>
 export type ScrapedEvent = z.infer<typeof ScrapedEventSchema>
 export type ScrapedData = z.infer<typeof ScrapedDataSchema>
-
-/**
- * Validate scraped data and return detailed errors
- */
-export function validateScrapedData(data: unknown): string[] {
-  const result = ScrapedDataSchema.safeParse(data)
-
-  if (result.success) {
-    return []
-  }
-
-  return result.error.errors.map((err) => {
-    const path = err.path.join('.')
-    return `${path}: ${err.message}`
-  })
-}
