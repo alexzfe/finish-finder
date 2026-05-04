@@ -174,15 +174,10 @@ function buildPersistedShape(prediction: Prediction) {
     keyFactors: output.keyFactors,
   }
 
-  // finishConfidence/funConfidence columns are still NOT NULL in the DB;
-  // we no longer surface a confidence value. Writes 0 as a placeholder until
-  // the columns are dropped in a follow-up PR (deploy-first ordering).
   return {
     finishProbability: prediction.finishProbability,
-    finishConfidence: 0,
     finishReasoning,
     funScore: prediction.funScore,
-    funConfidence: 0,
     funBreakdown,
     modelUsed: prediction.modelUsed,
     tokensUsed: prediction.tokensUsed,

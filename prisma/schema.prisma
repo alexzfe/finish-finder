@@ -285,12 +285,10 @@ model Prediction {
 
   // Finish Probability Prediction
   finishProbability Float // 0-1 (0-100%)
-  finishConfidence  Float // 0-1
   finishReasoning   Json  // Chain-of-thought steps: { defensive_comparison, finish_rate_comparison, etc. }
 
   // Fun Score Prediction
   funScore     Float // 0-100
-  funConfidence Float // 0-1
   funBreakdown Json  // Score breakdown: { pace_score, finish_rate_score, style_matchup_score, etc. }
 
   // ML Tier Model Prediction (from trained XGBoost classifier)
