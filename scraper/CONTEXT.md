@@ -68,15 +68,21 @@ Completed events provide fight outcome data for cancelled fight detection and re
 
 The scraper generates 16-character hex IDs extracted from UFCStats.com URLs (e.g., `01641ba5df0c69b0`). The ingestion API (`/api/internal/ingest`) automatically converts these hex IDs to database CUIDs (25 characters) at the API gateway boundary. This conversion applies to fighter IDs and fight winnerId fields.
 
-## Fight Matching Logic
+## Fight Reconciliation
 
-The ingestion API matches incoming fights against existing database records using a multi-step lookup:
+The ingestion API reconciles incoming fights against existing database records as one operation. Matching, change detection, and cancellation are produced together by a pure planner (`src/lib/scraper/fightReconciler.ts → planFightReconciliation`); the route applies the resulting plan inside its transaction.
 
-1. **Primary lookup**: Composite key (eventId, fighter1Id, fighter2Id) with normalized alphabetical order
-2. **Reversed order fallback**: Check reversed fighter order for fights created before normalization
-3. **sourceUrl fallback**: Match by UFCStats.com source URL
+**Matching rules**, in order:
 
-Winner ID resolution maps scraper hex IDs directly to database CUIDs without considering fighter storage order - the winner's identity is independent of how fighters are stored in the database.
+1. **Primary lookup**: Composite key (eventId, fighter1Id, fighter2Id) with normalized alphabetical fighter order.
+2. **Reversed order fallback**: Check reversed fighter order for fights created before the normalization rule existed. Hits are counted in `plan.reversedOrderHits` and logged so we can prove when it's safe to delete this fallback.
+3. **sourceUrl fallback**: Match by UFCStats.com source URL.
+
+**Change detection**: scraped fights are hashed (`calculateContentHash`) and compared to the existing row's `contentHash`; identical fights produce no update.
+
+**Cancellation**: any existing fight on an event listed in `scrapedEventUrls` that wasn't matched by any scraped fight (and isn't already completed/cancelled) is marked `isCancelled=true`. Events not in `scrapedEventUrls` are left untouched.
+
+**Winner ID resolution** maps scraper hex IDs directly to database CUIDs without considering fighter storage order — the winner's identity is independent of how fighters are stored.
 
 ## Integration Points
 

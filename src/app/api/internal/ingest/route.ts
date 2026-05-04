@@ -16,6 +16,12 @@ import { ApiError, Errors, errorResponse, successResponse } from '@/lib/api'
 import { getRequestId } from '@/lib/api/middleware'
 import prisma from '@/lib/database/prisma'
 import { apiLogger } from '@/lib/monitoring/logger'
+import { calculateContentHash } from '@/lib/scraper/contentHash'
+import {
+  type DbRef,
+  type ExistingFight,
+  planFightReconciliation,
+} from '@/lib/scraper/fightReconciler'
 import { ScrapedDataSchema, validateScrapedData, type ScrapedData } from '@/lib/scraper/validation'
 
 /**
@@ -263,221 +269,113 @@ async function upsertScrapedData(data: ScrapedData, requestId: string) {
       }
 
       // ========================================================
-      // BATCH FETCH: Pre-load all fighters and events for O(1) lookups
-      // This eliminates N+1 queries in the fight upsert loop
+      // BATCH FETCH: Pre-load just-upserted fighters and events, plus all
+      // existing fights for the events in scope, so the planner has everything
+      // it needs without further IO.
       // ========================================================
 
-      // Build scraped ID -> sourceUrl lookup maps
-      const scrapedFighterIdToSourceUrl = new Map(
-        data.fighters.map((f) => [f.id, f.sourceUrl])
-      )
-      const scrapedEventIdToSourceUrl = new Map(
-        data.events.map((e) => [e.id, e.sourceUrl])
-      )
-
-      // Batch fetch all fighters that were just upserted
       const fighterSourceUrls = data.fighters.map((f) => f.sourceUrl)
       const allFighters = await tx.fighter.findMany({
         where: { sourceUrl: { in: fighterSourceUrls } },
-        select: { id: true, sourceUrl: true }
+        select: { id: true, sourceUrl: true },
       })
-      const fighterBySourceUrl = new Map(
-        allFighters.map((f) => [f.sourceUrl, f])
-      )
+      const fighterBySourceUrl = new Map<string, DbRef>()
+      for (const f of allFighters) {
+        // The findMany filter guarantees non-null sourceUrl, but Prisma's
+        // generated type widens to `string | null`; narrow it here.
+        if (f.sourceUrl) fighterBySourceUrl.set(f.sourceUrl, { id: f.id, sourceUrl: f.sourceUrl })
+      }
 
-      // Batch fetch all events that were just upserted
       const eventSourceUrls = data.events.map((e) => e.sourceUrl)
       const allEvents = await tx.event.findMany({
         where: { sourceUrl: { in: eventSourceUrls } },
-        select: { id: true, sourceUrl: true }
+        select: { id: true, sourceUrl: true },
       })
-      const eventBySourceUrl = new Map(
-        allEvents.map((e) => [e.sourceUrl, e])
-      )
-
-      // ========================================================
-      // Upsert fights (using lookup maps instead of N+1 queries)
-      // ========================================================
-      for (const fight of data.fights) {
-        const contentHash = calculateContentHash(fight)
-
-        // O(1) map lookups instead of database queries
-        const fighter1SourceUrl = scrapedFighterIdToSourceUrl.get(fight.fighter1Id)
-        const fighter2SourceUrl = scrapedFighterIdToSourceUrl.get(fight.fighter2Id)
-        const eventSourceUrl = scrapedEventIdToSourceUrl.get(fight.eventId)
-
-        const fighter1 = fighter1SourceUrl ? fighterBySourceUrl.get(fighter1SourceUrl) : null
-        const fighter2 = fighter2SourceUrl ? fighterBySourceUrl.get(fighter2SourceUrl) : null
-        const event = eventSourceUrl ? eventBySourceUrl.get(eventSourceUrl) : null
-
-        if (!fighter1 || !fighter2 || !event) {
-          apiLogger.warn('Skipping fight - missing related records', {
-            requestId,
-            fightId: fight.id,
-            hasFighter1: !!fighter1,
-            hasFighter2: !!fighter2,
-            hasEvent: !!event,
-          })
-          continue
-        }
-
-        // Normalize fighter order (alphabetically by ID) to prevent reversed duplicates
-        const [normalizedFighter1Id, normalizedFighter2Id] =
-          [fighter1.id, fighter2.id].sort()
-
-        // Use composite unique key to find existing fight
-        let existing = await tx.fight.findUnique({
-          where: {
-            eventId_fighter1Id_fighter2Id: {
-              eventId: event.id,
-              fighter1Id: normalizedFighter1Id,
-              fighter2Id: normalizedFighter2Id,
-            },
-          },
-        })
-
-        // Fallback 1: Check REVERSED order
-        if (!existing) {
-          existing = await tx.fight.findUnique({
-            where: {
-              eventId_fighter1Id_fighter2Id: {
-                eventId: event.id,
-                fighter1Id: normalizedFighter2Id,
-                fighter2Id: normalizedFighter1Id,
-              },
-            },
-          })
-        }
-
-        // Fallback 2: Check by sourceUrl
-        if (!existing && fight.sourceUrl) {
-          existing = await tx.fight.findUnique({
-            where: { sourceUrl: fight.sourceUrl },
-          })
-        }
-
-        // Resolve winnerId
-        let normalizedWinnerId: string | null = null
-        if (fight.winnerId) {
-          if (fight.winnerId === fight.fighter1Id) {
-            normalizedWinnerId = fighter1.id
-          } else if (fight.winnerId === fight.fighter2Id) {
-            normalizedWinnerId = fighter2.id
-          }
-        }
-
-        if (!existing) {
-          // Create new fight
-          await tx.fight.create({
-            data: {
-              fighter1Id: normalizedFighter1Id,
-              fighter2Id: normalizedFighter2Id,
-              eventId: event.id,
-              weightClass: fight.weightClass ?? 'Unknown',
-              titleFight: fight.titleFight ?? false,
-              mainEvent: fight.mainEvent ?? false,
-              cardPosition: fight.cardPosition ?? 'preliminary',
-              scheduledRounds: fight.scheduledRounds ?? 3,
-              completed: fight.completed ?? false,
-              isCancelled: false,
-              winnerId: normalizedWinnerId,
-              method: fight.method,
-              round: fight.round,
-              time: fight.time,
-              sourceUrl: fight.sourceUrl,
-              lastScrapedAt: new Date(),
-              contentHash,
-            },
-          })
-          fightsAdded++
-        } else if (existing.contentHash !== contentHash) {
-          // Update existing fight
-          await tx.fight.update({
-            where: { id: existing.id },
-            data: {
-              weightClass: fight.weightClass ?? existing.weightClass,
-              titleFight: fight.titleFight ?? existing.titleFight,
-              mainEvent: fight.mainEvent ?? existing.mainEvent,
-              cardPosition: fight.cardPosition ?? existing.cardPosition,
-              scheduledRounds: fight.scheduledRounds ?? existing.scheduledRounds,
-              completed: fight.completed ?? existing.completed,
-              isCancelled: false,
-              winnerId: normalizedWinnerId ?? existing.winnerId,
-              method: fight.method ?? existing.method,
-              round: fight.round ?? existing.round,
-              time: fight.time ?? existing.time,
-              lastScrapedAt: new Date(),
-              contentHash,
-            },
-          })
-          fightsUpdated++
-        }
+      const eventBySourceUrl = new Map<string, DbRef>()
+      for (const e of allEvents) {
+        if (e.sourceUrl) eventBySourceUrl.set(e.sourceUrl, { id: e.id, sourceUrl: e.sourceUrl })
       }
 
-      // SCOPED RECONCILIATION: Mark cancelled fights
-      const scrapedEventUrls = data.scrapedEventUrls || []
-
-      if (scrapedEventUrls.length > 0) {
-        apiLogger.info('Reconciling fights for scraped events', {
-          requestId,
-          eventCount: scrapedEventUrls.length,
-        })
-
-        for (const eventUrl of scrapedEventUrls) {
-          const event = await tx.event.findUnique({
-            where: { sourceUrl: eventUrl },
-          })
-
-          if (!event) {
-            apiLogger.warn('Event not found for URL during reconciliation', { requestId, eventUrl })
-            continue
-          }
-
-          // Build set of scraped fight keys
-          const scrapedFightKeys = new Set<string>()
-
-          for (const fight of data.fights) {
-            const fightEvent = data.events.find((e: { id: string; sourceUrl: string }) => e.id === fight.eventId)
-            if (!fightEvent || fightEvent.sourceUrl !== eventUrl) continue
-
-            const f1SourceUrl = data.fighters.find((f: { id: string; sourceUrl: string }) => f.id === fight.fighter1Id)?.sourceUrl
-            const f2SourceUrl = data.fighters.find((f: { id: string; sourceUrl: string }) => f.id === fight.fighter2Id)?.sourceUrl
-
-            if (!f1SourceUrl || !f2SourceUrl) continue
-
-            const f1 = await tx.fighter.findUnique({ where: { sourceUrl: f1SourceUrl } })
-            const f2 = await tx.fighter.findUnique({ where: { sourceUrl: f2SourceUrl } })
-
-            if (!f1 || !f2) continue
-
-            const [nf1, nf2] = [f1.id, f2.id].sort()
-            scrapedFightKeys.add(`${event.id}:${nf1}:${nf2}`)
-          }
-
-          // Find and mark cancelled fights
-          const dbFights = await tx.fight.findMany({
-            where: {
-              eventId: event.id,
-              completed: false,
-              isCancelled: false,
+      const allEventIds = allEvents.map((e) => e.id)
+      const existingFights = allEventIds.length > 0
+        ? await tx.fight.findMany({
+            where: { eventId: { in: allEventIds } },
+            select: {
+              id: true,
+              eventId: true,
+              fighter1Id: true,
+              fighter2Id: true,
+              sourceUrl: true,
+              contentHash: true,
+              completed: true,
+              isCancelled: true,
             },
-            select: { id: true, eventId: true, fighter1Id: true, fighter2Id: true },
           })
+        : []
 
-          for (const dbFight of dbFights) {
-            const [nf1, nf2] = [dbFight.fighter1Id, dbFight.fighter2Id].sort()
-            const dbKey = `${dbFight.eventId}:${nf1}:${nf2}`
+      const existingFightsByEventId = new Map<string, ExistingFight[]>()
+      for (const ef of existingFights) {
+        const list = existingFightsByEventId.get(ef.eventId) ?? []
+        list.push(ef)
+        existingFightsByEventId.set(ef.eventId, list)
+      }
 
-            if (!scrapedFightKeys.has(dbKey)) {
-              await tx.fight.update({
-                where: { id: dbFight.id },
-                data: { isCancelled: true, lastScrapedAt: new Date() },
-              })
-              fightsCancelled++
-            }
-          }
-        }
+      // ========================================================
+      // Plan + apply fight reconciliation
+      // ========================================================
+      const plan = planFightReconciliation({
+        scrapedFights: data.fights,
+        scrapedFighters: data.fighters,
+        scrapedEvents: data.events,
+        fighterBySourceUrl,
+        eventBySourceUrl,
+        existingFightsByEventId,
+        scrapedEventUrls: data.scrapedEventUrls ?? [],
+      })
 
+      const now = new Date()
+
+      for (const create of plan.toCreate) {
+        await tx.fight.create({
+          data: { ...create.data, lastScrapedAt: now },
+        })
+        fightsAdded++
+      }
+
+      for (const update of plan.toUpdate) {
+        await tx.fight.update({
+          where: { id: update.existingId },
+          data: { ...update.data, lastScrapedAt: now },
+        })
+        fightsUpdated++
+      }
+
+      for (const cancel of plan.toCancel) {
+        await tx.fight.update({
+          where: { id: cancel.existingId },
+          data: { isCancelled: true, lastScrapedAt: now },
+        })
+        fightsCancelled++
+      }
+
+      for (const skipped of plan.skipped) {
+        apiLogger.warn('Skipping fight - missing related records', {
+          requestId,
+          fightId: skipped.scrapedFightId,
+          reason: skipped.reason,
+        })
+      }
+
+      if (plan.reversedOrderHits > 0) {
+        // Legacy compatibility signal — once this stays at 0 across enough
+        // ingest runs, the reversed-order fallback can be deleted.
+        apiLogger.info('Matched fights in reversed fighter order (legacy compat)', {
+          requestId,
+          hits: plan.reversedOrderHits,
+        })
+      }
+
+      if ((data.scrapedEventUrls ?? []).length > 0) {
         apiLogger.info('Reconciliation complete', { requestId, fightsCancelled })
       }
     })
@@ -518,13 +416,4 @@ async function upsertScrapedData(data: ScrapedData, requestId: string) {
 
     throw error
   }
-}
-
-/**
- * Calculate SHA256 hash of data for change detection
- */
-function calculateContentHash(data: Record<string, unknown>): string {
-  // Sort keys for consistent hashing
-  const content = JSON.stringify(data, Object.keys(data).sort())
-  return crypto.createHash('sha256').update(content).digest('hex')
 }
