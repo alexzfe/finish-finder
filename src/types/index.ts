@@ -1,127 +1,103 @@
 /**
- * Core types for the Finish Finder app
+ * Canonical wire shape for events / fights / fighters / predictions.
+ *
+ * Single source of truth for the contract between the server (API routes +
+ * static export) and the client. Both sides import these types; the zod
+ * schemas validate at the seam so drift between API and static JSON shows
+ * up at parse time, not silently in the UI.
  */
 
-export interface Fighter {
-  id: string;
-  name: string;
-  nickname?: string;
-  record: {
-    wins: number;
-    losses: number;
-    draws: number;
-  };
-  stats: {
-    finishRate: number;
-    koPercentage: number;
-    submissionPercentage: number;
-    averageFightTime: number; // in seconds
-    significantStrikesPerMinute: number;
-    takedownAccuracy: number;
-  };
-  popularity: {
-    socialFollowers: number;
-    recentBuzzScore: number; // 0-100
-    fanFavorite: boolean;
-  };
-  funScore: number; // Accumulated fun score from past fights
-  weightClass: WeightClass;
-  fighting_style: string[];
-  imageUrl?: string;
-  lastFightDate?: Date;
-}
+import { z } from 'zod'
 
-export interface Fight {
-  id: string;
-  fighter1: Fighter;
-  fighter2: Fighter;
-  weightClass: WeightClass;
-  titleFight: boolean;
-  mainEvent: boolean;
-  cardPosition?: 'main' | 'preliminary' | 'early-preliminary';
-  fightNumber?: number;
-  event: UFCEvent;
-  predictedFunScore: number; // 1-10 integer
-  funFactors: Array<FunFactor | string>;
-  finishProbability?: number; // 0-1
-  finishConfidence?: number;  // 0-1
-  fightPrediction?: string;
-  prediction?: string;
-  scheduledRounds?: number;
-  bookingDate: Date;
-  completed: boolean;
-  actualFunScore?: number; // Post-fight rating
-  // Fight outcome fields (for completed fights)
-  winnerId?: string;
-  method?: string; // KO, TKO, SUB, DEC, etc.
-  round?: number;
-  time?: string; // e.g. "4:32"
-}
+export const WeightClassSchema = z.enum([
+  'strawweight',
+  'flyweight',
+  'bantamweight',
+  'featherweight',
+  'lightweight',
+  'welterweight',
+  'middleweight',
+  'light_heavyweight',
+  'heavyweight',
+  'womens_strawweight',
+  'womens_flyweight',
+  'womens_bantamweight',
+  'womens_featherweight',
+  'catchweight',
+  'unknown',
+])
+export type WeightClass = z.infer<typeof WeightClassSchema>
 
-export interface UFCEvent {
-  id: string;
-  name: string;
-  date: Date;
-  location: string;
-  venue: string;
-  completed: boolean;
-  fightCard: Fight[];
-  mainCard: Fight[];
-  prelimCard: Fight[];
-  earlyPrelimCard: Fight[];
-}
+export const CardPositionSchema = z.enum([
+  'main',
+  'co-main',
+  'preliminary',
+  'early-preliminary',
+])
+export type CardPosition = z.infer<typeof CardPositionSchema>
 
-export interface FunFactor {
-  type: FunFactorType;
-  score: number; // 0-100
-  description: string;
-  weight: number; // How much this factor influences overall score
-}
+export const FighterRecordSchema = z.object({
+  wins: z.number(),
+  losses: z.number(),
+  draws: z.number(),
+})
 
-export type FunFactorType =
-  | 'high_finish_rate'
-  | 'striker_vs_striker'
-  | 'grappler_vs_striker'
-  | 'fan_favorites'
-  | 'title_implications'
-  | 'rivalry'
-  | 'comeback_potential'
-  | 'similar_skill_level'
-  | 'aggressive_styles'
-  | 'social_buzz';
+export const FighterSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  nickname: z.string().nullable(),
+  record: FighterRecordSchema,
+  weightClass: WeightClassSchema,
+  imageUrl: z.string().nullable(),
+})
+export type Fighter = z.infer<typeof FighterSchema>
 
-export type WeightClass =
-  | 'strawweight'
-  | 'flyweight'
-  | 'bantamweight'
-  | 'featherweight'
-  | 'lightweight'
-  | 'welterweight'
-  | 'middleweight'
-  | 'light_heavyweight'
-  | 'heavyweight'
-  | 'womens_strawweight'
-  | 'womens_flyweight'
-  | 'womens_bantamweight'
-  | 'womens_featherweight';
+/**
+ * The current prediction for a fight, projected for the wire.
+ *
+ * Distinct from the AI module's internal `Prediction` (src/lib/ai/prediction.ts),
+ * which carries token cost / billing fields. This shape is what the UI renders.
+ */
+export const PredictionSchema = z.object({
+  funScore: z.number(), // 1-10 integer
+  finishProbability: z.number(), // 0-1
+  confidence: z.number(), // 0-1
+  keyFactors: z.array(z.string()),
+  modelUsed: z.string().nullable(),
+  createdAt: z.string().nullable(), // ISO
+})
+export type Prediction = z.infer<typeof PredictionSchema>
 
-export interface PredictionModel {
-  modelVersion: string;
-  factors: {
-    finishRate: number;
-    stylistic: number;
-    popularity: number;
-    stakes: number;
-    historical: number;
-  };
-  confidence: number; // 0-100
-  lastUpdated: Date;
-}
+export const FightSchema = z.object({
+  id: z.string(),
+  fighter1: FighterSchema,
+  fighter2: FighterSchema,
+  weightClass: WeightClassSchema,
+  titleFight: z.boolean(),
+  mainEvent: z.boolean(),
+  cardPosition: CardPositionSchema,
+  scheduledRounds: z.number(),
+  fightNumber: z.number().nullable(),
+  bookingDate: z.string(), // ISO
+  completed: z.boolean(),
+  winnerId: z.string().nullable(),
+  // method / time are rendered as free text; lenient parse to avoid blanking
+  // pages when a scraper emits an unexpected value.
+  method: z.string().nullable(),
+  round: z.number().nullable(),
+  time: z.string().nullable(),
+  fightPrediction: z.string().nullable(),
+  prediction: PredictionSchema.nullable(),
+})
+export type Fight = z.infer<typeof FightSchema>
 
-export interface FunScoreHistory {
-  fightId: string;
-  predictedScore: number;
-  actualScore: number;
-  accuracy: number;
-  date: Date;
-}
+export const UFCEventSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  date: z.string(), // ISO
+  location: z.string(),
+  venue: z.string(),
+  completed: z.boolean(),
+  fightCard: z.array(FightSchema),
+})
+export type UFCEvent = z.infer<typeof UFCEventSchema>

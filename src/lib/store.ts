@@ -49,7 +49,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const event = get().events[index]
     set({
       currentEventIndex: index,
-      fights: event?.fightCard || []
+      fights: event?.fightCard ?? []
     })
   },
 
@@ -90,10 +90,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Apply sorting
     if (sortBy === 'funScore') {
       // Sort by Fun Score (highest first)
-      // Create new array to avoid mutating original
       return [...filtered].sort((a, b) => {
-        const scoreA = (a && typeof a.predictedFunScore === 'number') ? a.predictedFunScore : 0
-        const scoreB = (b && typeof b.predictedFunScore === 'number') ? b.predictedFunScore : 0
+        const scoreA = a?.prediction?.funScore ?? 0
+        const scoreB = b?.prediction?.funScore ?? 0
         return scoreB - scoreA
       })
     }

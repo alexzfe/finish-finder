@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-import type { WeightClass } from '@/types/unified'
+import type { WeightClass } from '@/types'
 
 import {
   WEIGHT_CLASSES,

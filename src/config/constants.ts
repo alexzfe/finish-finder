@@ -19,15 +19,13 @@ export const RATE_LIMITS = {
 } as const
 
 /**
- * Card position ordering for display
+ * Card position ordering for display, keyed on the canonical CardPosition enum.
  */
 export const CARD_POSITION_ORDER: Record<string, number> = {
-  'Main Event': 1,
-  'Co-Main Event': 2,
-  'Main Card': 3,
-  'Prelims': 4,
-  'Early Prelims': 5,
-  'preliminary': 6, // fallback
+  'main': 1,
+  'co-main': 2,
+  'preliminary': 3,
+  'early-preliminary': 4,
 } as const
 
 /**

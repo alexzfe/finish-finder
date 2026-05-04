@@ -14,5 +14,8 @@ export {
   toWeightClass,
   isValidWeightClass,
   getWeightClassDisplayName,
-  type WeightClass,
 } from './weight-class'
+
+export type { WeightClass } from '@/types'
+
+export { toCanonicalCardPosition } from './cardPosition'

@@ -31,7 +31,7 @@ export const FightCard = React.memo(
       .join(' ')
   }
 
-  const funScore = fight.predictedFunScore || 0
+  const funScore = fight.prediction?.funScore ?? 0
 
   return (
     <Reorder.Item

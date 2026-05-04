@@ -2,7 +2,7 @@
  * Tests for db-events route transformations.
  *
  * Critical functionality:
- * - Card position ordering (Main Event → Early Prelims)
+ * - Card position ordering (canonical kebab enum: main → early-preliminary)
  * - PredictionStore.toCurrentPrediction (active prediction → CurrentPrediction
  *   view, with the legacy-column compat shim)
  */
@@ -35,44 +35,42 @@ function sortFightsByCardPosition<T extends { cardPosition: string }>(fights: T[
 }
 
 describe('Card Position Ordering', () => {
-  it('should sort fights in correct order: Main Event → Early Prelims', () => {
+  it('sorts canonical card positions: main → co-main → preliminary → early-preliminary', () => {
     const fights = [
-      { id: '1', cardPosition: 'Early Prelims' },
-      { id: '2', cardPosition: 'Prelims' },
-      { id: '3', cardPosition: 'Main Card' },
-      { id: '4', cardPosition: 'Co-Main Event' },
-      { id: '5', cardPosition: 'Main Event' },
+      { id: '1', cardPosition: 'early-preliminary' },
+      { id: '2', cardPosition: 'preliminary' },
+      { id: '3', cardPosition: 'co-main' },
+      { id: '4', cardPosition: 'main' },
     ]
 
     const sorted = sortFightsByCardPosition(fights)
 
     expect(sorted.map((f) => f.cardPosition)).toEqual([
-      'Main Event',
-      'Co-Main Event',
-      'Main Card',
-      'Prelims',
-      'Early Prelims',
+      'main',
+      'co-main',
+      'preliminary',
+      'early-preliminary',
     ])
   })
 
-  it('should handle unknown card positions by placing them last', () => {
+  it('places unknown card positions last', () => {
     const fights = [
-      { id: '1', cardPosition: 'Unknown Position' },
-      { id: '2', cardPosition: 'Main Card' },
-      { id: '3', cardPosition: 'Main Event' },
+      { id: '1', cardPosition: 'unknown-bucket' },
+      { id: '2', cardPosition: 'preliminary' },
+      { id: '3', cardPosition: 'main' },
     ]
 
     const sorted = sortFightsByCardPosition(fights)
 
-    expect(sorted[0].cardPosition).toBe('Main Event')
-    expect(sorted[1].cardPosition).toBe('Main Card')
-    expect(sorted[2].cardPosition).toBe('Unknown Position')
+    expect(sorted[0].cardPosition).toBe('main')
+    expect(sorted[1].cardPosition).toBe('preliminary')
+    expect(sorted[2].cardPosition).toBe('unknown-bucket')
   })
 
-  it('should not mutate original array', () => {
+  it('does not mutate the original array', () => {
     const fights = [
-      { id: '1', cardPosition: 'Prelims' },
-      { id: '2', cardPosition: 'Main Event' },
+      { id: '1', cardPosition: 'preliminary' },
+      { id: '2', cardPosition: 'main' },
     ]
     const originalOrder = fights.map((f) => f.cardPosition)
 

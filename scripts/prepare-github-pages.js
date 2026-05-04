@@ -29,7 +29,7 @@ async function main() {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || 'finish-finder'
 
   console.log('🔄 Exporting static event data...')
-  await run('node', [path.join(scriptsDir, 'export-static-data.js')])
+  await run('npx', ['ts-node', path.join(scriptsDir, 'export-static-data.ts')])
 
   console.log(`🏗️ Building static site with base path "/${basePath}" ...`)
   await run('npx', ['next', 'build'], {

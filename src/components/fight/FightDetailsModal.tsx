@@ -97,18 +97,18 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                 <div className="grid gap-3 mb-5">
                   <div className="rounded-xl bg-white/5 px-4 py-3.5">
                     <span className="block text-[0.7rem] md:text-[0.75rem] text-white/70">Fun Score</span>
-                    <span className="ufc-condensed text-3xl" style={funScoreColor(fight.predictedFunScore || 0)}>
-                      {fight.predictedFunScore || 0}
+                    <span className="ufc-condensed text-3xl" style={funScoreColor(fight.prediction?.funScore ?? 0)}>
+                      {fight.prediction?.funScore ?? 0}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {(() => {
-                      const finishStyles = getFinishProbabilityStyles(fight.finishProbability || 0)
+                      const finishStyles = getFinishProbabilityStyles(fight.prediction?.finishProbability ?? 0)
                       return (
                         <div className={`rounded-xl ${finishStyles.bg} border ${finishStyles.border} px-4 py-3`}>
                           <span className="block text-[0.7rem] md:text-[0.75rem] text-white/70">Finish Probability</span>
                           <span className={`ufc-condensed text-xl ${finishStyles.text}`}>
-                            {Math.round((fight.finishProbability || 0) * 100)}%
+                            {Math.round((fight.prediction?.finishProbability ?? 0) * 100)}%
                           </span>
                         </div>
                       )
@@ -116,23 +116,23 @@ export function FightDetailsModal({ fight, isOpen, onClose }: FightDetailsModalP
                     <div className="rounded-xl bg-white/5 px-4 py-3">
                       <span className="block text-[0.7rem] md:text-[0.75rem] text-white/70">Confidence</span>
                       <span className="ufc-condensed text-lg text-white">
-                        {Math.round((fight.finishConfidence ?? 0) * 100)}%
+                        {Math.round((fight.prediction?.confidence ?? 0) * 100)}%
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Key Factors */}
-                {Array.isArray(fight.funFactors) && fight.funFactors.length > 0 && (
+                {fight.prediction?.keyFactors && fight.prediction.keyFactors.length > 0 && (
                   <div className="mb-5">
                     <p className="ufc-condensed text-[0.65rem] md:text-[0.7rem] uppercase tracking-[0.3em] text-white/50 mb-2">Key Factors</p>
                     <div className="flex flex-wrap gap-2">
-                      {fight.funFactors.map((factor, idx) => (
+                      {fight.prediction.keyFactors.map((factor, idx) => (
                         <span
                           key={idx}
                           className="inline-block rounded-full bg-[var(--ufc-red)]/20 px-3 py-1 text-xs font-medium text-white/90 border border-[var(--ufc-red)]/30"
                         >
-                          {typeof factor === 'string' ? factor : factor.type}
+                          {factor}
                         </span>
                       ))}
                     </div>

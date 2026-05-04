@@ -1,4 +1,4 @@
-import type { WeightClass } from '@/types/unified'
+import type { WeightClass } from '@/types'
 
 /**
  * Valid UFC weight classes

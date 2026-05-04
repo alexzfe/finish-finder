@@ -7,7 +7,7 @@ import { FightList } from '@/components/fight/FightList'
 import { EventNavigation } from '@/components/ui/EventNavigation'
 import { Header } from '@/components/ui/Header'
 import { funScoreColor } from '@/lib/ui/funScoreColor'
-import { type UFCEvent, type Fight } from '@/types'
+import { UFCEventSchema, type UFCEvent, type Fight } from '@/types'
 
 // Utility function to format weight class names
 const formatWeightClass = (weightClass?: string | null): string => {
@@ -43,56 +43,53 @@ export default function Home() {
       : ''
     const staticEventsUrl = `${basePath}/data/events.json`
 
+    const parseEvents = (raw: unknown): UFCEvent[] | null => {
+      if (!Array.isArray(raw) || raw.length === 0) return null
+      const result = UFCEventSchema.array().safeParse(raw)
+      if (!result.success) {
+        console.warn('Failed to parse events against UFCEventSchema:', result.error)
+        return null
+      }
+      return [...result.data].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      )
+    }
+
+    const applyEvents = (sortedEvents: UFCEvent[]) => {
+      setEvents(sortedEvents)
+
+      const now = new Date()
+      const nearestEventIndex = sortedEvents.findIndex(event => new Date(event.date) >= now)
+      const resolvedIndex = nearestEventIndex >= 0 ? nearestEventIndex : 0
+      setCurrentEventIndex(resolvedIndex)
+
+      const defaultEvent = sortedEvents[resolvedIndex]
+      if (defaultEvent?.fightCard?.length) {
+        setSelectedFight((prev) => {
+          const stillValid = prev && defaultEvent.fightCard.some(fight => fight.id === prev.id)
+          return stillValid ? prev : defaultEvent.fightCard[0]
+        })
+      }
+
+      setError(null)
+    }
+
     const fetchEvents = async () => {
       setLoading(true)
 
-      const normalizeEvents = (rawEvents: unknown[]): UFCEvent[] =>
-        rawEvents
-          .filter((event): event is Record<string, unknown> => typeof event === 'object' && event !== null)
-          .map((event) => ({
-            ...event,
-            date: new Date((event.date as string) || new Date())
-          } as UFCEvent))
-          .sort((a: UFCEvent, b: UFCEvent) => a.date.getTime() - b.date.getTime())
-
       try {
-        // Try API first so local development keeps dynamic data
-        console.log('🔍 Fetching events from API...')
         const apiResponse = await fetch('/api/db-events')
         if (apiResponse.ok) {
           const apiData = await apiResponse.json()
-          console.log('📊 API Response:', apiData)
-
-          // More lenient condition - just check if we have events
-          if (apiData && apiData.data && apiData.data.events && apiData.data.events.length > 0) {
-            console.log('✅ Found events, processing...')
-            const sortedEvents = normalizeEvents(apiData.data.events)
-            setEvents(sortedEvents)
-
-            // Set current event index
-            const now = new Date()
-            const nearestEventIndex = sortedEvents.findIndex((event: UFCEvent) => event.date >= now)
-            const resolvedIndex = nearestEventIndex >= 0 ? nearestEventIndex : 0
-            setCurrentEventIndex(resolvedIndex)
-
-            // Set selected fight
-            const defaultEvent = sortedEvents[resolvedIndex]
-            if (defaultEvent?.fightCard?.length) {
-              setSelectedFight(defaultEvent.fightCard[0])
-            }
-
-            setError(null)
+          const sortedEvents = parseEvents(apiData?.data?.events)
+          if (sortedEvents) {
+            applyEvents(sortedEvents)
             setLoading(false)
-            console.log('✅ Successfully loaded events from main database')
             return
-          } else {
-            console.log('❌ No events found in API response')
           }
-        } else {
-          console.log('❌ API response not OK:', apiResponse.status)
         }
       } catch (error) {
-        console.warn('❌ API event fetch failed, falling back to static data.', error)
+        console.warn('API event fetch failed, falling back to static data.', error)
       }
 
       try {
@@ -101,22 +98,9 @@ export default function Home() {
           throw new Error(`Static events fetch failed with status ${staticResponse.status}`)
         }
         const staticData = await staticResponse.json()
-        if (Array.isArray(staticData?.events) && staticData.events.length > 0) {
-          const sortedEvents = normalizeEvents(staticData.events)
-          setEvents(sortedEvents)
-
-          const now = new Date()
-          const nearestEventIndex = sortedEvents.findIndex((event: UFCEvent) => event.date >= now)
-          const resolvedIndex = nearestEventIndex >= 0 ? nearestEventIndex : 0
-          setCurrentEventIndex(resolvedIndex)
-          const defaultEvent = sortedEvents[resolvedIndex]
-          if (defaultEvent?.fightCard?.length) {
-            setSelectedFight((prev) => {
-              const stillValid = prev && defaultEvent.fightCard.some(fight => fight.id === prev.id)
-              return stillValid ? prev : defaultEvent.fightCard[0]
-            })
-          }
-          setError(null)
+        const sortedEvents = parseEvents(staticData?.events)
+        if (sortedEvents) {
+          applyEvents(sortedEvents)
           return
         }
         setError('No events available in static data. Please update data/events.json.')
@@ -301,33 +285,33 @@ export default function Home() {
                     <div className="grid gap-2.5 text-sm uppercase tracking-[0.24em] text-white/80">
                       <div className="rounded-xl bg-white/5 px-4 py-3.5">
                         <span className="block text-[0.7rem] text-white/70">Fun Score</span>
-                        <span className="ufc-condensed text-2xl md:text-3xl" style={funScoreColor(selectedFight.predictedFunScore || 0)}>{selectedFight.predictedFunScore || 0}</span>
+                        <span className="ufc-condensed text-2xl md:text-3xl" style={funScoreColor(selectedFight.prediction?.funScore ?? 0)}>{selectedFight.prediction?.funScore ?? 0}</span>
                       </div>
                       {(() => {
-                        const finishStyles = getFinishProbabilityStyles(selectedFight.finishProbability || 0)
+                        const finishStyles = getFinishProbabilityStyles(selectedFight.prediction?.finishProbability ?? 0)
                         return (
                           <div className={`rounded-xl ${finishStyles.bg} border ${finishStyles.border} px-4 py-3.5`}>
                             <span className="block text-[0.7rem] text-white/70">Finish Probability</span>
-                            <span className={`ufc-condensed text-xl md:text-2xl ${finishStyles.text}`}>{Math.round((selectedFight.finishProbability || 0) * 100)}%</span>
+                            <span className={`ufc-condensed text-xl md:text-2xl ${finishStyles.text}`}>{Math.round((selectedFight.prediction?.finishProbability ?? 0) * 100)}%</span>
                           </div>
                         )
                       })()}
                       <div className="rounded-xl bg-white/5 px-4 py-3.5">
                         <span className="block text-[0.7rem] text-white/70">Confidence</span>
-                        <span className="ufc-condensed text-base text-white md:text-lg">{Math.round((selectedFight.finishConfidence ?? 0) * 100)}%</span>
+                        <span className="ufc-condensed text-base text-white md:text-lg">{Math.round((selectedFight.prediction?.confidence ?? 0) * 100)}%</span>
                       </div>
                     </div>
 
-                    {Array.isArray(selectedFight.funFactors) && selectedFight.funFactors.length > 0 && (
+                    {selectedFight.prediction?.keyFactors && selectedFight.prediction.keyFactors.length > 0 && (
                       <div>
                         <p className="ufc-condensed text-[0.65rem] uppercase tracking-[0.3em] text-white/50 mb-2">Key Factors</p>
                         <div className="flex flex-wrap gap-2">
-                          {selectedFight.funFactors.map((factor, idx) => (
+                          {selectedFight.prediction.keyFactors.map((factor, idx) => (
                             <span
                               key={idx}
                               className="inline-block rounded-full bg-[var(--ufc-red)]/20 px-3 py-1 text-xs font-medium text-white/90 border border-[var(--ufc-red)]/30"
                             >
-                              {typeof factor === 'string' ? factor : factor.type}
+                              {factor}
                             </span>
                           ))}
                         </div>
