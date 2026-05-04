@@ -75,9 +75,15 @@ const FightListComponent = ({ event, onFightClick }: FightListProps) => {
     return `${record.wins}-${record.losses}-${record.draws}`
   }
 
+  // Label by position in the main-card section: the DB doesn't distinguish
+  // Main Event / Co-Main / Main Card (all stored as 'Main Card'), and the
+  // canonical wire enum collapses them to 'main'. The scraper convention is
+  // fightNumber=1 → main event, fightNumber=2 → co-main, so after the
+  // fightNumber-asc sort, index 0 is the main event and index 1 is the co-main.
   const positionLabel = (fight: Fight, indexInMainCard: number): string => {
     if (fight.cardPosition === 'co-main') return 'Co-Main Event'
     if (fight.mainEvent || indexInMainCard === 0) return 'Main Event'
+    if (indexInMainCard === 1) return 'Co-Main Event'
     return 'Main Card'
   }
 
