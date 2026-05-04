@@ -3,7 +3,11 @@
 import { useEffect, useMemo, memo, useCallback, useState } from 'react'
 
 import { FighterAvatar } from '@/components/fighter/FighterAvatar'
-import { CARD_POSITION_ORDER } from '@/config'
+// Imported from `@/config/constants` directly: the `@/config` barrel re-exports
+// `./env`, which calls `process.exit(1)` at module load when env vars are
+// missing. That's fine server-side, but pulling it into a client component
+// crashes the browser (process.exit is not a function).
+import { CARD_POSITION_ORDER } from '@/config/constants'
 import { funScoreColor } from '@/lib/ui/funScoreColor'
 import { type CardPosition, type Fight, type UFCEvent } from '@/types'
 
